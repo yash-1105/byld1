@@ -15,7 +15,7 @@ type FilterType = 'all' | 'pending' | 'approved' | 'rejected';
 
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState(initialApprovals);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<FilterType>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const handleAction = (id: string, action: 'approved' | 'rejected') => {
