@@ -1,10 +1,14 @@
 import { useData } from '@/contexts/DataContext';
 import { motion } from 'framer-motion';
-import { FolderKanban, CheckSquare, DollarSign, Users, TrendingUp, AlertTriangle, Clock, ArrowUpRight } from 'lucide-react';
+import { FolderKanban, CheckSquare, DollarSign, AlertTriangle, ArrowUpRight, Clock, CheckCircle, XCircle, Activity } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
+
+const workflowStages = ['Design', 'Approval', 'Construction', 'Finishing'];
 
 export default function ArchitectDashboard() {
   const { projects, tasks, budgetItems, siteUpdates } = useData();
@@ -36,6 +40,28 @@ export default function ArchitectDashboard() {
     { name: 'Done', value: tasks.filter(t => t.status === 'done').length },
   ];
 
+  // Pending approvals
+  const [approvals, setApprovals] = useState([
+    { id: 'a1', title: 'Change Order #12 — Additional Steel', project: 'Skyline Tower', amount: '$45,000' },
+    { id: 'a2', title: 'Landscape Design Revision', project: 'Harbor View', amount: '-' },
+  ]);
+
+  const handleApproval = (id: string, action: 'approved' | 'rejected') => {
+    setApprovals(prev => prev.filter(a => a.id !== id));
+    toast.success(`Item ${action}`);
+  };
+
+  // Activity timeline
+  const timeline = [
+    { time: '2h ago', event: 'Concrete pour completed — Level 28', type: 'success' as const },
+    { time: '5h ago', event: 'Budget alert: Skyline Tower at 65%', type: 'warning' as const },
+    { time: '1d ago', event: 'New task assigned to Mike Johnson', type: 'info' as const },
+    { time: '1d ago', event: 'Weather delay reported — High winds', type: 'error' as const },
+    { time: '2d ago', event: 'Foundation inspection passed', type: 'success' as const },
+  ];
+
+  const stageMap: Record<string, number> = { planning: 0, design: 0, approval: 1, construction: 2, finishing: 3, completed: 4 };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -65,11 +91,93 @@ export default function ArchitectDashboard() {
         ))}
       </div>
 
-      {/* Charts Row */}
+      {/* Workflow Tracker */}
+      <motion.div {...fadeIn} transition={{ delay: 0.15 }} className="glass-card p-5">
+        <h3 className="font-semibold text-foreground mb-4">Project Workflows</h3>
+        <div className="space-y-4">
+          {projects.slice(0, 3).map(p => {
+            const stage = stageMap[p.status] ?? 0;
+            return (
+              <div key={p.id} className="flex items-center gap-4">
+                <div className="w-28 text-sm font-medium text-foreground truncate">{p.name.split(' ').slice(0, 2).join(' ')}</div>
+                <div className="flex-1 flex items-center gap-1">
+                  {workflowStages.map((ws, i) => (
+                    <div key={ws} className="flex items-center flex-1">
+                      <div className={`h-2 flex-1 rounded-full ${i <= stage ? 'gradient-primary' : 'bg-muted'} transition-all`} />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 text-[10px] text-muted-foreground">
+                  {workflowStages.map((ws, i) => (
+                    <span key={ws} className={`${i === stage ? 'text-primary font-semibold' : ''}`}>{ws}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
+
+      {/* Approvals + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="glass-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-foreground">Pending Approvals</h3>
+            <Link to="/approvals" className="text-xs text-primary hover:underline">View all</Link>
+          </div>
+          {approvals.length > 0 ? (
+            <div className="space-y-3">
+              {approvals.map(a => (
+                <div key={a.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">{a.title}</div>
+                    <div className="text-xs text-muted-foreground">{a.project} {a.amount !== '-' ? `· ${a.amount}` : ''}</div>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => handleApproval(a.id, 'approved')} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors">
+                      <CheckCircle className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleApproval(a.id, 'rejected')} className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+                      <XCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              All caught up! No pending approvals.
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div {...fadeIn} transition={{ delay: 0.25 }} className="glass-card p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-4 h-4 text-primary" />
+            <h3 className="font-semibold text-foreground">Activity Timeline</h3>
+          </div>
+          <div className="space-y-3">
+            {timeline.map((t, i) => (
+              <div key={i} className="flex items-start gap-3">
+                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                  t.type === 'success' ? 'bg-success' : t.type === 'warning' ? 'bg-warning' : t.type === 'error' ? 'bg-destructive' : 'bg-primary'
+                }`} />
+                <div className="flex-1">
+                  <div className="text-sm text-foreground">{t.event}</div>
+                  <div className="text-xs text-muted-foreground">{t.time}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <motion.div {...fadeIn} transition={{ delay: 0.3 }} className="glass-card p-5">
           <h3 className="font-semibold text-foreground mb-4">Project Progress</h3>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={projectProgress}>
               <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
@@ -79,17 +187,17 @@ export default function ArchitectDashboard() {
           </ResponsiveContainer>
         </motion.div>
 
-        <motion.div {...fadeIn} transition={{ delay: 0.25 }} className="glass-card p-5">
+        <motion.div {...fadeIn} transition={{ delay: 0.35 }} className="glass-card p-5">
           <h3 className="font-semibold text-foreground mb-4">Tasks by Status</h3>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={tasksByStatus} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value">
+              <Pie data={tasksByStatus} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
                 {tasksByStatus.map((_, i) => <Cell key={i} fill={statusColors[i]} />)}
               </Pie>
-              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(220 13% 91%)' }} />
+              <Tooltip contentStyle={{ borderRadius: 12 }} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="flex justify-center gap-4 mt-2">
+          <div className="flex justify-center gap-4 mt-1">
             {tasksByStatus.map((s, i) => (
               <div key={s.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColors[i] }} />
@@ -101,37 +209,40 @@ export default function ArchitectDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <motion.div {...fadeIn} transition={{ delay: 0.3 }} className="glass-card p-5">
+        <motion.div {...fadeIn} transition={{ delay: 0.4 }} className="glass-card p-5">
           <h3 className="font-semibold text-foreground mb-4">Budget Overview (M)</h3>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={budgetByProject}>
               <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(220 13% 91%)' }} />
+              <Tooltip contentStyle={{ borderRadius: 12 }} />
               <Bar dataKey="budget" fill="hsl(217, 91%, 60%)" radius={[6, 6, 0, 0]} name="Budget" />
               <Bar dataKey="spent" fill="hsl(38, 92%, 50%)" radius={[6, 6, 0, 0]} name="Spent" />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
 
-        <motion.div {...fadeIn} transition={{ delay: 0.35 }} className="glass-card p-5">
+        <motion.div {...fadeIn} transition={{ delay: 0.45 }} className="glass-card p-5">
           <h3 className="font-semibold text-foreground mb-4">Weekly Activity</h3>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={220}>
             <LineChart data={weeklyActivity}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 93%)" />
               <XAxis dataKey="day" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(220 13% 91%)' }} />
+              <Tooltip contentStyle={{ borderRadius: 12 }} />
               <Line type="monotone" dataKey="tasks" stroke="hsl(217, 91%, 60%)" strokeWidth={2.5} dot={{ fill: 'hsl(217, 91%, 60%)', r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </motion.div>
       </div>
 
-      {/* Recent Activity */}
-      <motion.div {...fadeIn} transition={{ delay: 0.4 }} className="glass-card p-5">
-        <h3 className="font-semibold text-foreground mb-4">Recent Site Updates</h3>
-        <div className="space-y-3">
+      {/* Recent Updates */}
+      <motion.div {...fadeIn} transition={{ delay: 0.5 }} className="glass-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-foreground">Recent Site Updates</h3>
+          <Link to="/site-updates" className="text-xs text-primary hover:underline">View all</Link>
+        </div>
+        <div className="space-y-2">
           {siteUpdates.slice(0, 4).map(u => (
             <div key={u.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
               <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
@@ -143,11 +254,28 @@ export default function ArchitectDashboard() {
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                 u.type === 'milestone' ? 'bg-success/10 text-success' : u.type === 'issue' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
-              }`}>
-                {u.type}
-              </span>
+              }`}>{u.type}</span>
             </div>
           ))}
+        </div>
+      </motion.div>
+
+      {/* Daily Summary */}
+      <motion.div {...fadeIn} transition={{ delay: 0.55 }} className="glass-card p-5">
+        <h3 className="font-semibold text-foreground mb-3">📋 Daily Project Summary</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+          <div className="bg-muted/50 rounded-xl p-4">
+            <div className="text-xs text-muted-foreground mb-1">Tasks Completed Today</div>
+            <div className="text-lg font-bold text-foreground">3</div>
+          </div>
+          <div className="bg-muted/50 rounded-xl p-4">
+            <div className="text-xs text-muted-foreground mb-1">Active Workers On-Site</div>
+            <div className="text-lg font-bold text-foreground">47</div>
+          </div>
+          <div className="bg-muted/50 rounded-xl p-4">
+            <div className="text-xs text-muted-foreground mb-1">Weather</div>
+            <div className="text-lg font-bold text-foreground">☀️ Clear, 72°F</div>
+          </div>
         </div>
       </motion.div>
     </div>
