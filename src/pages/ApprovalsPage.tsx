@@ -23,7 +23,7 @@ export default function ApprovalsPage() {
     toast.success(`Item ${action}`);
   };
 
-  const filtered = filter === 'all' ? approvals : approvals.filter(a => a.status === filter);
+  const filtered = filter === 'all' ? approvals : approvals.filter(a => a.status === (filter as string));
   const pendingCount = approvals.filter(a => a.status === 'pending').length;
 
   return (
