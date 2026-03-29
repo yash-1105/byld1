@@ -43,7 +43,7 @@ export default function ApprovalsPage() {
 
       {/* Filters */}
       <div className="flex gap-2">
-        {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map(f => (
+        {(['all', 'pending', 'approved', 'rejected'] as FilterType[]).map(f => (
           <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors capitalize ${filter === f ? 'gradient-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:text-foreground'}`}>
             {f} {f !== 'all' ? `(${approvals.filter(a => f === 'all' || a.status === f).length})` : `(${approvals.length})`}
           </button>
