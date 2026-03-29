@@ -11,7 +11,7 @@ const initialApprovals = [
   { id: '5', title: 'MEP Systems Approval', project: 'Skyline Tower', type: 'Design Change', status: 'pending' as const, date: '2025-03-29', amount: '$8,500', description: 'Final mechanical and plumbing system layout for floors 20-28.' },
 ];
 
-type Filter = 'all' | 'pending' | 'approved' | 'rejected';
+type FilterType = 'all' | 'pending' | 'approved' | 'rejected';
 
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState(initialApprovals);
