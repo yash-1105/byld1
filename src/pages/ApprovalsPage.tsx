@@ -26,8 +26,7 @@ const initialApprovals: ApprovalItem[] = [
     id: "1",
     title: "Modern Wall Light #2",
     category: "Design",
-    image:
-      "https://www.google.com/url?sa=t&source=web&rct=j&url=https%3A%2F%2Fwww.shopmurphy.in%2Fproducts%2Fmurphy-twistra-led-wall-lamp-modern-french-gold-light%3Fsrsltid%3DAfmBOooeZ0sUQdoG6yiXRLMFFtDCz0k4TZ9S5hnZzmAW8MQDatHZxgNF&ved=0CBYQjRxqFwoTCPjqg7n4yZMDFQAAAAAdAAAAABAI&opi=89978449",
+    image: "https://unsplash.com/photos/black-pendant-lamp-turned-on-in-dark-room-ocVpzd5LJOA",
     status: "pending",
     requestedBy: "Sarah Anderson",
     date: "Mar 28, 2025",
