@@ -1,49 +1,127 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ClipboardCheck, Layers, DollarSign, FileText, AlertTriangle, ShoppingCart, Wrench, Filter } from 'lucide-react';
-import ApprovalCard, { type ApprovalItem } from '@/components/projects/ApprovalCard';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  ClipboardCheck,
+  Layers,
+  DollarSign,
+  FileText,
+  AlertTriangle,
+  ShoppingCart,
+  Wrench,
+  Filter,
+} from "lucide-react";
+import ApprovalCard, { type ApprovalItem } from "@/components/projects/ApprovalCard";
 
 const categories = [
-  { key: 'all', label: 'All Requests', icon: ClipboardCheck },
-  { key: 'design', label: 'Design', icon: Layers },
-  { key: 'procurement', label: 'Procurement', icon: ShoppingCart },
-  { key: 'financial', label: 'Financial', icon: DollarSign },
-  { key: 'contracts', label: 'Contracts', icon: FileText },
-  { key: 'issues', label: 'Issues', icon: AlertTriangle },
+  { key: "all", label: "All Requests", icon: ClipboardCheck },
+  { key: "design", label: "Design", icon: Layers },
+  { key: "procurement", label: "Procurement", icon: ShoppingCart },
+  { key: "financial", label: "Financial", icon: DollarSign },
+  { key: "contracts", label: "Contracts", icon: FileText },
+  { key: "issues", label: "Issues", icon: AlertTriangle },
 ];
 
 const initialApprovals: ApprovalItem[] = [
-  { id: '1', title: 'Modern Wall Light #2', category: 'Design', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=400&fit=crop', status: 'pending', requestedBy: 'Sarah Anderson', date: 'Mar 28, 2025', cost: '$1,850', description: 'Brass three-light pendant cluster for the dining area, replaces single fixture.' },
-  { id: '2', title: 'Italian Marble Selection', category: 'Procurement', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop', status: 'pending', requestedBy: 'Mike Johnson', date: 'Mar 27, 2025', cost: '$28,000', description: 'Calacatta Gold marble for master bathroom and kitchen countertops.' },
-  { id: '3', title: 'HVAC System Upgrade', category: 'Financial', image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=600&h=400&fit=crop', status: 'pending', requestedBy: 'Alex Rivera', date: 'Mar 26, 2025', cost: '$45,000', description: 'Upgrade from standard to smart HVAC with zone control for all floors.' },
-  { id: '4', title: 'Floor Tile — Herringbone Oak', category: 'Design', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=400&fit=crop', status: 'pending', requestedBy: 'Sarah Anderson', date: 'Mar 25, 2025', cost: '$3,600', description: 'Engineered oak herringbone tiles for living room and hallway.' },
-  { id: '5', title: 'Velvet Sofa — Forest Green', category: 'Design', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=400&fit=crop', status: 'approved', requestedBy: 'Sarah Anderson', date: 'Mar 20, 2025', cost: '$2,900' },
-  { id: '6', title: 'Electrical Subcontractor', category: 'Contracts', image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&h=400&fit=crop', status: 'approved', requestedBy: 'Mike Johnson', date: 'Mar 18, 2025', cost: '$95,000' },
-  { id: '7', title: 'Black Marble Countertop', category: 'Procurement', image: 'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=600&h=400&fit=crop', status: 'rejected', requestedBy: 'Mike Johnson', date: 'Mar 15, 2025', cost: '$6,200', description: 'Clashes with warm palette — architect recommended lighter option.' },
+  {
+    id: "1",
+    title: "Modern Wall Light #2",
+    category: "Design",
+    image:
+      "https://www.google.com/url?sa=t&source=web&rct=j&url=https%3A%2F%2Fwww.shopmurphy.in%2Fproducts%2Fmurphy-twistra-led-wall-lamp-modern-french-gold-light%3Fsrsltid%3DAfmBOooeZ0sUQdoG6yiXRLMFFtDCz0k4TZ9S5hnZzmAW8MQDatHZxgNF&ved=0CBYQjRxqFwoTCPjqg7n4yZMDFQAAAAAdAAAAABAI&opi=89978449",
+    status: "pending",
+    requestedBy: "Sarah Anderson",
+    date: "Mar 28, 2025",
+    cost: "$1,850",
+    description: "Brass three-light pendant cluster for the dining area, replaces single fixture.",
+  },
+  {
+    id: "2",
+    title: "Italian Marble Selection",
+    category: "Procurement",
+    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop",
+    status: "pending",
+    requestedBy: "Mike Johnson",
+    date: "Mar 27, 2025",
+    cost: "$28,000",
+    description: "Calacatta Gold marble for master bathroom and kitchen countertops.",
+  },
+  {
+    id: "3",
+    title: "HVAC System Upgrade",
+    category: "Financial",
+    image: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=600&h=400&fit=crop",
+    status: "pending",
+    requestedBy: "Alex Rivera",
+    date: "Mar 26, 2025",
+    cost: "$45,000",
+    description: "Upgrade from standard to smart HVAC with zone control for all floors.",
+  },
+  {
+    id: "4",
+    title: "Floor Tile — Herringbone Oak",
+    category: "Design",
+    image: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=400&fit=crop",
+    status: "pending",
+    requestedBy: "Sarah Anderson",
+    date: "Mar 25, 2025",
+    cost: "$3,600",
+    description: "Engineered oak herringbone tiles for living room and hallway.",
+  },
+  {
+    id: "5",
+    title: "Velvet Sofa — Forest Green",
+    category: "Design",
+    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=400&fit=crop",
+    status: "approved",
+    requestedBy: "Sarah Anderson",
+    date: "Mar 20, 2025",
+    cost: "$2,900",
+  },
+  {
+    id: "6",
+    title: "Electrical Subcontractor",
+    category: "Contracts",
+    image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&h=400&fit=crop",
+    status: "approved",
+    requestedBy: "Mike Johnson",
+    date: "Mar 18, 2025",
+    cost: "$95,000",
+  },
+  {
+    id: "7",
+    title: "Black Marble Countertop",
+    category: "Procurement",
+    image: "https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=600&h=400&fit=crop",
+    status: "rejected",
+    requestedBy: "Mike Johnson",
+    date: "Mar 15, 2025",
+    cost: "$6,200",
+    description: "Clashes with warm palette — architect recommended lighter option.",
+  },
 ];
 
-type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected' | 'on_hold';
+type StatusFilter = "all" | "pending" | "approved" | "rejected" | "on_hold";
 
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState(initialApprovals);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  const handleAction = (id: string, action: 'approved' | 'rejected' | 'on_hold', reason?: string) => {
-    setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: action } : a));
+  const handleAction = (id: string, action: "approved" | "rejected" | "on_hold", reason?: string) => {
+    setApprovals((prev) => prev.map((a) => (a.id === id ? { ...a, status: action } : a)));
   };
 
   const filtered = approvals
-    .filter(a => activeCategory === 'all' || a.category.toLowerCase() === activeCategory)
-    .filter(a => statusFilter === 'all' || a.status === statusFilter);
+    .filter((a) => activeCategory === "all" || a.category.toLowerCase() === activeCategory)
+    .filter((a) => statusFilter === "all" || a.status === statusFilter);
 
-  const pendingCount = approvals.filter(a => a.status === 'pending').length;
+  const pendingCount = approvals.filter((a) => a.status === "pending").length;
 
   const statusFilters: { key: StatusFilter; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'pending', label: 'Pending' },
-    { key: 'approved', label: 'Approved' },
-    { key: 'rejected', label: 'Rejected' },
+    { key: "all", label: "All" },
+    { key: "pending", label: "Pending" },
+    { key: "approved", label: "Approved" },
+    { key: "rejected", label: "Rejected" },
   ];
 
   return (
@@ -52,20 +130,22 @@ export default function ApprovalsPage() {
       <div className="w-56 flex-shrink-0">
         <div className="soft-card p-4 space-y-1 sticky top-6">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-3">Categories</h3>
-          {categories.map(cat => (
+          {categories.map((cat) => (
             <button
               key={cat.key}
               onClick={() => setActiveCategory(cat.key)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 activeCategory === cat.key
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <cat.icon className="w-4 h-4" />
               {cat.label}
-              {cat.key === 'all' && pendingCount > 0 && (
-                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-warning/10 text-warning font-semibold">{pendingCount}</span>
+              {cat.key === "all" && pendingCount > 0 && (
+                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-warning/10 text-warning font-semibold">
+                  {pendingCount}
+                </span>
               )}
             </button>
           ))}
@@ -89,14 +169,14 @@ export default function ApprovalsPage() {
 
         {/* Status filter */}
         <div className="flex gap-2">
-          {statusFilters.map(f => (
+          {statusFilters.map((f) => (
             <button
               key={f.key}
               onClick={() => setStatusFilter(f.key)}
               className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                 statusFilter === f.key
-                  ? 'gradient-primary text-primary-foreground'
-                  : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+                  ? "gradient-primary text-primary-foreground"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {f.label}
