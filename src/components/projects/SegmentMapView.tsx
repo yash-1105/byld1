@@ -11,6 +11,7 @@ interface Segment {
   name: string;
   status: 'pending' | 'approved' | 'in_progress' | 'completed';
   progress: number;
+  image?: string;
   budget: number;
   spent: number;
   tasks: { title: string; status: string; assignee: string }[];
