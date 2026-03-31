@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, Clock, AlertTriangle, DollarSign, ClipboardCheck, ListTodo, MessageSquare } from 'lucide-react';
+import livingRoomImg from '@/assets/living-room.jpg';
+import kitchenImg from '@/assets/kitchen.jpg';
+import bedroomImg from '@/assets/bedroom.jpg';
+import bathroomImg from '@/assets/bathroom.jpg';
 
 interface Segment {
   id: string;
