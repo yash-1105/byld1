@@ -29,7 +29,7 @@ const segments: Segment[] = [
     progress: 68,
     budget: 85000,
     spent: 57800,
-    tasks: [
+    image: livingRoomImg,
       { title: 'Flooring installation', status: 'in_progress', assignee: 'Mike J.' },
       { title: 'Wall finishing', status: 'todo', assignee: 'Alex R.' },
       { title: 'Lighting fixtures', status: 'done', assignee: 'Mike J.' },
