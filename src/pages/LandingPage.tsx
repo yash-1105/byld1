@@ -2,9 +2,9 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import {
-  Building2, ArrowRight, BarChart3, Users, Shield, Zap, Camera, Bot,
+  Building2, ArrowRight, BarChart3, Users, Zap, Camera, Bot,
   CheckCircle, Layers, FileText, Bell, MessageSquare, ClipboardCheck,
-  HardHat, User, Briefcase, ChevronRight, Play
+  HardHat, User, Briefcase, ChevronRight, Play, Shield
 } from 'lucide-react';
 import Footer from '@/components/Footer';
 
@@ -46,10 +46,10 @@ export default function LandingPage() {
   ];
 
   const roles = [
-    { role: 'Architect', icon: Building2, desc: 'Full project control — create projects, assign tasks, manage budgets, approve changes, and coordinate teams.', color: 'bg-primary/10 text-primary' },
-    { role: 'Contractor', icon: HardHat, desc: 'Task execution focus — view assigned work, post site updates, upload documentation, and report progress.', color: 'bg-warning/10 text-warning' },
-    { role: 'Client', icon: User, desc: 'Simplified oversight — track progress, review budgets, approve decisions, and receive real-time updates.', color: 'bg-success/10 text-success' },
-    { role: 'Consultant', icon: Briefcase, desc: 'Expert collaboration — respond to consultation requests, share assessments, and communicate with architects.', color: 'bg-accent/10 text-accent' },
+    { role: 'Architect', icon: Building2, desc: 'Full project control — create projects, assign tasks, manage budgets, approve changes, and coordinate teams.', gradient: 'from-primary/10 to-primary/5' },
+    { role: 'Contractor', icon: HardHat, desc: 'Task execution focus — view assigned work, post site updates, upload documentation, and report progress.', gradient: 'from-warning/10 to-warning/5' },
+    { role: 'Client', icon: User, desc: 'Simplified oversight — track progress, review budgets, approve decisions, and receive real-time updates.', gradient: 'from-success/10 to-success/5' },
+    { role: 'Consultant', icon: Briefcase, desc: 'Expert collaboration — respond to consultation requests, share assessments, and communicate with architects.', gradient: 'from-accent/10 to-accent/5' },
   ];
 
   const advancedFeatures = [
@@ -63,9 +63,9 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="h-16 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-6 lg:px-12 sticky top-0 z-50">
+      <nav className="h-16 bg-card/80 backdrop-blur-xl border-b border-border flex items-center justify-between px-6 lg:px-12 sticky top-0 z-50">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center">
+          <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
             <Building2 className="w-4 h-4 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold text-foreground tracking-tight">BYLD</span>
@@ -78,7 +78,7 @@ export default function LandingPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-sm font-medium text-foreground hover:text-primary transition-colors hidden sm:inline-block">Sign In</Link>
-          <Link to="/login" className="gradient-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
+          <Link to="/login" className="gradient-primary text-primary-foreground px-5 py-2 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-primary/20">
             Get Started
           </Link>
         </div>
@@ -86,15 +86,16 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3" />
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full bg-primary/5 blur-3xl" />
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-28 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-warning/[0.03]" />
+        <div className="absolute top-20 left-1/3 w-[600px] h-[600px] rounded-full bg-primary/[0.06] blur-[120px]" />
+        <div className="absolute bottom-10 right-1/4 w-[400px] h-[400px] rounded-full bg-warning/[0.05] blur-[100px]" />
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-24 lg:py-32 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-full inline-block">
+              <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-full inline-block mb-6">
                 Construction Management Platform
               </span>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mt-6 leading-[1.1] tracking-tight">
+              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold text-foreground leading-[1.08] tracking-tight">
                 Build smarter.<br />
                 <span className="gradient-text">Deliver faster.</span>
               </h1>
@@ -102,10 +103,10 @@ export default function LandingPage() {
                 Manage construction projects, track progress, control budgets, and collaborate with your entire team in one place.
               </p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-8">
-                <Link to="/login" className="gradient-primary text-primary-foreground px-7 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-lg shadow-primary/20">
+                <Link to="/login" className="gradient-primary text-primary-foreground px-7 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-xl shadow-primary/25">
                   Start Free Trial <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link to="/login" className="border border-border text-foreground px-7 py-3.5 rounded-xl text-sm font-semibold hover:bg-muted transition-colors flex items-center gap-2">
+                <Link to="/login" className="border border-border text-foreground px-7 py-3.5 rounded-xl text-sm font-semibold hover:bg-card transition-colors flex items-center gap-2">
                   <Play className="w-4 h-4" /> View Demo
                 </Link>
               </div>
@@ -118,18 +119,16 @@ export default function LandingPage() {
               transition={{ duration: 0.7, delay: 0.2 }}
               className="relative"
             >
-              <div className="absolute inset-0 gradient-primary opacity-10 rounded-2xl blur-2xl scale-105" />
-              <div className="relative bg-card rounded-2xl border border-border shadow-2xl shadow-primary/10 overflow-hidden">
-                {/* Title bar */}
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/50">
+              <div className="absolute -inset-4 gradient-primary opacity-[0.07] rounded-3xl blur-2xl" />
+              <div className="relative soft-card overflow-hidden shadow-2xl shadow-primary/10">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
                   <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-destructive/60" />
-                    <div className="w-3 h-3 rounded-full bg-warning/60" />
-                    <div className="w-3 h-3 rounded-full bg-success/60" />
+                    <div className="w-3 h-3 rounded-full bg-destructive/50" />
+                    <div className="w-3 h-3 rounded-full bg-warning/50" />
+                    <div className="w-3 h-3 rounded-full bg-success/50" />
                   </div>
-                  <div className="flex-1 text-center text-xs text-muted-foreground">BYLD — Dashboard</div>
+                  <div className="flex-1 text-center text-xs text-muted-foreground font-medium">BYLD — Dashboard</div>
                 </div>
-                {/* Mock dashboard */}
                 <div className="p-5 space-y-4">
                   <div className="grid grid-cols-3 gap-3">
                     {[
@@ -137,14 +136,13 @@ export default function LandingPage() {
                       { label: 'Tasks Done', val: '67%', color: 'text-success' },
                       { label: 'Budget Used', val: '$8.1M', color: 'text-warning' },
                     ].map(s => (
-                      <div key={s.label} className="bg-muted/50 rounded-xl p-3">
+                      <div key={s.label} className="bg-muted/40 rounded-xl p-3.5 border border-border/50">
                         <div className="text-[10px] text-muted-foreground">{s.label}</div>
                         <div className={`text-lg font-bold ${s.color} mt-0.5`}>{s.val}</div>
                       </div>
                     ))}
                   </div>
-                  {/* Chart mock */}
-                  <div className="bg-muted/30 rounded-xl p-4">
+                  <div className="bg-muted/30 rounded-xl p-4 border border-border/50">
                     <div className="text-xs font-medium text-foreground mb-3">Project Progress</div>
                     <div className="flex items-end gap-2 h-20">
                       {[65, 30, 15, 5, 45, 80, 55].map((h, i) => (
@@ -158,10 +156,9 @@ export default function LandingPage() {
                       ))}
                     </div>
                   </div>
-                  {/* Tasks mock */}
                   <div className="space-y-2">
                     {['Steel framework — Level 30', 'MEP coordination review', 'Foundation inspection'].map((t, i) => (
-                      <div key={t} className="flex items-center gap-3 bg-muted/30 rounded-lg px-3 py-2">
+                      <div key={t} className="flex items-center gap-3 bg-muted/30 rounded-xl px-3.5 py-2.5 border border-border/50">
                         <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-destructive' : i === 1 ? 'bg-warning' : 'bg-success'}`} />
                         <span className="text-xs text-foreground flex-1">{t}</span>
                         <span className="text-[10px] text-muted-foreground">{i === 0 ? 'Urgent' : i === 1 ? 'Review' : 'Done'}</span>
@@ -176,17 +173,22 @@ export default function LandingPage() {
       </section>
 
       {/* Trust Strip */}
-      <section className="border-y border-border bg-muted/30">
+      <section className="border-y border-border bg-card/50">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 py-6">
-          <motion.div {...fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-muted-foreground">
+          <motion.div {...fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-10 text-sm text-muted-foreground">
             <span className="font-medium text-foreground">Trusted by construction teams worldwide</span>
             <div className="flex items-center gap-6">
-              {['Architects', 'Contractors', 'Developers', 'Consultants'].map(t => (
-                <span key={t} className="flex items-center gap-1.5 text-xs">
-                  <div className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center">
-                    <Building2 className="w-3 h-3 text-primary" />
+              {[
+                { name: 'Architects', icon: Building2 },
+                { name: 'Contractors', icon: HardHat },
+                { name: 'Developers', icon: Zap },
+                { name: 'Consultants', icon: Briefcase },
+              ].map(t => (
+                <span key={t.name} className="flex items-center gap-1.5 text-xs">
+                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <t.icon className="w-3 h-3 text-primary" />
                   </div>
-                  {t}
+                  {t.name}
                 </span>
               ))}
             </div>
@@ -195,19 +197,19 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-24">
-        <motion.div {...fadeUp} className="text-center mb-14">
+      <section className="max-w-7xl mx-auto px-6 lg:px-12 py-24 lg:py-28">
+        <motion.div {...fadeUp} className="text-center mb-16">
           <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">Features</span>
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-4">Everything you need to manage construction</h2>
-          <p className="text-muted-foreground mt-3 max-w-2xl mx-auto">From project planning to completion, BYLD gives your team the tools to deliver on time and on budget.</p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-5">Everything you need to manage construction</h2>
+          <p className="text-muted-foreground mt-4 max-w-2xl mx-auto text-lg">From project planning to completion, BYLD gives your team the tools to deliver on time and on budget.</p>
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((f, i) => (
-            <motion.div key={f.title} {...stagger} transition={{ delay: i * 0.08 }} className="group glass-card-hover p-6">
-              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <f.icon className="w-5 h-5 text-primary" />
+            <motion.div key={f.title} {...stagger} transition={{ delay: i * 0.08 }} className="group soft-card-hover p-7">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
+                <f.icon className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-foreground mb-2">{f.title}</h3>
+              <h3 className="font-semibold text-foreground text-lg mb-2">{f.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
             </motion.div>
           ))}
@@ -215,19 +217,19 @@ export default function LandingPage() {
       </section>
 
       {/* Product Showcase Tabs */}
-      <section className="bg-muted/30 border-y border-border">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-24">
-          <motion.div {...fadeUp} className="text-center mb-12">
+      <section className="bg-card/50 border-y border-border">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-24 lg:py-28">
+          <motion.div {...fadeUp} className="text-center mb-14">
             <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">Product</span>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-4">See BYLD in action</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-5">See BYLD in action</h2>
           </motion.div>
-          <div className="flex justify-center gap-2 mb-8">
+          <div className="flex justify-center gap-2 mb-10">
             {tabs.map((tab, i) => (
               <button
                 key={tab.label}
                 onClick={() => setActiveTab(i)}
-                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  activeTab === i ? 'gradient-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  activeTab === i ? 'gradient-primary text-primary-foreground shadow-xl shadow-primary/20' : 'bg-card border border-border text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {tab.label}
@@ -235,8 +237,8 @@ export default function LandingPage() {
             ))}
           </div>
           <motion.div key={activeTab} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="max-w-4xl mx-auto">
-            <div className="bg-card rounded-2xl border border-border shadow-xl overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/50">
+            <div className="soft-card overflow-hidden shadow-xl">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
                 <div className="flex gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-destructive/50" />
                   <div className="w-2.5 h-2.5 rounded-full bg-warning/50" />
@@ -253,21 +255,21 @@ export default function LandingPage() {
                         { l: 'Budget', v: '$42.5M', c: 'text-foreground' },
                         { l: 'Team', v: '24', c: 'text-primary' },
                       ].map(s => (
-                        <div key={s.l} className="bg-muted/50 rounded-xl p-4 text-center">
+                        <div key={s.l} className="bg-muted/40 rounded-xl p-4 text-center border border-border/50">
                           <div className="text-xs text-muted-foreground">{s.l}</div>
                           <div className={`text-xl font-bold ${s.c} mt-1`}>{s.v}</div>
                         </div>
                       ))}
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-muted/30 rounded-xl p-4 h-32 flex items-end">
+                      <div className="bg-muted/30 rounded-xl p-4 h-32 flex items-end border border-border/50">
                         <div className="flex items-end gap-1 w-full h-full">
                           {[40, 65, 30, 80, 55, 70, 45, 90].map((h, i) => (
                             <div key={i} className="flex-1 gradient-primary rounded-t-sm" style={{ height: `${h}%` }} />
                           ))}
                         </div>
                       </div>
-                      <div className="bg-muted/30 rounded-xl p-4 flex items-center justify-center">
+                      <div className="bg-muted/30 rounded-xl p-4 flex items-center justify-center border border-border/50">
                         <div className="relative w-24 h-24">
                           <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
                             <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--muted))" strokeWidth="8" />
@@ -290,10 +292,10 @@ export default function LandingPage() {
                           <span className="text-muted-foreground bg-muted px-1.5 py-0.5 rounded text-[10px]">{ci + 1}</span>
                         </div>
                         {Array.from({ length: 2 - (ci === 3 ? 1 : 0) }, (_, i) => (
-                          <div key={i} className="bg-muted/50 rounded-lg p-3 border border-border/50">
+                          <div key={i} className="bg-muted/40 rounded-xl p-3 border border-border/50">
                             <div className="text-xs font-medium text-foreground">Task {ci * 2 + i + 1}</div>
                             <div className="flex items-center gap-1 mt-2">
-                              <div className={`text-[9px] px-1.5 py-0.5 rounded ${ci === 0 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                              <div className={`text-[9px] px-1.5 py-0.5 rounded-full ${ci === 0 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
                                 {ci === 0 ? 'urgent' : 'medium'}
                               </div>
                             </div>
@@ -310,7 +312,7 @@ export default function LandingPage() {
                       { title: 'Weather delay — High winds', type: 'issue', time: '1d ago' },
                       { title: 'Electrical rough-in progress', type: 'progress', time: '2d ago' },
                     ].map(u => (
-                      <div key={u.title} className="flex items-start gap-3 bg-muted/30 rounded-xl p-4">
+                      <div key={u.title} className="flex items-start gap-3 bg-muted/30 rounded-xl p-4 border border-border/50">
                         <div className={`w-2 h-2 rounded-full mt-1.5 ${u.type === 'milestone' ? 'bg-success' : u.type === 'issue' ? 'bg-destructive' : 'bg-primary'}`} />
                         <div className="flex-1">
                           <div className="text-sm font-medium text-foreground">{u.title}</div>
@@ -331,20 +333,20 @@ export default function LandingPage() {
       </section>
 
       {/* Workflow */}
-      <section className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-24">
-        <motion.div {...fadeUp} className="text-center mb-14">
+      <section className="max-w-7xl mx-auto px-6 lg:px-12 py-24 lg:py-28">
+        <motion.div {...fadeUp} className="text-center mb-16">
           <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">Workflow</span>
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-4">From design to delivery</h2>
-          <p className="text-muted-foreground mt-3">Track every project through a structured, stage-based workflow.</p>
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-5">From design to delivery</h2>
+          <p className="text-muted-foreground mt-4 text-lg">Track every project through a structured, stage-based workflow.</p>
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {workflowSteps.map((step, i) => (
             <motion.div key={step.stage} {...stagger} transition={{ delay: i * 0.1 }} className="relative">
-              <div className="glass-card-hover p-6 text-center h-full">
-                <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground mx-auto mb-4">
+              <div className="soft-card-hover p-7 text-center h-full">
+                <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground mx-auto mb-5 shadow-lg shadow-primary/20">
                   {i + 1}
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">{step.stage}</h3>
+                <h3 className="font-semibold text-foreground text-lg mb-2">{step.stage}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
               </div>
               {i < 3 && (
@@ -358,20 +360,20 @@ export default function LandingPage() {
       </section>
 
       {/* Roles */}
-      <section className="bg-muted/30 border-y border-border">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-24">
-          <motion.div {...fadeUp} className="text-center mb-14">
+      <section className="bg-card/50 border-y border-border">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 py-24 lg:py-28">
+          <motion.div {...fadeUp} className="text-center mb-16">
             <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">Roles</span>
-            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-4">Tailored for every team member</h2>
-            <p className="text-muted-foreground mt-3">Each role gets a unique dashboard, navigation, and permissions.</p>
+            <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-5">Tailored for every team member</h2>
+            <p className="text-muted-foreground mt-4 text-lg">Each role gets a unique dashboard, navigation, and permissions.</p>
           </motion.div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {roles.map((r, i) => (
-              <motion.div key={r.role} {...stagger} transition={{ delay: i * 0.08 }} className="glass-card-hover p-6 text-center">
-                <div className={`w-14 h-14 rounded-2xl ${r.color.split(' ')[0]} flex items-center justify-center mx-auto mb-4`}>
-                  <r.icon className={`w-7 h-7 ${r.color.split(' ')[1]}`} />
+              <motion.div key={r.role} {...stagger} transition={{ delay: i * 0.08 }} className="soft-card-hover p-7 text-center">
+                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${r.gradient} flex items-center justify-center mx-auto mb-5`}>
+                  <r.icon className="w-8 h-8 text-foreground" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">{r.role}</h3>
+                <h3 className="font-semibold text-foreground text-lg mb-2">{r.role}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{r.desc}</p>
               </motion.div>
             ))}
@@ -380,19 +382,19 @@ export default function LandingPage() {
       </section>
 
       {/* Advanced Features */}
-      <section className="max-w-7xl mx-auto px-6 lg:px-12 py-20 lg:py-24">
-        <motion.div {...fadeUp} className="text-center mb-14">
+      <section className="max-w-7xl mx-auto px-6 lg:px-12 py-24 lg:py-28">
+        <motion.div {...fadeUp} className="text-center mb-16">
           <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">Advanced</span>
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-4">Built for serious project management</h2>
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mt-5">Built for serious project management</h2>
         </motion.div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {advancedFeatures.map((f, i) => (
-            <motion.div key={f.title} {...stagger} transition={{ delay: i * 0.08 }} className="group flex items-start gap-4 glass-card-hover p-5">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+            <motion.div key={f.title} {...stagger} transition={{ delay: i * 0.08 }} className="group flex items-start gap-5 soft-card-hover p-6">
+              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
                 <f.icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground mb-1">{f.title}</h3>
+                <h3 className="font-semibold text-foreground mb-1.5">{f.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             </motion.div>
@@ -402,15 +404,15 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="border-t border-border">
-        <div className="max-w-4xl mx-auto px-6 lg:px-12 py-20 lg:py-24 text-center">
+        <div className="max-w-4xl mx-auto px-6 lg:px-12 py-24 lg:py-28 text-center">
           <motion.div {...fadeUp}>
             <h2 className="text-3xl lg:text-4xl font-bold text-foreground">Start managing your projects the smarter way</h2>
-            <p className="text-muted-foreground mt-4 max-w-xl mx-auto">Join construction teams who deliver projects on time and on budget with BYLD.</p>
+            <p className="text-muted-foreground mt-4 max-w-xl mx-auto text-lg">Join construction teams who deliver projects on time and on budget with BYLD.</p>
             <div className="flex items-center justify-center gap-3 mt-8">
-              <Link to="/login" className="gradient-primary text-primary-foreground px-8 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-lg shadow-primary/20">
+              <Link to="/login" className="gradient-primary text-primary-foreground px-8 py-3.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity flex items-center gap-2 shadow-xl shadow-primary/25">
                 Get Started <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link to="/pricing" className="border border-border text-foreground px-8 py-3.5 rounded-xl text-sm font-semibold hover:bg-muted transition-colors">
+              <Link to="/pricing" className="border border-border text-foreground px-8 py-3.5 rounded-xl text-sm font-semibold hover:bg-card transition-colors">
                 View Pricing
               </Link>
             </div>
