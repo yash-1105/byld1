@@ -166,27 +166,33 @@ export default function SegmentMapView() {
                 onClick={() => { setActiveSegment(seg); setDetailTab('tasks'); }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`absolute rounded-xl border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 cursor-pointer group ${
-                  isActive ? 'segment-glow border-primary bg-primary/10 z-10' : 'border-border bg-card/80 hover:border-primary/40 hover:bg-card'
+                className={`absolute rounded-2xl border-2 transition-all duration-300 overflow-hidden cursor-pointer group ${
+                  isActive ? 'segment-glow border-primary z-10' : 'border-border hover:border-primary/40'
                 }`}
                 style={{ top: seg.position.top, left: seg.position.left, width: seg.position.width, height: seg.position.height }}
               >
-                <span className={`text-sm font-semibold ${isActive ? 'text-primary' : 'text-foreground'} transition-colors`}>
-                  {seg.name}
-                </span>
-                <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.color}`}>
-                  {sc.label}
-                </span>
-                <div className="w-16 h-1.5 rounded-full bg-muted mt-1 overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${seg.progress}%` }}
-                    transition={{ duration: 1, delay: 0.3 }}
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: seg.color }}
-                  />
+                {seg.image && (
+                  <img src={seg.image} alt={seg.name} className="absolute inset-0 w-full h-full object-cover opacity-30 group-hover:opacity-40 transition-opacity" loading="lazy" />
+                )}
+                <div className={`absolute inset-0 ${isActive ? 'bg-primary/10' : 'bg-card/70'} transition-colors`} />
+                <div className="relative flex flex-col items-center justify-center gap-1.5 h-full">
+                  <span className={`text-sm font-semibold ${isActive ? 'text-primary' : 'text-foreground'} transition-colors drop-shadow-sm`}>
+                    {seg.name}
+                  </span>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.color}`}>
+                    {sc.label}
+                  </span>
+                  <div className="w-16 h-1.5 rounded-full bg-muted mt-1 overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${seg.progress}%` }}
+                      transition={{ duration: 1, delay: 0.3 }}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: seg.color }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{seg.progress}%</span>
                 </div>
-                <span className="text-[10px] text-muted-foreground">{seg.progress}%</span>
               </motion.button>
             );
           })}
