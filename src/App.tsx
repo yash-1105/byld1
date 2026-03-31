@@ -11,6 +11,7 @@ import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ProjectsPage from "@/pages/ProjectsPage";
+import ProjectDetailPage from "@/pages/ProjectDetailPage";
 import TasksPage from "@/pages/TasksPage";
 import SiteUpdatesPage from "@/pages/SiteUpdatesPage";
 import BudgetPage from "@/pages/BudgetPage";
