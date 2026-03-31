@@ -1,95 +1,120 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Clock, Filter, FileText, AlertTriangle } from 'lucide-react';
-import { toast } from 'sonner';
+import { ClipboardCheck, Layers, DollarSign, FileText, AlertTriangle, ShoppingCart, Wrench, Filter } from 'lucide-react';
+import ApprovalCard, { type ApprovalItem } from '@/components/projects/ApprovalCard';
 
-const initialApprovals = [
-  { id: '1', title: 'Change Order #12 - Additional Steel', project: 'Skyline Tower', type: 'Change Order', status: 'pending' as const, date: '2025-03-28', amount: '$45,000', description: 'Additional structural steel required for reinforced beam connections on levels 30-35.' },
-  { id: '2', title: 'Landscape Design Revision', project: 'Harbor View', type: 'Design Change', status: 'pending' as const, date: '2025-03-26', amount: '-', description: 'Updated landscape plan incorporating native plantings and rainwater collection.' },
-  { id: '3', title: 'Foundation Inspection Sign-off', project: 'Skyline Tower', type: 'Inspection', status: 'approved' as const, date: '2025-03-20', amount: '-', description: 'Final foundation inspection completed. All structural tests passed.' },
-  { id: '4', title: 'Material Substitution - Facade', project: 'Green Valley', type: 'Material', status: 'rejected' as const, date: '2025-03-18', amount: '$12,000', description: 'Request to substitute aluminum cladding with composite panels.' },
-  { id: '5', title: 'MEP Systems Approval', project: 'Skyline Tower', type: 'Design Change', status: 'pending' as const, date: '2025-03-29', amount: '$8,500', description: 'Final mechanical and plumbing system layout for floors 20-28.' },
+const categories = [
+  { key: 'all', label: 'All Requests', icon: ClipboardCheck },
+  { key: 'design', label: 'Design', icon: Layers },
+  { key: 'procurement', label: 'Procurement', icon: ShoppingCart },
+  { key: 'financial', label: 'Financial', icon: DollarSign },
+  { key: 'contracts', label: 'Contracts', icon: FileText },
+  { key: 'issues', label: 'Issues', icon: AlertTriangle },
 ];
 
-type FilterType = 'all' | 'pending' | 'approved' | 'rejected';
+const initialApprovals: ApprovalItem[] = [
+  { id: '1', title: 'Modern Wall Light #2', category: 'Design', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=400&fit=crop', status: 'pending', requestedBy: 'Sarah Anderson', date: 'Mar 28, 2025', cost: '$1,850', description: 'Brass three-light pendant cluster for the dining area, replaces single fixture.' },
+  { id: '2', title: 'Italian Marble Selection', category: 'Procurement', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop', status: 'pending', requestedBy: 'Mike Johnson', date: 'Mar 27, 2025', cost: '$28,000', description: 'Calacatta Gold marble for master bathroom and kitchen countertops.' },
+  { id: '3', title: 'HVAC System Upgrade', category: 'Financial', image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=600&h=400&fit=crop', status: 'pending', requestedBy: 'Alex Rivera', date: 'Mar 26, 2025', cost: '$45,000', description: 'Upgrade from standard to smart HVAC with zone control for all floors.' },
+  { id: '4', title: 'Floor Tile — Herringbone Oak', category: 'Design', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=400&fit=crop', status: 'pending', requestedBy: 'Sarah Anderson', date: 'Mar 25, 2025', cost: '$3,600', description: 'Engineered oak herringbone tiles for living room and hallway.' },
+  { id: '5', title: 'Velvet Sofa — Forest Green', category: 'Design', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=400&fit=crop', status: 'approved', requestedBy: 'Sarah Anderson', date: 'Mar 20, 2025', cost: '$2,900' },
+  { id: '6', title: 'Electrical Subcontractor', category: 'Contracts', image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&h=400&fit=crop', status: 'approved', requestedBy: 'Mike Johnson', date: 'Mar 18, 2025', cost: '$95,000' },
+  { id: '7', title: 'Black Marble Countertop', category: 'Procurement', image: 'https://images.unsplash.com/photo-1600566752355-35792bedcfea?w=600&h=400&fit=crop', status: 'rejected', requestedBy: 'Mike Johnson', date: 'Mar 15, 2025', cost: '$6,200', description: 'Clashes with warm palette — architect recommended lighter option.' },
+];
+
+type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected' | 'on_hold';
 
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState(initialApprovals);
-  const [filter, setFilter] = useState<FilterType>('all');
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
-  const handleAction = (id: string, action: 'approved' | 'rejected') => {
+  const handleAction = (id: string, action: 'approved' | 'rejected' | 'on_hold', reason?: string) => {
     setApprovals(prev => prev.map(a => a.id === id ? { ...a, status: action } : a));
-    toast.success(`Item ${action}`);
   };
 
-  const filtered = filter === 'all' ? approvals : approvals.filter(a => a.status === (filter as string));
+  const filtered = approvals
+    .filter(a => activeCategory === 'all' || a.category.toLowerCase() === activeCategory)
+    .filter(a => statusFilter === 'all' || a.status === statusFilter);
+
   const pendingCount = approvals.filter(a => a.status === 'pending').length;
 
+  const statusFilters: { key: StatusFilter; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'approved', label: 'Approved' },
+    { key: 'rejected', label: 'Rejected' },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Approvals</h1>
-          <p className="text-muted-foreground text-sm mt-1">{pendingCount} items pending review</p>
-        </div>
-        {pendingCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-warning/10 text-warning text-sm font-medium">
-            <AlertTriangle className="w-4 h-4" />
-            {pendingCount} pending
-          </div>
-        )}
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-2">
-        {(['all', 'pending', 'approved', 'rejected'] as FilterType[]).map(f => (
-          <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors capitalize ${filter === f ? 'gradient-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:text-foreground'}`}>
-            {f} {f !== 'all' ? `(${approvals.filter(a => a.status === (f as typeof a.status)).length})` : `(${approvals.length})`}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        {filtered.map((a, i) => (
-          <motion.div key={a.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-card overflow-hidden">
-            <button onClick={() => setExpanded(expanded === a.id ? null : a.id)} className="w-full text-left p-5">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <h3 className="font-semibold text-foreground text-sm">{a.title}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      a.status === 'approved' ? 'bg-success/10 text-success' : a.status === 'rejected' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'
-                    }`}>{a.status}</span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{a.project} · {a.type} · {a.date} {a.amount !== '-' && `· ${a.amount}`}</div>
-                </div>
-                {a.status === 'pending' && (
-                  <div className="flex gap-2 ml-4">
-                    <button onClick={(e) => { e.stopPropagation(); handleAction(a.id, 'approved'); }} className="p-2 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors">
-                      <CheckCircle className="w-4 h-4" />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleAction(a.id, 'rejected'); }} className="p-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
-                      <XCircle className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
+    <div className="flex gap-6 min-h-[calc(100vh-120px)]">
+      {/* Sidebar */}
+      <div className="w-56 flex-shrink-0">
+        <div className="soft-card p-4 space-y-1 sticky top-6">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-3">Categories</h3>
+          {categories.map(cat => (
+            <button
+              key={cat.key}
+              onClick={() => setActiveCategory(cat.key)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                activeCategory === cat.key
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              <cat.icon className="w-4 h-4" />
+              {cat.label}
+              {cat.key === 'all' && pendingCount > 0 && (
+                <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded-full bg-warning/10 text-warning font-semibold">{pendingCount}</span>
+              )}
             </button>
-            {expanded === a.id && (
-              <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} className="overflow-hidden">
-                <div className="px-5 pb-5 pt-0 border-t border-border mt-0 pt-4">
-                  <p className="text-sm text-muted-foreground">{a.description}</p>
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
-        ))}
+          ))}
+        </div>
+      </div>
+
+      {/* Main */}
+      <div className="flex-1 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Approval Center</h1>
+            <p className="text-muted-foreground text-sm mt-1">{pendingCount} items awaiting review</p>
+          </div>
+          {pendingCount > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-warning/10 text-warning text-sm font-medium">
+              <AlertTriangle className="w-4 h-4" />
+              {pendingCount} pending
+            </div>
+          )}
+        </div>
+
+        {/* Status filter */}
+        <div className="flex gap-2">
+          {statusFilters.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setStatusFilter(f.key)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                statusFilter === f.key
+                  ? 'gradient-primary text-primary-foreground'
+                  : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          {filtered.map((item, i) => (
+            <ApprovalCard key={item.id} item={item} index={i} onAction={handleAction} />
+          ))}
+        </div>
+
         {filtered.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <CheckCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No {filter !== 'all' ? filter : ''} approvals found</p>
+          <div className="text-center py-20 soft-card">
+            <ClipboardCheck className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">No approvals match your filters</p>
           </div>
         )}
       </div>

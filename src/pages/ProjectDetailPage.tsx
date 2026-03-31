@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Users, DollarSign, Calendar, CheckSquare, ClipboardCheck, ShoppingCart, Layers } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, CheckSquare, ClipboardCheck, ShoppingCart, Layers, Clock, TrendingUp } from 'lucide-react';
 import SegmentMapView from '@/components/projects/SegmentMapView';
 
 const workflowTabs = [
@@ -10,6 +10,14 @@ const workflowTabs = [
   { key: 'tasks', label: 'Tasks', icon: CheckSquare },
   { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
   { key: 'procurement', label: 'Procurement', icon: ShoppingCart },
+  { key: 'timeline', label: 'Timeline', icon: Clock },
+];
+
+const timelineItems = [
+  { phase: 'Design', start: 'Jan 2025', end: 'Feb 2025', progress: 100, status: 'completed' },
+  { phase: 'Approvals', start: 'Feb 2025', end: 'Mar 2025', progress: 85, status: 'in_progress' },
+  { phase: 'Construction', start: 'Mar 2025', end: 'Aug 2025', progress: 35, status: 'in_progress' },
+  { phase: 'Finishing', start: 'Aug 2025', end: 'Oct 2025', progress: 0, status: 'pending' },
 ];
 
 export default function ProjectDetailPage() {
@@ -60,18 +68,12 @@ export default function ProjectDetailPage() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Progress', value: `${project.progress}%`, icon: Layers, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Progress', value: `${project.progress}%`, icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/10' },
           { label: 'Tasks Done', value: `${doneTasks}/${projectTasks.length}`, icon: CheckSquare, color: 'text-success', bg: 'bg-success/10' },
           { label: 'Budget Used', value: `$${(project.spent / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-warning', bg: 'bg-warning/10' },
-          { label: 'Team Members', value: project.team.length.toString(), icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Team', value: project.team.length.toString(), icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
         ].map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="soft-card p-5"
-          >
+          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="soft-card p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{s.label}</p>
@@ -86,12 +88,12 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Workflow Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {workflowTabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
               activeTab === tab.key
                 ? 'gradient-primary text-primary-foreground shadow-lg shadow-primary/20'
                 : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -110,12 +112,12 @@ export default function ProjectDetailPage() {
         <div className="soft-card p-6 space-y-3">
           <h3 className="font-semibold text-foreground mb-4">Project Tasks</h3>
           {projectTasks.length > 0 ? projectTasks.map(task => (
-            <div key={task.id} className="flex items-center gap-4 p-4 rounded-xl bg-muted/40 border border-border/50">
+            <div key={task.id} className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                task.status === 'done' ? 'bg-success/10' : task.status === 'in_progress' ? 'bg-primary/10' : task.status === 'review' ? 'bg-warning/10' : 'bg-muted'
+                task.status === 'done' ? 'bg-success/10' : task.status === 'in_progress' ? 'bg-primary/10' : 'bg-muted'
               }`}>
                 <CheckSquare className={`w-4 h-4 ${
-                  task.status === 'done' ? 'text-success' : task.status === 'in_progress' ? 'text-primary' : task.status === 'review' ? 'text-warning' : 'text-muted-foreground'
+                  task.status === 'done' ? 'text-success' : task.status === 'in_progress' ? 'text-primary' : 'text-muted-foreground'
                 }`} />
               </div>
               <div className="flex-1">
@@ -141,7 +143,7 @@ export default function ProjectDetailPage() {
             { title: 'Ceiling Design Revision', amount: '-', status: 'pending' },
             { title: 'Material Selection — Italian Marble', amount: '$28,000', status: 'approved' },
           ].map((a, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-muted/40 border border-border/50">
+            <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border/50">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${a.status === 'approved' ? 'bg-success/10' : 'bg-warning/10'}`}>
                 <ClipboardCheck className={`w-4 h-4 ${a.status === 'approved' ? 'text-success' : 'text-warning'}`} />
               </div>
@@ -161,7 +163,7 @@ export default function ProjectDetailPage() {
         <div className="soft-card p-6 space-y-3">
           <h3 className="font-semibold text-foreground mb-4">Procurement Status</h3>
           {procurementItems.map((item, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-muted/40 border border-border/50">
+            <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 border border-border/50">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                 <ShoppingCart className="w-4 h-4 text-primary" />
               </div>
@@ -174,6 +176,50 @@ export default function ProjectDetailPage() {
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {activeTab === 'timeline' && (
+        <div className="soft-card p-6 space-y-6">
+          <h3 className="font-semibold text-foreground">Project Timeline</h3>
+          <div className="space-y-4">
+            {timelineItems.map((item, i) => (
+              <motion.div key={item.phase} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    item.status === 'completed' ? 'bg-success/10' : item.status === 'in_progress' ? 'bg-primary/10' : 'bg-muted'
+                  }`}>
+                    {item.status === 'completed' ? (
+                      <CheckSquare className="w-4 h-4 text-success" />
+                    ) : (
+                      <Clock className={`w-4 h-4 ${item.status === 'in_progress' ? 'text-primary' : 'text-muted-foreground'}`} />
+                    )}
+                  </div>
+                  {i < timelineItems.length - 1 && <div className="w-px h-12 bg-border mt-2" />}
+                </div>
+                <div className="flex-1 pb-6">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-foreground">{item.phase}</h4>
+                    <span className="text-xs text-muted-foreground">{item.start} — {item.end}</span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                      <span>Progress</span>
+                      <span className="font-medium">{item.progress}%</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${item.progress}%` }}
+                        transition={{ duration: 1, delay: 0.3 + i * 0.15 }}
+                        className={`h-full rounded-full ${item.status === 'completed' ? 'bg-success' : 'gradient-primary'}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       )}
     </div>
