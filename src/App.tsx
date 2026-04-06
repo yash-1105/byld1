@@ -5,28 +5,44 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
+import { Suspense, lazy } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import AIAssistant from "@/components/AIAssistant";
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
-import DashboardPage from "@/pages/DashboardPage";
-import ProjectsPage from "@/pages/ProjectsPage";
-import ProjectDetailPage from "@/pages/ProjectDetailPage";
-import TasksPage from "@/pages/TasksPage";
-import SiteUpdatesPage from "@/pages/SiteUpdatesPage";
-import BudgetPage from "@/pages/BudgetPage";
-import DocumentsPage from "@/pages/DocumentsPage";
-import ChatPage from "@/pages/ChatPage";
-import TeamPage from "@/pages/TeamPage";
-import CalendarPage from "@/pages/CalendarPage";
-import SettingsPage from "@/pages/SettingsPage";
-import ApprovalsPage from "@/pages/ApprovalsPage";
-import ConsultationsPage from "@/pages/ConsultationsPage";
-import NotificationsPage from "@/pages/NotificationsPage";
-import StaticPage from "@/pages/StaticPage";
 import NotFound from "@/pages/NotFound";
 
+// Lazy load heavy pages
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const ProjectsPage = lazy(() => import("@/pages/ProjectsPage"));
+const ProjectDetailPage = lazy(() => import("@/pages/ProjectDetailPage"));
+const TasksPage = lazy(() => import("@/pages/TasksPage"));
+const SiteUpdatesPage = lazy(() => import("@/pages/SiteUpdatesPage"));
+const BudgetPage = lazy(() => import("@/pages/BudgetPage"));
+const DocumentsPage = lazy(() => import("@/pages/DocumentsPage"));
+const ChatPage = lazy(() => import("@/pages/ChatPage"));
+const TeamPage = lazy(() => import("@/pages/TeamPage"));
+const CalendarPage = lazy(() => import("@/pages/CalendarPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const ApprovalsPage = lazy(() => import("@/pages/ApprovalsPage"));
+const ConsultationsPage = lazy(() => import("@/pages/ConsultationsPage"));
+const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
+const ProcurementPage = lazy(() => import("@/pages/ProcurementPage"));
+const TimelinePage = lazy(() => import("@/pages/TimelinePage"));
+const StaticPage = lazy(() => import("@/pages/StaticPage"));
+
 const queryClient = new QueryClient();
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <span className="text-xs text-muted-foreground">Loading...</span>
+      </div>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -45,32 +61,34 @@ function AppRoutes() {
 
         {/* Protected dashboard routes */}
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/projects/:id" element={<ProjectDetailPage />} />
-          <Route path="/tasks" element={<TasksPage />} />
-          <Route path="/site-updates" element={<SiteUpdatesPage />} />
-          <Route path="/budget" element={<BudgetPage />} />
-          <Route path="/documents" element={<DocumentsPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/team" element={<TeamPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/approvals" element={<ApprovalsPage />} />
-          <Route path="/consultations" element={<ConsultationsPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
+          <Route path="/projects" element={<Suspense fallback={<PageLoader />}><ProjectsPage /></Suspense>} />
+          <Route path="/projects/:id" element={<Suspense fallback={<PageLoader />}><ProjectDetailPage /></Suspense>} />
+          <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><TasksPage /></Suspense>} />
+          <Route path="/site-updates" element={<Suspense fallback={<PageLoader />}><SiteUpdatesPage /></Suspense>} />
+          <Route path="/budget" element={<Suspense fallback={<PageLoader />}><BudgetPage /></Suspense>} />
+          <Route path="/documents" element={<Suspense fallback={<PageLoader />}><DocumentsPage /></Suspense>} />
+          <Route path="/chat" element={<Suspense fallback={<PageLoader />}><ChatPage /></Suspense>} />
+          <Route path="/team" element={<Suspense fallback={<PageLoader />}><TeamPage /></Suspense>} />
+          <Route path="/calendar" element={<Suspense fallback={<PageLoader />}><CalendarPage /></Suspense>} />
+          <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
+          <Route path="/approvals" element={<Suspense fallback={<PageLoader />}><ApprovalsPage /></Suspense>} />
+          <Route path="/consultations" element={<Suspense fallback={<PageLoader />}><ConsultationsPage /></Suspense>} />
+          <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
+          <Route path="/procurement" element={<Suspense fallback={<PageLoader />}><ProcurementPage /></Suspense>} />
+          <Route path="/timeline" element={<Suspense fallback={<PageLoader />}><TimelinePage /></Suspense>} />
         </Route>
 
         {/* Static/footer pages */}
-        <Route path="/features" element={<StaticPage page="features" />} />
-        <Route path="/pricing" element={<StaticPage page="pricing" />} />
-        <Route path="/integrations" element={<StaticPage page="integrations" />} />
-        <Route path="/about" element={<StaticPage page="about" />} />
-        <Route path="/blog" element={<StaticPage page="blog" />} />
-        <Route path="/careers" element={<StaticPage page="careers" />} />
-        <Route path="/privacy" element={<StaticPage page="privacy" />} />
-        <Route path="/terms" element={<StaticPage page="terms" />} />
-        <Route path="/security" element={<StaticPage page="security" />} />
+        <Route path="/features" element={<Suspense fallback={<PageLoader />}><StaticPage page="features" /></Suspense>} />
+        <Route path="/pricing" element={<Suspense fallback={<PageLoader />}><StaticPage page="pricing" /></Suspense>} />
+        <Route path="/integrations" element={<Suspense fallback={<PageLoader />}><StaticPage page="integrations" /></Suspense>} />
+        <Route path="/about" element={<Suspense fallback={<PageLoader />}><StaticPage page="about" /></Suspense>} />
+        <Route path="/blog" element={<Suspense fallback={<PageLoader />}><StaticPage page="blog" /></Suspense>} />
+        <Route path="/careers" element={<Suspense fallback={<PageLoader />}><StaticPage page="careers" /></Suspense>} />
+        <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><StaticPage page="privacy" /></Suspense>} />
+        <Route path="/terms" element={<Suspense fallback={<PageLoader />}><StaticPage page="terms" /></Suspense>} />
+        <Route path="/security" element={<Suspense fallback={<PageLoader />}><StaticPage page="security" /></Suspense>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
