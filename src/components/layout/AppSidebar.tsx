@@ -43,20 +43,25 @@ export default function AppSidebar() {
   return (
     <motion.aside
       animate={{ width: collapsed ? 72 : 260 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       className="h-screen bg-card border-r border-border flex flex-col sticky top-0 z-30 overflow-hidden"
     >
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-border">
-        <div className="w-9 h-9 gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
+      <div className="h-16 flex items-center px-4 border-b border-border/60">
+        <motion.div
+          whileHover={{ rotate: 8, scale: 1.05 }}
+          transition={{ type: 'spring', stiffness: 300 }}
+          className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-primary/15"
+        >
           <Building2 className="w-4 h-4 text-primary-foreground" />
-        </div>
+        </motion.div>
         <AnimatePresence>
           {!collapsed && (
             <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -8 }}
+              transition={{ duration: 0.2 }}
               className="ml-3 font-bold text-lg tracking-tight text-foreground"
             >
               BYLD
@@ -66,20 +71,27 @@ export default function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
         {filteredNav.map(item => {
-          const active = location.pathname === item.path;
+          const active = location.pathname === item.path || (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group ${
+              className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
                 active
                   ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
               }`}
             >
-              <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-primary' : ''}`} />
+              {active && (
+                <motion.div
+                  layoutId="sidebar-active"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary"
+                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                />
+              )}
+              <item.icon className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${active ? 'text-primary' : 'group-hover:text-foreground'}`} />
               <AnimatePresence>
                 {!collapsed && (
                   <motion.span
@@ -98,9 +110,9 @@ export default function AppSidebar() {
       </nav>
 
       {/* User + Collapse */}
-      <div className="p-3 border-t border-border space-y-2">
+      <div className="p-3 border-t border-border/60 space-y-2">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-xs font-semibold text-primary-foreground flex-shrink-0">
+          <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-xs font-semibold text-primary-foreground flex-shrink-0 shadow-sm shadow-primary/15">
             {user.avatar}
           </div>
           <AnimatePresence>
@@ -115,14 +127,14 @@ export default function AppSidebar() {
         <div className="flex gap-1">
           <button
             onClick={logout}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors flex-1"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors flex-1"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
             {!collapsed && <span>Logout</span>}
           </button>
           <button
             onClick={() => setCollapsed(c => !c)}
-            className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="p-2 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
           >
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>

@@ -16,7 +16,7 @@ export interface ApprovalItem {
 }
 
 const statusStyles: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: 'bg-warning/10', text: 'text-warning', label: 'Pending' },
+  pending: { bg: 'bg-warning/10', text: 'text-warning', label: 'Pending Approval' },
   approved: { bg: 'bg-success/10', text: 'text-success', label: 'Approved' },
   rejected: { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Rejected' },
   on_hold: { bg: 'bg-muted', text: 'text-muted-foreground', label: 'On Hold' },
@@ -58,30 +58,30 @@ export default function ApprovalCard({ item, index, onAction }: Props) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16, rotate: -0.5 }}
+      initial={{ opacity: 0, y: 20, rotate: -1 }}
       animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={{ delay: index * 0.06, type: 'spring', stiffness: 200 }}
-      whileHover={{ y: -4, boxShadow: '0 20px 60px -15px rgba(0,0,0,0.12)' }}
+      transition={{ delay: index * 0.06, type: 'spring', stiffness: 180, damping: 20 }}
+      whileHover={{ y: -8, boxShadow: '0 24px 64px -16px rgba(0,0,0,0.14)' }}
       className="soft-card overflow-hidden group"
     >
       {/* Image */}
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative h-52 overflow-hidden">
         <img
           src={item.image}
           alt={item.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/50 to-transparent" />
-        <span className={`absolute top-3 right-3 text-[11px] px-3 py-1 rounded-full font-semibold ${st.bg} ${st.text} backdrop-blur-md`}>
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-foreground/10 to-transparent" />
+        <span className={`absolute top-3 right-3 text-[11px] px-3 py-1.5 rounded-full font-semibold ${st.bg} ${st.text} backdrop-blur-md border border-current/10`}>
           {st.label}
         </span>
         {item.cost && (
-          <span className="absolute top-3 left-3 text-[11px] px-3 py-1 rounded-full font-semibold bg-card/80 text-foreground backdrop-blur-md">
+          <span className="absolute top-3 left-3 text-[11px] px-3 py-1.5 rounded-full font-semibold bg-card/80 text-foreground backdrop-blur-md border border-border/30">
             {item.cost}
           </span>
         )}
-        <div className="absolute bottom-3 left-4 right-4">
-          <h3 className="text-primary-foreground font-semibold text-base drop-shadow-lg">{item.title}</h3>
+        <div className="absolute bottom-4 left-5 right-5">
+          <h3 className="text-primary-foreground font-bold text-lg drop-shadow-lg">{item.title}</h3>
           <p className="text-primary-foreground/70 text-xs mt-0.5">{item.category}</p>
         </div>
       </div>
@@ -100,15 +100,30 @@ export default function ApprovalCard({ item, index, onAction }: Props) {
         {/* Actions */}
         {item.status === 'pending' && !showReasonInput && (
           <div className="flex gap-2 pt-1">
-            <button onClick={() => handleAction('approved')} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-success/10 text-success text-sm font-medium hover:bg-success/20 transition-colors">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => handleAction('approved')}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-success/10 text-success text-sm font-semibold hover:bg-success/20 transition-colors border border-success/20"
+            >
               <Check className="w-4 h-4" /> Approve
-            </button>
-            <button onClick={() => handleAction('rejected')} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition-colors">
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => handleAction('rejected')}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors border border-destructive/20"
+            >
               <X className="w-4 h-4" /> Reject
-            </button>
-            <button onClick={() => handleAction('on_hold')} className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-warning/10 text-warning text-sm font-medium hover:bg-warning/20 transition-colors">
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleAction('on_hold')}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-warning/10 text-warning text-sm font-semibold hover:bg-warning/20 transition-colors border border-warning/20"
+            >
               <Pause className="w-4 h-4" />
-            </button>
+            </motion.button>
           </div>
         )}
 
@@ -120,16 +135,22 @@ export default function ApprovalCard({ item, index, onAction }: Props) {
               <textarea
                 value={reason}
                 onChange={e => setReason(e.target.value)}
-                placeholder={`Reason for ${pendingAction === 'rejected' ? 'rejection' : 'holding'}...`}
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-muted/30 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                placeholder="Reason for decision..."
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-muted/20 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 resize-none transition-all"
                 rows={2}
               />
             </div>
+            <p className="text-[10px] text-muted-foreground">To confirm your decision, you must provide a reason.</p>
             <div className="flex gap-2">
-              <button onClick={submitWithReason} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors ${pendingAction === 'rejected' ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 'bg-warning/10 text-warning hover:bg-warning/20'}`}>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={submitWithReason}
+                className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors border ${pendingAction === 'rejected' ? 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20' : 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20'}`}
+              >
                 Confirm {pendingAction === 'rejected' ? 'Rejection' : 'Hold'}
-              </button>
-              <button onClick={() => { setShowReasonInput(false); setPendingAction(null); }} className="px-4 py-2.5 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
+              </motion.button>
+              <button onClick={() => { setShowReasonInput(false); setPendingAction(null); }} className="px-5 py-3 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
                 Cancel
               </button>
             </div>
