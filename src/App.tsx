@@ -57,7 +57,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
 
         {/* Protected dashboard routes */}
         <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
