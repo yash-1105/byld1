@@ -49,13 +49,7 @@ export default function AppSidebar() {
     >
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-border/60">
-        <motion.div
-          whileHover={{ rotate: 8, scale: 1.05 }}
-          transition={{ type: 'spring', stiffness: 300 }}
-          className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-primary/15"
-        >
-          <Building2 className="w-4 h-4 text-primary-foreground" />
-        </motion.div>
+        <img src="/images/byld-logo.jpeg" alt="BYLD" className="w-9 h-9 rounded-xl flex-shrink-0 object-cover" />
         <AnimatePresence>
           {!collapsed && (
             <motion.span
@@ -63,7 +57,8 @@ export default function AppSidebar() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.2 }}
-              className="ml-3 font-bold text-lg tracking-tight text-foreground"
+              className="ml-3 text-lg tracking-[0.2em] text-foreground"
+              style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}
             >
               BYLD
             </motion.span>
