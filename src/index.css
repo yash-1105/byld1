@@ -128,7 +128,7 @@
     background: linear-gradient(
       110deg,
       transparent 33%,
-      hsl(35 30% 96% / 0.6) 50%,
+      hsl(0 0% 99% / 0.6) 50%,
       transparent 67%
     );
     background-size: 300% 100%;
