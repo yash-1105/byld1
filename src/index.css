@@ -113,7 +113,7 @@
   }
 
   .segment-glow {
-    box-shadow: 0 0 30px -4px hsl(28 60% 48% / 0.25);
+    box-shadow: 0 0 30px -4px hsl(28 55% 50% / 0.2);
   }
 
   .magnetic-hover {
