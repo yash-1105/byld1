@@ -198,7 +198,7 @@ export default function ArchitectDashboard() {
               <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
-              <Bar dataKey="progress" fill="hsl(217, 91%, 60%)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="progress" fill="hsl(28, 60%, 48%)" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
