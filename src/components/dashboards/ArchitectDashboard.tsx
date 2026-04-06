@@ -26,7 +26,7 @@ export default function ArchitectDashboard() {
 
   const projectProgress = projects.map(p => ({ name: p.name.split(' ')[0], progress: p.progress }));
   const budgetByProject = projects.map(p => ({ name: p.name.split(' ')[0], budget: p.budget / 1000000, spent: p.spent / 1000000 }));
-  const statusColors = ['hsl(217, 91%, 60%)', 'hsl(152, 60%, 42%)', 'hsl(38, 92%, 50%)', 'hsl(262, 83%, 58%)'];
+  const statusColors = ['hsl(28, 60%, 48%)', 'hsl(158, 50%, 42%)', 'hsl(38, 85%, 52%)', 'hsl(262, 60%, 55%)'];
   const tasksByStatus = [
     { name: 'To Do', value: tasks.filter(t => t.status === 'todo').length },
     { name: 'In Progress', value: tasks.filter(t => t.status === 'in_progress').length },
@@ -198,7 +198,7 @@ export default function ArchitectDashboard() {
               <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
-              <Bar dataKey="progress" fill="hsl(217, 91%, 60%)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="progress" fill="hsl(28, 60%, 48%)" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
@@ -231,8 +231,8 @@ export default function ArchitectDashboard() {
             <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={{ borderRadius: 16 }} />
-            <Bar dataKey="budget" fill="hsl(217, 91%, 60%)" radius={[8, 8, 0, 0]} name="Budget" />
-            <Bar dataKey="spent" fill="hsl(38, 92%, 50%)" radius={[8, 8, 0, 0]} name="Spent" />
+            <Bar dataKey="budget" fill="hsl(28, 60%, 48%)" radius={[8, 8, 0, 0]} name="Budget" />
+            <Bar dataKey="spent" fill="hsl(38, 85%, 52%)" radius={[8, 8, 0, 0]} name="Spent" />
           </BarChart>
         </ResponsiveContainer>
       </motion.div>
