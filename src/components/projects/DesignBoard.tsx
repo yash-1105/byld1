@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   StickyNote, Grid3X3, Trash2, Check, X, Clock, MessageSquare,
   User, AlertTriangle, Pin, GripVertical, Tag, Filter, Eye,
