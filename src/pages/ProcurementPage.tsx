@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShoppingCart, Star, MapPin, Clock, ChevronRight, Filter, Search,
-  Phone, Mail, ArrowLeft, Check, X, Package, Truck, DollarSign,
-  BarChart3, Users, Calendar, FileText, TrendingUp
+  Star, MapPin, Clock, ChevronRight, Search,
+  Mail, ArrowLeft, Check, X, Package, Truck, DollarSign,
+  BarChart3, Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 

@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Clock, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight,
-  Filter, Users, Layers, Info, ArrowRight, ZoomIn, ZoomOut
+  Clock, AlertTriangle, CheckCircle,
+  Filter, Layers
 } from 'lucide-react';
 
 interface GanttTask {

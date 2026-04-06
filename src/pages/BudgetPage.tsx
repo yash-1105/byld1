@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, DollarSign, TrendingUp, TrendingDown, FileText, CreditCard, Receipt, AlertTriangle, ArrowUpRight, PieChart as PieIcon } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, CartesianGrid } from 'recharts';
+import { Plus, X, DollarSign, TrendingUp, TrendingDown, CreditCard, AlertTriangle, PieChart as PieIcon } from 'lucide-react';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, CartesianGrid } from 'recharts';
 import { toast } from 'sonner';
 
 const segmentBudgets = [
