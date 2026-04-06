@@ -168,7 +168,7 @@ export default function TimelinePage() {
                     const leftPct = (task.startWeek / totalWeeks) * 100;
                     const widthPct = (task.duration / totalWeeks) * 100;
                     const isHovered = hoveredTask === task.id;
-                    const depTask = task.dependencies?.[0] ? ganttTasks.find(t => t.id === task.dependencies![0]) : null;
+                    const _depTask = task.dependencies?.[0] ? ganttTasks.find(t => t.id === task.dependencies![0]) : null;
 
                     return (
                       <div
