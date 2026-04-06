@@ -94,16 +94,10 @@ export default function LandingPage() {
         transition={{ duration: 0.6 }}
         className="h-16 bg-card/60 backdrop-blur-2xl border-b border-border/50 flex items-center justify-between px-6 lg:px-12 sticky top-0 z-50"
       >
-        <div className="flex items-center gap-2.5">
-          <motion.div
-            whileHover={{ rotate: 10, scale: 1.1 }}
-            transition={{ type: 'spring', stiffness: 300 }}
-            className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"
-          >
-            <Building2 className="w-4 h-4 text-primary-foreground" />
-          </motion.div>
-          <span className="text-xl font-bold text-foreground tracking-tight">BYLD</span>
-        </div>
+        <Link to="/" className="flex items-center gap-3">
+          <img src="/images/byld-logo.jpeg" alt="BYLD" className="h-8 w-8 rounded-lg object-cover" />
+          <span className="text-xl tracking-[0.2em] text-foreground" style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}>BYLD</span>
+        </Link>
         <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
           {['Features', 'Pricing', 'About', 'Blog'].map(l => (
             <Link key={l} to={`/${l.toLowerCase()}`} className="relative group hover:text-foreground transition-colors">
