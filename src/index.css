@@ -136,7 +136,7 @@
   }
 
   .text-glow {
-    text-shadow: 0 0 40px hsl(28 60% 48% / 0.3);
+    text-shadow: 0 0 40px hsl(28 55% 50% / 0.25);
   }
 
   .card-3d {
