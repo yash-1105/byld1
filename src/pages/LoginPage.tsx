@@ -43,12 +43,10 @@ export default function LoginPage() {
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.15, type: 'spring' }}
-            className="inline-flex items-center gap-2.5 mb-4"
+            className="inline-flex items-center gap-3 mb-4"
           >
-            <div className="w-11 h-11 gradient-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <Building2 className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-foreground">BYLD</span>
+            <img src="/images/byld-logo.jpeg" alt="BYLD" className="w-11 h-11 rounded-xl object-cover shadow-lg shadow-primary/20" />
+            <span className="text-2xl tracking-[0.2em] text-foreground" style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}>BYLD</span>
           </motion.div>
           <p className="text-muted-foreground text-sm">Select your role to continue</p>
         </div>
