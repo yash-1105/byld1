@@ -1,3 +1,6 @@
+# Backend secrets (see backend/.env.example)
+backend/.env
+
 # Logs
 logs
 *.log
