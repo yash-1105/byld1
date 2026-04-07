@@ -110,6 +110,22 @@ class ChangeOrderStatus(str, Enum):
 
 ### Completed
 - [x] AGENT.md created
+- [x] Frontend moved into `frontend/` subdirectory
+- [x] ESLint errors and warnings fixed (0 errors, 0 warnings)
+- [x] `docker-compose.yml` created (postgres:15, redis:7) + `.env.example`
+- [x] Backend scaffolded (`backend/app/` with config, main, db, schemas, api, services, security, storage, workers)
+- [x] Alembic initialized with async engine + `Base.metadata` wired to `settings.DATABASE_URL`
+- [x] SQLAlchemy models drafted — 19 tables across 9 domain files + `enums.py`
+- [x] Frontend API client layer — `api/client.ts` (axios + auth interceptors + envelope unwrap), `api/auth.ts`, `api/index.ts`
+- [x] Full verification pass — all checks green (docker, backend health, frontend build + lint)
+- [x] Full system audit completed and written to `SYSTEM_AUDIT.md`
+- [x] Backend schema stabilized: enum drift fixed, timestamp conventions aligned, FK indexes added, bidirectional relationships completed, FK nullability/type hints normalized
+- [x] Security layer implemented: password hashing, JWT access/refresh tokens, token decode, current-user dependencies, and consistent auth error handling
+- [x] Auth API implemented and wired under `/api/v1/auth` with frontend-compatible register/login/refresh/me/logout endpoints
+- [x] Initial Alembic migration generated and applied to Postgres (`alembic upgrade head`)
+- [x] Backend test suite added and passing (`pytest -v` → 9 passed)
+- [x] Env handling cleaned up: repo-root `.env.example` removed, `backend/.env` gitignored, backend env example remains source of truth
+- [x] Post-stabilization full system audit rerun completed; `SYSTEM_AUDIT.md` refreshed with current verification results, API surface, model inventory, config state, and remaining gaps
 
 ### In Progress
 - (none)
@@ -117,5 +133,15 @@ class ChangeOrderStatus(str, Enum):
 ### Blocked
 - (none)
 
+### Verification Status (2026-04-08)
+- **Docker:** `docker compose up -d` starts `postgres:15` and `redis:7`; Postgres responds to `pg_isready` ✓
+- **Backend boot:** `app.main` imports cleanly; `/api/v1/health` returns the documented success envelope with `meta`
+- **Alembic:** initial revision generated and `alembic upgrade head` applied successfully; Postgres now has all expected tables
+- **Backend tests:** `pytest -v` passes (9/9) ✓
+- **Frontend build:** `npm run build` succeeds (chunk size warning on index bundle only) ✓
+- **Frontend lint:** `npm run lint` passes cleanly ✓
+- **Frontend tests:** `npm run test` passes (1/1) ✓
+- **Auth API:** frontend-compatible auth routes now exist and are registered under `/api/v1/auth` ✓
+
 ### Decisions Made
-- (none yet)
+- **Schema is MIGRATED status** — initial migration has been generated and applied locally; future model changes should proceed through Alembic revisions rather than ad hoc schema resets.
