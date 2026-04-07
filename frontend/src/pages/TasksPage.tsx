@@ -27,7 +27,7 @@ export default function TasksPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return;
-    addTask({ ...form, status: 'todo', priority: form.priority as any });
+    addTask({ ...form, status: 'todo', priority: form.priority as 'low' | 'medium' | 'high' | 'urgent' });
     setForm({ title: '', description: '', priority: 'medium', assignee: '', deadline: '', projectId: '1' });
     setShowForm(false);
     toast.success('Task created');

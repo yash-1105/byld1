@@ -68,7 +68,7 @@ export default function BudgetPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.category.trim()) return;
-    addBudgetItem({ ...form, amount: Number(form.amount) || 0, type: form.type as any, date: new Date().toISOString().split('T')[0], status: 'pending' });
+    addBudgetItem({ ...form, amount: Number(form.amount) || 0, type: form.type as 'expense' | 'payment', date: new Date().toISOString().split('T')[0], status: 'pending' });
     setForm({ category: '', description: '', amount: '', type: 'expense', projectId: '1' });
     setShowForm(false);
     toast.success('Budget entry added');

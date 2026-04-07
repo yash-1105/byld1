@@ -68,7 +68,7 @@ export default function SiteUpdatesPage() {
               <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Update title" className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
               <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" rows={3} className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
               <div className="flex gap-4">
-                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as any }))} className="px-4 py-2.5 rounded-lg border border-border bg-background text-sm outline-none">
+                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as 'progress' | 'issue' | 'milestone' }))} className="px-4 py-2.5 rounded-lg border border-border bg-background text-sm outline-none">
                   <option value="progress">Progress</option>
                   <option value="milestone">Milestone</option>
                   <option value="issue">Issue</option>
