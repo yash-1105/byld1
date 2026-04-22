@@ -86,6 +86,16 @@ const pages: Record<string, { title: string; subtitle: string; content: React.Re
 
 export default function StaticPage({ page }: { page: string }) {
   const data = pages[page];
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      // Wait for content to mount
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [page]);
   if (!data) return null;
 
   return (
