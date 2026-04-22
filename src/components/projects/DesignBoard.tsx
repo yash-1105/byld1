@@ -125,10 +125,160 @@ const residentialItems: DesignItem[] = [
   },
 ];
 
+// Coastal / luxury items for Harbor View Residences
+const coastalItems: DesignItem[] = [
+  {
+    id: 'h1', title: 'Linen Drapery — Sand', image: 'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=500&h=400&fit=crop',
+    category: 'Textiles', note: 'Floor-to-ceiling sheers for ocean-facing units', price: '$3,800', status: 'rough',
+    addedBy: 'Lisa W.', date: 'Mar 26', tags: ['Living Room', 'Premium'],
+    activity: [{ action: 'Added to Rough Board', user: 'Lisa W.', time: '2 days ago' }],
+  },
+  {
+    id: 'h2', title: 'Travertine Tile Floor', image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=500&h=400&fit=crop',
+    category: 'Flooring', note: 'Honed finish for entry and lobby', price: '$12,400', status: 'rough',
+    addedBy: 'Sarah C.', date: 'Mar 24', tags: ['Living Room', 'Flooring'],
+    activity: [{ action: 'Added to Rough Board', user: 'Sarah C.', time: '4 days ago' }],
+  },
+  {
+    id: 'h3', title: 'Rattan Lounge Chair', image: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?w=500&h=400&fit=crop',
+    category: 'Furniture', note: 'Coastal accent for balcony seating', price: '$1,650', status: 'rough',
+    addedBy: 'Lisa W.', date: 'Mar 27', tags: ['Outdoor', 'Seating'],
+    activity: [{ action: 'Added to Rough Board', user: 'Lisa W.', time: '1 day ago' }],
+  },
+  {
+    id: 'h4', title: 'Brushed Nickel Faucet Set', image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=500&h=400&fit=crop',
+    category: 'Fixtures', price: '$2,200', status: 'confirmed', addedBy: 'Sarah C.', date: 'Mar 22',
+    tags: ['Bathroom', 'Fixtures'],
+    activity: [
+      { action: 'Added to Rough Board', user: 'Sarah C.', time: 'Mar 19' },
+      { action: 'Approved by Client', user: 'Anna M.', time: 'Mar 22' },
+    ],
+  },
+  {
+    id: 'h5', title: 'Driftwood Coffee Table', image: 'https://images.unsplash.com/photo-1532372320572-cda25653a26d?w=500&h=400&fit=crop',
+    category: 'Furniture', price: '$2,400', status: 'confirmed', addedBy: 'Lisa W.', date: 'Mar 21',
+    tags: ['Living Room', 'Furniture'],
+    activity: [
+      { action: 'Added to Rough Board', user: 'Lisa W.', time: 'Mar 18' },
+      { action: 'Approved by Architect', user: 'Sarah C.', time: 'Mar 21' },
+    ],
+  },
+  {
+    id: 'h6', title: 'Dark Walnut Cabinetry', image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=500&h=400&fit=crop',
+    category: 'Materials', price: '$8,900', status: 'discarded', addedBy: 'Lisa W.', date: 'Mar 16',
+    tags: ['Kitchen'],
+    rejectionReason: 'Too dark for the bright coastal palette — switching to whitewashed oak.',
+    rejectedBy: 'Anna M. (Client)', previousStatus: 'Previously Rough',
+    activity: [
+      { action: 'Added to Rough Board', user: 'Lisa W.', time: 'Mar 12' },
+      { action: 'Rejected by Client', user: 'Anna M.', time: 'Mar 16' },
+    ],
+  },
+];
+
+// Retail / commercial items for Green Valley Mall
+const retailItems: DesignItem[] = [
+  {
+    id: 'r1', title: 'Polished Concrete Floor', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=500&h=400&fit=crop',
+    category: 'Flooring', note: 'Sealed polished concrete for main concourse', price: '$48,000', status: 'rough',
+    addedBy: 'Mike J.', date: 'Mar 25', tags: ['Outdoor', 'Flooring'],
+    activity: [{ action: 'Added to Rough Board', user: 'Mike J.', time: '3 days ago' }],
+  },
+  {
+    id: 'r2', title: 'LED Track Lighting Grid', image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=500&h=400&fit=crop',
+    category: 'Lighting', note: 'Adjustable spots for retail tenant zones', price: '$22,500', status: 'rough',
+    addedBy: 'Sarah C.', date: 'Mar 26', tags: ['Living Room'],
+    activity: [{ action: 'Added to Rough Board', user: 'Sarah C.', time: '2 days ago' }],
+  },
+  {
+    id: 'r3', title: 'Living Wall Planters', image: 'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=500&h=400&fit=crop',
+    category: 'Materials', note: 'Vertical garden for atrium — sustainability push', price: '$36,000', status: 'rough',
+    addedBy: 'Sarah C.', date: 'Mar 28', tags: ['Outdoor', 'Premium'],
+    activity: [{ action: 'Added to Rough Board', user: 'Sarah C.', time: '5 hours ago' }],
+  },
+  {
+    id: 'r4', title: 'Skylight Glass Panels', image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=500&h=400&fit=crop',
+    category: 'Materials', price: '$92,000', status: 'confirmed', addedBy: 'Sarah C.', date: 'Mar 20',
+    tags: ['Outdoor'],
+    activity: [
+      { action: 'Added to Rough Board', user: 'Sarah C.', time: 'Mar 15' },
+      { action: 'Approved by Architect', user: 'Sarah C.', time: 'Mar 20' },
+    ],
+  },
+  {
+    id: 'r5', title: 'Modular Bench Seating', image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&h=400&fit=crop',
+    category: 'Furniture', price: '$14,200', status: 'confirmed', addedBy: 'Mike J.', date: 'Mar 18',
+    tags: ['Living Room', 'Seating'],
+    activity: [
+      { action: 'Added to Rough Board', user: 'Mike J.', time: 'Mar 14' },
+      { action: 'Approved by Client', user: 'David P.', time: 'Mar 18' },
+    ],
+  },
+  {
+    id: 'r6', title: 'Neon Signage Package', image: 'https://images.unsplash.com/photo-1524484485831-a92ffc0de03f?w=500&h=400&fit=crop',
+    category: 'Lighting', price: '$8,400', status: 'discarded', addedBy: 'Mike J.', date: 'Mar 14',
+    tags: ['Living Room'],
+    rejectionReason: 'Off-brand for sustainable positioning — replaced with backlit etched glass.',
+    rejectedBy: 'Sarah C. (Architect)', previousStatus: 'Previously Rough',
+    activity: [
+      { action: 'Added to Rough Board', user: 'Mike J.', time: 'Mar 10' },
+      { action: 'Rejected by Architect', user: 'Sarah C.', time: 'Mar 14' },
+    ],
+  },
+];
+
+// Office / transit items for Metro Station Plaza
+const transitItems: DesignItem[] = [
+  {
+    id: 'm1', title: 'Acoustic Ceiling Panels', image: 'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=500&h=400&fit=crop',
+    category: 'Materials', note: 'Sound dampening for open office floors', price: '$18,000', status: 'rough',
+    addedBy: 'Emily F.', date: 'Mar 27', tags: ['Living Room'],
+    activity: [{ action: 'Added to Rough Board', user: 'Emily F.', time: '1 day ago' }],
+  },
+  {
+    id: 'm2', title: 'Glass Partition Walls', image: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=500&h=400&fit=crop',
+    category: 'Materials', note: 'Frameless glass for meeting rooms', price: '$28,500', status: 'rough',
+    addedBy: 'Sarah C.', date: 'Mar 26', tags: ['Living Room', 'Premium'],
+    activity: [{ action: 'Added to Rough Board', user: 'Sarah C.', time: '2 days ago' }],
+  },
+  {
+    id: 'm3', title: 'Ergonomic Task Chairs', image: 'https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=500&h=400&fit=crop',
+    category: 'Furniture', note: 'Herman Miller for executive floors', price: '$42,000', status: 'rough',
+    addedBy: 'Emily F.', date: 'Mar 28', tags: ['Living Room', 'Seating'],
+    activity: [{ action: 'Added to Rough Board', user: 'Emily F.', time: '4 hours ago' }],
+  },
+  {
+    id: 'm4', title: 'Porcelain Tile — Concourse', image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=500&h=400&fit=crop',
+    category: 'Flooring', price: '$56,000', status: 'confirmed', addedBy: 'Sarah C.', date: 'Mar 22',
+    tags: ['Outdoor', 'Flooring'],
+    activity: [
+      { action: 'Added to Rough Board', user: 'Sarah C.', time: 'Mar 18' },
+      { action: 'Approved by Architect', user: 'Sarah C.', time: 'Mar 22' },
+    ],
+  },
+  {
+    id: 'm5', title: 'Wayfinding Signage System', image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=500&h=400&fit=crop',
+    category: 'Lighting', price: '$11,200', status: 'confirmed', addedBy: 'Emily F.', date: 'Mar 19',
+    tags: ['Living Room'],
+    activity: [
+      { action: 'Added to Rough Board', user: 'Emily F.', time: 'Mar 15' },
+      { action: 'Approved by Client', user: 'David P.', time: 'Mar 19' },
+    ],
+  },
+];
+
+const projectItemSets: Record<string, DesignItem[]> = {
+  '1': residentialItems,   // Skyline Tower
+  '2': coastalItems,       // Harbor View Residences
+  '3': retailItems,        // Green Valley Mall
+  '4': transitItems,       // Metro Station Plaza
+};
+
 type BoardTab = 'rough' | 'confirmed' | 'discarded';
 
-export default function DesignBoard() {
-  const [items, setItems] = useState(initialItems);
+export default function DesignBoard({ projectId }: { projectId?: string } = {}) {
+  const seed = projectId && projectItemSets[projectId] ? projectItemSets[projectId] : residentialItems;
+  const [items, setItems] = useState<DesignItem[]>(seed);
   const [activeTab, setActiveTab] = useState<BoardTab>('rough');
   const [activeSegment, setActiveSegment] = useState('All');
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
