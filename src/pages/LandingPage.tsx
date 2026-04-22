@@ -8,6 +8,9 @@ import {
   ArrowUpRight, Map, Palette
 } from 'lucide-react';
 import Footer from '@/components/Footer';
+import marbleWall from '@/assets/marble-wall.jpg';
+import velvetSofa from '@/assets/velvet-sofa.jpg';
+import blackMarble from '@/assets/black-marble.jpg';
 
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0);
