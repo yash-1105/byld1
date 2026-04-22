@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, X, Send, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 interface AIMessage {
   role: 'user' | 'assistant';
@@ -14,41 +18,152 @@ const suggestions = [
   'Any overdue items?',
 ];
 
-const mockResponses: Record<string, string> = {
-  'status': 'Skyline Tower is **65% complete** and on track. Harbor View Residences is in the design phase at 30% progress. Green Valley Mall awaits approval at 15%.',
-  'task': 'You have **3 tasks** in progress, **3 tasks** in the to-do queue, and **1 task** under review. 2 tasks are marked as urgent priority.',
-  'budget': 'Total portfolio budget: **$42.5M**. Current expenditure: **$13.2M** (31%). Skyline Tower has the highest utilization at 65% of its $12.5M budget.',
-  'overdue': 'There is **1 overdue task**: "MEP coordination drawings" was due on April 1st. Additionally, there are 2 pending approvals requiring attention.',
-};
-
-function getResponse(input: string): string {
-  const lower = input.toLowerCase();
-  if (lower.includes('status') || lower.includes('progress')) return mockResponses['status'];
-  if (lower.includes('task') || lower.includes('pending')) return mockResponses['task'];
-  if (lower.includes('budget') || lower.includes('cost') || lower.includes('money')) return mockResponses['budget'];
-  if (lower.includes('overdue') || lower.includes('delay') || lower.includes('late')) return mockResponses['overdue'];
-  return `Based on your current portfolio, everything looks on track. Skyline Tower is 65% complete with 8 active tasks. Let me know if you need specific details about any project.`;
-}
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 export default function AIAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<AIMessage[]>([
-    { role: 'assistant', content: 'Hi! I\'m your BYLD AI assistant. Ask me about your projects, tasks, or budget.' }
+    { role: 'assistant', content: "Hi! I'm your BYLD AI assistant. Ask me about your projects, tasks, or budget." }
   ]);
   const [input, setInput] = useState('');
-  const [typing, setTyping] = useState(false);
+  const [streaming, setStreaming] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const { user } = useAuth();
+  const { projects, tasks, budgetItems, siteUpdates, notifications } = useData();
 
-  const handleSend = (text?: string) => {
-    const msg = text || input.trim();
-    if (!msg) return;
-    setMessages(prev => [...prev, { role: 'user', content: msg }]);
+  useEffect(() => {
+    if (!open && abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+      setStreaming(false);
+    }
+  }, [open]);
+
+  const streamChat = async (history: AIMessage[]) => {
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const context = {
+      user: user ? { name: user.name, role: user.role } : undefined,
+      projects,
+      tasks,
+      budgetItems,
+      siteUpdates,
+      notifications,
+    };
+
+    // Cap history at last 20 messages
+    const trimmed = history.slice(-20);
+
+    const resp = await fetch(CHAT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages: trimmed, context }),
+      signal: controller.signal,
+    });
+
+    if (!resp.ok) {
+      if (resp.status === 429) {
+        toast({ title: 'Rate limit reached', description: 'Please wait a moment and try again.', variant: 'destructive' });
+      } else if (resp.status === 402) {
+        toast({ title: 'AI credits exhausted', description: 'Add funds in Settings → Workspace → Usage.', variant: 'destructive' });
+      } else {
+        toast({ title: 'AI error', description: 'Something went wrong. Try again.', variant: 'destructive' });
+      }
+      throw new Error(`Chat failed: ${resp.status}`);
+    }
+    if (!resp.body) throw new Error('No response body');
+
+    // Add empty assistant message to be filled
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let textBuffer = '';
+    let assistantSoFar = '';
+    let streamDone = false;
+
+    const appendDelta = (delta: string) => {
+      assistantSoFar += delta;
+      setMessages(prev => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last && last.role === 'assistant') {
+          next[next.length - 1] = { ...last, content: assistantSoFar };
+        }
+        return next;
+      });
+    };
+
+    while (!streamDone) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      textBuffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+        let line = textBuffer.slice(0, newlineIndex);
+        textBuffer = textBuffer.slice(newlineIndex + 1);
+        if (line.endsWith('\r')) line = line.slice(0, -1);
+        if (line.startsWith(':') || line.trim() === '') continue;
+        if (!line.startsWith('data: ')) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === '[DONE]') { streamDone = true; break; }
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) appendDelta(content);
+        } catch {
+          textBuffer = line + '\n' + textBuffer;
+          break;
+        }
+      }
+    }
+
+    if (textBuffer.trim()) {
+      for (let raw of textBuffer.split('\n')) {
+        if (!raw) continue;
+        if (raw.endsWith('\r')) raw = raw.slice(0, -1);
+        if (raw.startsWith(':') || raw.trim() === '') continue;
+        if (!raw.startsWith('data: ')) continue;
+        const jsonStr = raw.slice(6).trim();
+        if (jsonStr === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) appendDelta(content);
+        } catch { /* ignore */ }
+      }
+    }
+  };
+
+  const handleSend = async (text?: string) => {
+    const msg = (text ?? input).trim();
+    if (!msg || streaming) return;
+    const next: AIMessage[] = [...messages, { role: 'user', content: msg }];
+    setMessages(next);
     setInput('');
-    setTyping(true);
-
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: getResponse(msg) }]);
-      setTyping(false);
-    }, 1000);
+    setStreaming(true);
+    try {
+      await streamChat(next);
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') {
+        console.error(e);
+        // Remove the empty assistant placeholder if present
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last && last.role === 'assistant' && last.content === '') return prev.slice(0, -1);
+          return prev;
+        });
+      }
+    } finally {
+      setStreaming(false);
+      abortRef.current = null;
+    }
   };
 
   return (
@@ -88,11 +203,17 @@ export default function AIAssistant() {
                   <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm ${
                     m.role === 'user' ? 'gradient-primary text-primary-foreground' : 'bg-muted text-foreground'
                   }`}>
-                    {m.content}
+                    {m.role === 'assistant' ? (
+                      <div className="prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-headings:my-1">
+                        <ReactMarkdown>{m.content || '…'}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      m.content
+                    )}
                   </div>
                 </motion.div>
               ))}
-              {typing && (
+              {streaming && messages[messages.length - 1]?.role === 'user' && (
                 <div className="flex gap-1 px-3.5 py-2.5 bg-muted rounded-2xl w-fit">
                   <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-pulse-dot" />
                   <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-pulse-dot" style={{ animationDelay: '0.2s' }} />
