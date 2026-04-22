@@ -229,7 +229,7 @@ export default function SegmentMapView({ projectId }: { projectId?: string } = {
 
             {/* Tab Content */}
             <div className="p-6">
-              {detailTab === 'design' && <DesignBoard />}
+              {detailTab === 'design' && <DesignBoard projectId={projectId} />}
 
               {detailTab === 'tasks' && (
                 <div className="space-y-3">
