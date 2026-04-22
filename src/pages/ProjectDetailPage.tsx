@@ -106,7 +106,7 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'map' && <SegmentMapView />}
+      {activeTab === 'map' && <SegmentMapView projectId={project.id} />}
 
       {activeTab === 'tasks' && (
         <div className="soft-card p-6 space-y-3">

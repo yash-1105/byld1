@@ -1,4 +1,5 @@
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { TrendingUp, DollarSign, Camera, ClipboardCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -7,15 +8,21 @@ import { Link } from 'react-router-dom';
 const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
 
 export default function ClientDashboard() {
-  const { projects, siteUpdates, budgetItems } = useData();
-  const mainProject = projects[0];
-  const totalBudget = projects.reduce((s, p) => s + p.budget, 0);
-  const totalSpent = projects.reduce((s, p) => s + p.spent, 0);
+  const { projects, siteUpdates } = useData();
+  const { user } = useAuth();
+  // Client only sees their own project (David Park → Skyline Tower / id '1')
+  const clientProjects = projects.filter(p => p.team.includes(user?.name || ''));
+  const myProjects = clientProjects.length > 0 ? clientProjects : projects.slice(0, 1);
+  const mainProject = myProjects[0];
+  const projectIds = new Set(myProjects.map(p => p.id));
+  const myUpdates = siteUpdates.filter(u => projectIds.has(u.projectId));
+  const totalBudget = myProjects.reduce((s, p) => s + p.budget, 0);
+  const totalSpent = myProjects.reduce((s, p) => s + p.spent, 0);
 
   const stats = [
     { label: 'Overall Progress', value: `${mainProject.progress}%`, icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/10' },
     { label: 'Budget Spent', value: `$${(totalSpent / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-warning', bg: 'bg-warning/10' },
-    { label: 'Site Updates', value: siteUpdates.length, icon: Camera, color: 'text-success', bg: 'bg-success/10' },
+    { label: 'Site Updates', value: myUpdates.length, icon: Camera, color: 'text-success', bg: 'bg-success/10' },
     { label: 'Pending Approvals', value: 2, icon: ClipboardCheck, color: 'text-destructive', bg: 'bg-destructive/10' },
   ];
 
@@ -23,7 +30,7 @@ export default function ClientDashboard() {
     { name: 'Spent', value: totalSpent },
     { name: 'Remaining', value: totalBudget - totalSpent },
   ];
-  const colors = ['#F59E0B', '#E5E7EB'];
+  const colors = ['hsl(30, 25%, 62%)', 'hsl(36, 22%, 92%)'];
 
   return (
     <div className="space-y-6">
@@ -50,8 +57,8 @@ export default function ClientDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="glass-card p-5">
-          <h3 className="font-semibold text-foreground mb-4">Project Progress</h3>
-          {projects.slice(0, 3).map(p => (
+          <h3 className="font-semibold text-foreground mb-4">Your Project</h3>
+          {myProjects.map(p => (
             <div key={p.id} className="mb-4">
               <div className="flex justify-between text-sm mb-1.5">
                 <span className="font-medium text-foreground">{p.name}</span>
@@ -91,7 +98,7 @@ export default function ClientDashboard() {
           <Link to="/site-updates" className="text-sm text-primary hover:underline">View all</Link>
         </div>
         <div className="space-y-3">
-          {siteUpdates.slice(0, 3).map(u => (
+          {myUpdates.slice(0, 3).map(u => (
             <div key={u.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
               <div className={`w-2 h-2 rounded-full mt-2 ${u.type === 'milestone' ? 'bg-success' : u.type === 'issue' ? 'bg-destructive' : 'bg-primary'}`} />
               <div>
@@ -100,6 +107,9 @@ export default function ClientDashboard() {
               </div>
             </div>
           ))}
+          {myUpdates.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">No updates yet</p>
+          )}
         </div>
       </motion.div>
     </div>

@@ -6,60 +6,62 @@
 
 @layer base {
   :root {
-    --background: 0 0% 99%;
-    --foreground: 0 0% 12%;
+    /* Soft white / faint beige palette */
+    --background: 36 30% 98%;
+    --foreground: 30 10% 18%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 30 10% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
+    --popover-foreground: 30 10% 18%;
 
-    --primary: 28 55% 50%;
+    /* Soft warm taupe accent — much lighter than before */
+    --primary: 30 25% 62%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 30 10% 95%;
-    --secondary-foreground: 0 0% 20%;
+    --secondary: 36 25% 96%;
+    --secondary-foreground: 30 10% 25%;
 
-    --muted: 30 8% 94%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 36 22% 95%;
+    --muted-foreground: 30 8% 48%;
 
-    --accent: 28 55% 50%;
+    --accent: 30 25% 62%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 4 74% 55%;
+    --destructive: 4 60% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 158 50% 42%;
+    --success: 150 35% 50%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 85% 52%;
+    --warning: 38 70% 60%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 30 10% 91%;
-    --input: 30 10% 91%;
-    --ring: 28 55% 50%;
+    --border: 36 18% 92%;
+    --input: 36 18% 92%;
+    --ring: 30 25% 62%;
 
     --radius: 0.875rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 40%;
-    --sidebar-primary: 28 55% 50%;
+    --sidebar-background: 36 30% 99%;
+    --sidebar-foreground: 30 8% 42%;
+    --sidebar-primary: 30 25% 62%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 8% 96%;
-    --sidebar-accent-foreground: 0 0% 20%;
-    --sidebar-border: 30 10% 93%;
-    --sidebar-ring: 28 55% 50%;
+    --sidebar-accent: 36 22% 96%;
+    --sidebar-accent-foreground: 30 10% 25%;
+    --sidebar-border: 36 18% 94%;
+    --sidebar-ring: 30 25% 62%;
 
-    --chart-1: 28 55% 50%;
-    --chart-2: 158 50% 42%;
-    --chart-3: 38 85% 52%;
-    --chart-4: 262 60% 55%;
-    --chart-5: 4 74% 55%;
+    --chart-1: 30 25% 62%;
+    --chart-2: 150 35% 55%;
+    --chart-3: 38 70% 65%;
+    --chart-4: 220 20% 65%;
+    --chart-5: 4 60% 65%;
 
-    --warm-50: 30 10% 98%;
-    --warm-100: 30 8% 94%;
-    --warm-200: 30 8% 88%;
+    --warm-50: 36 30% 98%;
+    --warm-100: 36 25% 95%;
+    --warm-200: 36 20% 90%;
   }
 }
 
@@ -94,15 +96,15 @@
   }
 
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(28 55% 50%), hsl(32 50% 44%));
+    background: linear-gradient(135deg, hsl(30 25% 62%), hsl(28 22% 56%));
   }
 
   .gradient-warm {
-    background: linear-gradient(135deg, hsl(30 10% 98%), hsl(30 8% 94%));
+    background: linear-gradient(135deg, hsl(36 30% 98%), hsl(36 22% 95%));
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, hsl(28 55% 44%), hsl(32 50% 38%));
+    background: linear-gradient(135deg, hsl(30 30% 50%), hsl(28 25% 42%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -113,7 +115,7 @@
   }
 
   .segment-glow {
-    box-shadow: 0 0 30px -4px hsl(28 55% 50% / 0.2);
+    box-shadow: 0 0 30px -4px hsl(30 25% 62% / 0.2);
   }
 
   .magnetic-hover {
@@ -136,7 +138,7 @@
   }
 
   .text-glow {
-    text-shadow: 0 0 40px hsl(28 55% 50% / 0.25);
+    text-shadow: 0 0 40px hsl(30 25% 62% / 0.25);
   }
 
   .card-3d {

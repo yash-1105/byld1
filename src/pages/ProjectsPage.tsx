@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Search, Users, ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -17,11 +18,17 @@ const projectImages = [
 
 export default function ProjectsPage() {
   const { projects, addProject } = useData();
+  const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({ name: '', description: '', deadline: '', budget: '' });
 
-  const filtered = projects.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  // Clients only see projects they're a part of
+  const visible = user?.role === 'client'
+    ? projects.filter(p => p.team.includes(user.name))
+    : projects;
+  const filtered = visible.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const isClient = user?.role === 'client';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,12 +52,14 @@ export default function ProjectsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Projects</h1>
-          <p className="text-muted-foreground text-sm mt-1">{projects.length} projects total</p>
+          <h1 className="text-2xl font-bold text-foreground">{isClient ? 'My Project' : 'Projects'}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{visible.length} {visible.length === 1 ? 'project' : 'projects'} total</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2 shadow-lg shadow-primary/20">
-          <Plus className="w-4 h-4" /> Add New Project
-        </button>
+        {!isClient && (
+          <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2 shadow-lg shadow-primary/20">
+            <Plus className="w-4 h-4" /> Add New Project
+          </button>
+        )}
       </div>
 
       <div className="relative">

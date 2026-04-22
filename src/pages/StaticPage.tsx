@@ -71,10 +71,8 @@ export default function StaticPage({ page }: { page: string }) {
     <div className="min-h-screen bg-background">
       <nav className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center">
-            <Building2 className="w-4 h-4 text-primary-foreground" />
-          </div>
-          <span className="font-bold text-foreground">BYLD</span>
+          <img src="/images/byld-logo.jpeg" alt="BYLD" className="w-8 h-8 rounded-lg object-cover" />
+          <span className="tracking-[0.2em] text-foreground" style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}>BYLD</span>
         </Link>
         <Link to="/login" className="gradient-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90">Sign In</Link>
       </nav>
