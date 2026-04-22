@@ -32,7 +32,7 @@ interface DesignItem {
 
 const segments = ['All', 'Living Room', 'Kitchen', 'Bedroom', 'Bathroom', 'Outdoor'];
 
-const initialItems: DesignItem[] = [
+const residentialItems: DesignItem[] = [
   {
     id: '1', title: 'Marble Accent Wall', image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=500&h=400&fit=crop',
     category: 'Materials', note: 'Consider for feature wall behind sofa', price: '$4,200', status: 'rough',
