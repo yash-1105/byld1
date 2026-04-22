@@ -26,7 +26,7 @@ export default function ArchitectDashboard() {
 
   const projectProgress = projects.map(p => ({ name: p.name.split(' ')[0], progress: p.progress }));
   const budgetByProject = projects.map(p => ({ name: p.name.split(' ')[0], budget: p.budget / 1000000, spent: p.spent / 1000000 }));
-  const statusColors = ['hsl(28, 60%, 48%)', 'hsl(158, 50%, 42%)', 'hsl(38, 85%, 52%)', 'hsl(262, 60%, 55%)'];
+  const statusColors = ['hsl(30, 25%, 62%)', 'hsl(150, 35%, 55%)', 'hsl(38, 70%, 65%)', 'hsl(220, 20%, 65%)'];
   const tasksByStatus = [
     { name: 'To Do', value: tasks.filter(t => t.status === 'todo').length },
     { name: 'In Progress', value: tasks.filter(t => t.status === 'in_progress').length },
