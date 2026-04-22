@@ -97,7 +97,7 @@ const statusConfig: Record<string, { label: string; color: string; bg: string; b
 
 type DetailTab = 'design' | 'tasks' | 'approvals' | 'budget' | 'issues';
 
-export default function SegmentMapView() {
+export default function SegmentMapView({ projectId }: { projectId?: string } = {}) {
   const [activeSegment, setActiveSegment] = useState<typeof segments[0] | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('design');
 
