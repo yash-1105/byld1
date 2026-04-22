@@ -42,6 +42,7 @@ const suppliers: Supplier[] = [
   },
   {
     id: 's2', name: 'Nordic Wood Supply', image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=500&h=300&fit=crop',
+    
     rating: 4.6, price: '$18,500', priceValue: 18500, delivery: '1-2 weeks', location: 'Stockholm, Sweden',
     category: 'Flooring', availability: 'in_stock', products: ['Oak Hardwood', 'Engineered Wood', 'Bamboo'],
     details: {

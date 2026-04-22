@@ -19,7 +19,7 @@ const categories = [
 const initialApprovals: ApprovalItem[] = [
   {
     id: "1", title: "Light Oak Wood Flooring", category: "Procurement",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=600&h=400&fit=crop",
+    image: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=600&h=400&fit=crop",
     status: "pending", requestedBy: "Sarah Anderson", date: "4 hours ago",
     cost: "$3,600", description: "Engineered oak flooring for living room and hallway areas.",
   },
@@ -37,7 +37,7 @@ const initialApprovals: ApprovalItem[] = [
   },
   {
     id: "4", title: "Line Item for Contract Revision", category: "Contracts",
-    image: "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&h=400&fit=crop",
+    image: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&h=400&fit=crop",
     status: "pending", requestedBy: "Michael B.", date: "2 days ago",
     cost: "$95,000", description: "Updated scope revision for electrical subcontractor agreement.",
   },
