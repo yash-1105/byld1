@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { Building2, Zap, Shield, BarChart3, Users, Cloud, ArrowRight } from 'lucide-react';
+import { Building2, Shield, ArrowRight, Map, Palette, ClipboardCheck, Layers, Camera, Bot } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 import Footer from '@/components/Footer';
 
 const pages: Record<string, { title: string; subtitle: string; content: React.ReactNode }> = {
@@ -8,22 +9,42 @@ const pages: Record<string, { title: string; subtitle: string; content: React.Re
     title: 'Features',
     subtitle: 'Everything you need to manage construction projects',
     content: (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+      <div className="mt-12 space-y-10">
         {[
-          { icon: BarChart3, title: 'Project Analytics', desc: 'Real-time dashboards with progress tracking, budget monitoring, and team performance metrics.' },
-          { icon: Users, title: 'Team Collaboration', desc: 'Built-in chat, document sharing, and approval workflows for seamless team communication.' },
-          { icon: Shield, title: 'Role-Based Access', desc: 'Granular permissions for architects, contractors, clients, and consultants.' },
-          { icon: Zap, title: 'Task Management', desc: 'Kanban boards, priority settings, and deadline tracking for every team member.' },
-          { icon: Cloud, title: 'Document Management', desc: 'Organized file storage with tags, folders, and version control.' },
-          { icon: Building2, title: 'AI Assistant', desc: 'Intelligent project insights and recommendations powered by AI.' },
+          { id: 'segment-map', icon: Map, title: 'Segment Map', tagline: 'Interactive floor plans for every project', points: ['Click any room to open its tasks, budget, approvals, and design board.', 'Real-time progress badges per segment.', 'Color-coded status — pending, in progress, complete.', 'Per-area cost and timeline tracking.'] },
+          { id: 'design-board', icon: Palette, title: 'Design Board', tagline: '3-stage moodboard for every segment', points: ['Rough tab for free-form inspiration pinning.', 'Confirmed tab with structured material grid.', 'Discarded tab keeps an audit log of rejected ideas.', 'Attach photos, vendor links, and notes per item.'] },
+          { id: 'approvals', icon: ClipboardCheck, title: 'Approvals', tagline: 'Tinder-style approval cards', points: ['Stack of pending requests with swipe-style decisions.', 'Mandatory reason on every approve or reject.', 'Full history with timestamps and decision-maker.', 'Role-based routing — only the right people see the right requests.'] },
+          { id: 'budget', icon: Layers, title: 'Budget Tracking', tagline: 'Per-segment financial control', points: ['Total vs allocated vs spent at a glance.', 'Segment-wise breakdown with drilldown.', 'Payment milestones and tax-inclusive line items.', 'Real-time variance alerts when overspending starts.'] },
+          { id: 'site-monitoring', icon: Camera, title: 'Site Monitoring', tagline: 'A digital logbook for every site visit', points: ['Photo and video updates pinned to a date and segment.', 'Weather conditions logged automatically.', 'Inventory tracking with smart reorder hints.', 'Searchable timeline of every change on site.'] },
+          { id: 'ai-assistance', icon: Bot, title: 'AI Assistance', tagline: 'A real chatbot trained on your project data', points: ['Ask anything about your projects, tasks, budget, or approvals.', 'Streaming responses with markdown formatting.', 'Context-aware — knows your role and visible projects.', 'Smart notification summaries and predictive insights.'] },
         ].map((f, i) => (
-          <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="glass-card-hover p-6">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-              <f.icon className="w-5 h-5 text-primary" />
+          <motion.section
+            id={f.id}
+            key={f.id}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: i * 0.05 }}
+            className="soft-card p-8 scroll-mt-24"
+          >
+            <div className="flex items-start gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/10 flex-shrink-0">
+                <f.icon className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold text-foreground">{f.title}</h2>
+                <p className="text-sm text-muted-foreground mt-1">{f.tagline}</p>
+                <ul className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5">
+                  {f.points.map(p => (
+                    <li key={p} className="text-sm text-muted-foreground flex items-start gap-2">
+                      <span className="text-primary mt-0.5">✓</span>
+                      <span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <h3 className="font-semibold text-foreground mb-2">{f.title}</h3>
-            <p className="text-sm text-muted-foreground">{f.desc}</p>
-          </motion.div>
+          </motion.section>
         ))}
       </div>
     ),
@@ -65,6 +86,16 @@ const pages: Record<string, { title: string; subtitle: string; content: React.Re
 
 export default function StaticPage({ page }: { page: string }) {
   const data = pages[page];
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+      // Wait for content to mount
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [page]);
   if (!data) return null;
 
   return (
