@@ -327,8 +327,8 @@ export default function LandingPage() {
               variants={fadeChild}
               onMouseEnter={() => setHoveredFeature(i)}
               onMouseLeave={() => setHoveredFeature(null)}
-              className="group soft-card-hover p-8 relative overflow-hidden cursor-pointer"
             >
+              <Link to={`/features#${f.slug}`} className="group soft-card-hover p-8 relative overflow-hidden cursor-pointer block h-full">
               {/* Hover glow */}
               <motion.div
                 animate={{ opacity: hoveredFeature === i ? 0.06 : 0, scale: hoveredFeature === i ? 1.5 : 1 }}
@@ -351,6 +351,7 @@ export default function LandingPage() {
                   Learn more <ArrowRight className="w-3 h-3" />
                 </motion.div>
               </div>
+              </Link>
             </motion.div>
           ))}
         </motion.div>
