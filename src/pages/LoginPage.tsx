@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Building2, HardHat, User, Briefcase, ArrowRight } from 'lucide-react';
+import { Building2, HardHat, User, Briefcase, ArrowRight, ArrowLeft } from 'lucide-react';
 
 const roles: { role: UserRole; label: string; icon: React.ElementType; desc: string; stat: string }[] = [
   { role: 'architect', label: 'Architect', icon: Building2, desc: 'Full project control, design management, and team coordination', stat: 'Full Access' },
@@ -38,6 +38,13 @@ export default function LoginPage() {
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-lg relative"
       >
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors mb-6 group"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+          Back to home
+        </Link>
         <div className="text-center mb-10">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
