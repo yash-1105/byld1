@@ -430,42 +430,71 @@ export default function LandingPage() {
                   </div>
                 )}
                 {activeTab === 1 && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-5 gap-3">
-                      {['Living Room', 'Kitchen', 'Bedroom', 'Bathroom', 'Outdoor'].map((r, i) => (
-                        <motion.div
-                          key={r}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: i * 0.08 }}
-                          className="bg-muted/30 rounded-xl p-4 text-center border border-border/40 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer group"
-                        >
-                          <div className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">{r}</div>
-                          <div className="w-12 h-1.5 rounded-full bg-border overflow-hidden mx-auto mt-2">
-                            <div className="h-full gradient-primary rounded-full" style={{ width: `${20 + i * 15}%` }} />
-                          </div>
-                        </motion.div>
-                      ))}
+                  <div className="space-y-4">
+                    {/* Floor-plan SVG overview */}
+                    <div className="bg-muted/20 rounded-xl p-4 border border-border/40">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-xs font-medium text-foreground flex items-center gap-2">
+                          <Map className="w-3.5 h-3.5 text-primary" /> Floor Plan — Level 1
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success" /> Done</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning" /> In Progress</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Pending</span>
+                        </div>
+                      </div>
+                      <svg viewBox="0 0 400 220" className="w-full h-auto rounded-lg">
+                        {[
+                          { x: 10, y: 10, w: 180, h: 110, label: 'Living Room', fill: 'hsl(var(--success) / 0.12)', stroke: 'hsl(var(--success))', pct: 80 },
+                          { x: 200, y: 10, w: 110, h: 110, label: 'Kitchen', fill: 'hsl(var(--warning) / 0.12)', stroke: 'hsl(var(--warning))', pct: 55 },
+                          { x: 320, y: 10, w: 70, h: 110, label: 'Bath', fill: 'hsl(var(--muted) / 0.6)', stroke: 'hsl(var(--border))', pct: 15 },
+                          { x: 10, y: 130, w: 130, h: 80, label: 'Bedroom', fill: 'hsl(var(--success) / 0.12)', stroke: 'hsl(var(--success))', pct: 90 },
+                          { x: 150, y: 130, w: 130, h: 80, label: 'Office', fill: 'hsl(var(--warning) / 0.12)', stroke: 'hsl(var(--warning))', pct: 40 },
+                          { x: 290, y: 130, w: 100, h: 80, label: 'Outdoor', fill: 'hsl(var(--muted) / 0.6)', stroke: 'hsl(var(--border))', pct: 20 },
+                        ].map((r, i) => (
+                          <g key={r.label} className="cursor-pointer">
+                            <motion.rect
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: i * 0.1 }}
+                              x={r.x} y={r.y} width={r.w} height={r.h} rx={6}
+                              fill={r.fill} stroke={r.stroke} strokeWidth={1.5}
+                            />
+                            <text x={r.x + r.w / 2} y={r.y + r.h / 2 - 4} textAnchor="middle" className="fill-foreground" fontSize={10} fontWeight={600}>{r.label}</text>
+                            <text x={r.x + r.w / 2} y={r.y + r.h / 2 + 10} textAnchor="middle" className="fill-muted-foreground" fontSize={9}>{r.pct}%</text>
+                          </g>
+                        ))}
+                      </svg>
                     </div>
-                    <div className="bg-muted/20 rounded-xl p-6 border border-border/40 text-center">
-                      <Map className="w-8 h-8 mx-auto text-primary/40 mb-2" />
-                      <p className="text-sm text-muted-foreground">Interactive floor plan — click any segment to explore</p>
+                    {/* Segment summary cards */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { l: 'Active Segments', v: '6', c: 'text-primary' },
+                        { l: 'Tasks Open', v: '14', c: 'text-warning' },
+                        { l: 'Avg Progress', v: '50%', c: 'text-success' },
+                      ].map(s => (
+                        <div key={s.l} className="bg-muted/30 rounded-xl p-3 text-center border border-border/40">
+                          <div className="text-[10px] text-muted-foreground">{s.l}</div>
+                          <div className={`text-base font-bold ${s.c} mt-0.5`}>{s.v}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
                 {activeTab === 2 && (
                   <div className="space-y-3">
                     {[
-                      { title: 'Marble Accent Wall', status: 'Rough', badge: 'bg-warning/10 text-warning' },
-                      { title: 'Velvet Sofa — Forest Green', status: 'Confirmed', badge: 'bg-success/10 text-success' },
-                      { title: 'Black Marble Countertop', status: 'Discarded', badge: 'bg-destructive/10 text-destructive' },
+                      { title: 'Marble Accent Wall', note: 'Living Room — Feature wall', img: marbleWall, status: 'Rough', badge: 'bg-warning/10 text-warning' },
+                      { title: 'Velvet Sofa — Forest Green', note: 'Living Room — Seating', img: velvetSofa, status: 'Confirmed', badge: 'bg-success/10 text-success' },
+                      { title: 'Black Marble Countertop', note: 'Kitchen — Replaced with quartz', img: blackMarble, status: 'Discarded', badge: 'bg-destructive/10 text-destructive' },
                     ].map((d, i) => (
-                      <motion.div key={d.title} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="flex items-center gap-4 bg-muted/20 rounded-xl p-4 border border-border/40">
-                        <div className="w-12 h-12 rounded-lg bg-muted/40 border border-border/40" />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-foreground">{d.title}</div>
+                      <motion.div key={d.title} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }} className="flex items-center gap-4 bg-muted/20 rounded-xl p-3 border border-border/40 hover:border-primary/30 transition-colors">
+                        <img src={d.img} alt={d.title} loading="lazy" width={56} height={56} className="w-14 h-14 rounded-lg object-cover border border-border/40 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-foreground truncate">{d.title}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">{d.note}</div>
                         </div>
-                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-medium ${d.badge}`}>{d.status}</span>
+                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-medium ${d.badge} flex-shrink-0`}>{d.status}</span>
                       </motion.div>
                     ))}
                   </div>
