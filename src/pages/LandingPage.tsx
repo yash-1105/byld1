@@ -67,12 +67,12 @@ export default function LandingPage() {
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
 
   const features = [
-    { icon: Map, title: 'Segment Map', desc: 'Interactive floor plans with clickable room segments, real-time status, and per-area task tracking.' },
-    { icon: Palette, title: 'Design Board', desc: 'Pin inspiration, confirm materials, and track rejected ideas with a visual moodboard system.' },
-    { icon: ClipboardCheck, title: 'Approvals', desc: 'Tinder-style approval cards with mandatory reasons, history tracking, and role-based workflows.' },
-    { icon: Layers, title: 'Budget Tracking', desc: 'Segment-wise budgets, expense breakdown, payment milestones, and real-time variance alerts.' },
-    { icon: Camera, title: 'Site Monitoring', desc: 'Photo/video updates, digital logbook, weather tracking, and smart inventory management.' },
-    { icon: Bot, title: 'AI Assistance', desc: 'Smart notifications, communication summaries, predictive insights, and document search.' },
+    { icon: Map, title: 'Segment Map', slug: 'segment-map', desc: 'Interactive floor plans with clickable room segments, real-time status, and per-area task tracking.' },
+    { icon: Palette, title: 'Design Board', slug: 'design-board', desc: 'Pin inspiration, confirm materials, and track rejected ideas with a visual moodboard system.' },
+    { icon: ClipboardCheck, title: 'Approvals', slug: 'approvals', desc: 'Tinder-style approval cards with mandatory reasons, history tracking, and role-based workflows.' },
+    { icon: Layers, title: 'Budget Tracking', slug: 'budget', desc: 'Segment-wise budgets, expense breakdown, payment milestones, and real-time variance alerts.' },
+    { icon: Camera, title: 'Site Monitoring', slug: 'site-monitoring', desc: 'Photo/video updates, digital logbook, weather tracking, and smart inventory management.' },
+    { icon: Bot, title: 'AI Assistance', slug: 'ai-assistance', desc: 'Smart notifications, communication summaries, predictive insights, and document search.' },
   ];
 
   const tabs = [
