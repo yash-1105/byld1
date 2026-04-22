@@ -198,7 +198,7 @@ export default function ArchitectDashboard() {
               <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
-              <Bar dataKey="progress" fill="hsl(28, 60%, 48%)" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="progress" fill="hsl(30, 25%, 62%)" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
@@ -231,8 +231,8 @@ export default function ArchitectDashboard() {
             <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={{ borderRadius: 16 }} />
-            <Bar dataKey="budget" fill="hsl(28, 60%, 48%)" radius={[8, 8, 0, 0]} name="Budget" />
-            <Bar dataKey="spent" fill="hsl(38, 85%, 52%)" radius={[8, 8, 0, 0]} name="Spent" />
+            <Bar dataKey="budget" fill="hsl(30, 25%, 62%)" radius={[8, 8, 0, 0]} name="Budget" />
+            <Bar dataKey="spent" fill="hsl(38, 70%, 70%)" radius={[8, 8, 0, 0]} name="Spent" />
           </BarChart>
         </ResponsiveContainer>
       </motion.div>
