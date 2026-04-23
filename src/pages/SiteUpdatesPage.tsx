@@ -3,6 +3,7 @@ import { useData } from '@/contexts/DataContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Camera, AlertTriangle, CheckCircle, Clock, CloudRain, Users, Package, Thermometer } from 'lucide-react';
 import { toast } from 'sonner';
+import AISummaryPanel from '@/components/ai/AISummaryPanel';
 
 export default function SiteUpdatesPage() {
   const { siteUpdates, addSiteUpdate } = useData();
@@ -79,6 +80,8 @@ export default function SiteUpdatesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AISummaryPanel />
 
       {activeTab === 'timeline' && (
         <div className="relative">

@@ -2,3 +2,9 @@ project_id = "pikleinlgnhvikolifjc"
 
 [functions.chat]
 verify_jwt = false
+
+[functions.ai-summarize]
+verify_jwt = false
+
+[functions.ai-insights]
+verify_jwt = false
