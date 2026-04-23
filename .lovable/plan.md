@@ -1,51 +1,96 @@
 
 
-## Add Real AI Chatbot (Gemini Flash) to BYLD
+## AI Communication Summaries + AI Smart Insights
 
-Replace the mock `AIAssistant` keyword-matcher with a real streaming chatbot powered by **Lovable AI Gateway** using `google/gemini-3-flash-preview`.
+Two new AI features wired to real backend endpoints powered by Gemini Flash via the Lovable AI Gateway. No mocks, no hardcoded responses, no keys in the frontend.
 
-### What you get
+### Architecture
 
-- The same floating bottom-right chat bubble, but it actually understands questions
-- Streaming token-by-token responses (modern feel)
-- Markdown-formatted answers (bold, lists)
-- Context-aware: knows the logged-in user's role, projects, tasks, budget, approvals
-- Friendly error toasts for rate limits (429) and out-of-credits (402)
-- Suggested prompts kept from current UI
+```text
+React UI ──REST──▶ Edge Function ──▶ Lovable AI Gateway (Gemini 3 Flash)
+  (BYLD)         (acts as Express)         (real LLM)
+```
 
-### How it works
+Edge Functions are Lovable Cloud's equivalent of Express routes — same contract (`POST /api/...` style), but managed, secure, and already used by the existing chatbot.
 
-**1. Enable Lovable Cloud + Lovable AI** — required to provision the `LOVABLE_API_KEY` secret. No keys needed from you.
+---
 
-**2. New edge function `supabase/functions/chat/index.ts`**
-- Accepts `{ messages, context }` from the client
-- Builds a system prompt on the backend that includes the user's role + a compact summary of their projects/tasks/budget
-- Calls `https://ai.gateway.lovable.dev/v1/chat/completions` with `model: "google/gemini-3-flash-preview"` and `stream: true`
-- Returns the SSE stream straight to the client
-- Handles 429 and 402 with clear JSON errors
-- Registered in `supabase/config.toml` with `verify_jwt = false` (public)
+### Feature 1 — AI Communication Summaries
 
-**3. Rewrite `src/components/AIAssistant.tsx`**
-- Remove `mockResponses` / `getResponse()`
-- Add `streamChat()` helper that POSTs to the edge function and parses SSE line-by-line for true token-by-token rendering
-- Pull live data from `useData()` and `useAuth()` and pass as `context` with each request
-- Render assistant messages with `react-markdown`
-- Show toast on 429 / 402
-- `AbortController` cancels in-flight stream when the panel closes
-- Cap history at last ~20 messages to control token cost
+**Backend** — `supabase/functions/ai-summarize/index.ts`
+- Accepts `{ updates: SiteUpdate[], range: 'today' | '7d' | 'custom', from?, to? }`
+- Filters updates by date range server-side
+- Calls Gemini Flash with a construction-PM system prompt
+- Returns `{ summary: string }`
+- CORS + input validation (Zod) + 429/402 handling
+
+**Frontend component** — `src/components/ai/AISummaryPanel.tsx`
+- Range dropdown: Today / Last 7 Days / Custom Range (date pickers appear when "Custom")
+- "Generate Summary" button
+- Output card with: title, markdown-rendered summary, refresh button, skeleton loader, error state
+- Uses `supabase.functions.invoke('ai-summarize', { body: { updates, range } })`
+
+**Placement**
+- `DashboardPage` — compact variant near the top
+- `SiteUpdatesPage` — full variant above the timeline tab
+
+---
+
+### Feature 2 — AI Smart Insights
+
+**Backend** — `supabase/functions/ai-insights/index.ts`
+- Accepts `{ tasks, approvals, budget, projects, siteUpdates }`
+- Sends a structured prompt asking Gemini to return JSON via `tool_choice` (forced tool call) so output is always valid structured data
+- Returns `{ insights: [{ title, description, severity: 'low'|'medium'|'high', category? }] }`
+- Same CORS/validation/error handling pattern
+
+**Frontend component** — `src/components/ai/AIInsightsPanel.tsx`
+- "Analyze Project" button
+- Renders alert cards in a responsive grid
+- Each card: severity dot + colored left border, title, description, category chip
+- Severity color map: high → destructive, medium → warning, low → primary
+- Skeleton loader (3 placeholder cards), empty state, error toast
+
+**Placement**
+- Top of `DashboardPage`, above existing dashboard widgets
+
+---
 
 ### Files
 
 ```text
-NEW    supabase/functions/chat/index.ts
-EDIT   supabase/config.toml                (register chat function, verify_jwt=false)
-EDIT   src/components/AIAssistant.tsx      (real streaming + markdown)
-NEW    package: react-markdown
+NEW    supabase/functions/ai-summarize/index.ts
+NEW    supabase/functions/ai-insights/index.ts
+EDIT   supabase/config.toml                        (register both functions)
+NEW    src/components/ai/AISummaryPanel.tsx
+NEW    src/components/ai/AIInsightsPanel.tsx
+EDIT   src/pages/DashboardPage.tsx                 (mount both panels)
+EDIT   src/pages/SiteUpdatesPage.tsx               (mount summary panel)
 ```
+
+### Design system compliance
+
+- Glass cards, rounded-xl, soft shadows (matches existing `glass-card` + gradient-primary)
+- Framer Motion fade/slide-in (no exit animations, per project rule)
+- `react-markdown` already installed for the chatbot — reused for summary output
+- Skeleton component already in `src/components/ui/skeleton.tsx`
+
+### Security
+
+- All AI calls happen server-side in edge functions
+- `LOVABLE_API_KEY` already configured as a secret — never reaches the browser
+- Input validated with Zod, CORS preflight handled, error envelopes returned with proper status codes
+
+### Why this is integration-ready (not a mock)
+
+- Real LLM calls on every click (Gemini 3 Flash via Lovable AI Gateway — free during the promo window)
+- Structured JSON output for insights via forced tool-calling, so the frontend can trust the shape
+- Proper loading, error, empty, and rate-limit (429) / out-of-credits (402) UX
+- Swap the model string later to upgrade to Gemini 2.5 Pro or GPT-5 with a one-line change
 
 ### Out of scope (easy follow-ups)
 
-- Persisting chat history across sessions (needs a `chat_messages` table)
-- Tool calling so the AI can create tasks / approve requests
-- Per-project scoped chats
+- Caching summaries per range to avoid re-spending on identical inputs
+- Streaming the summary token-by-token (like the chatbot)
+- Persisting generated insights so they survive a refresh
 
