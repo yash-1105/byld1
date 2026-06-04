@@ -1,11 +1,12 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 const FRAME_COUNT = 240;
 
 export default function HeroScrollAnimation() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [frameIndex, setFrameIndex] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imagesRef = useRef<(HTMLImageElement | null)[]>(new Array(FRAME_COUNT).fill(null));
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -13,28 +14,60 @@ export default function HeroScrollAnimation() {
   });
 
   useEffect(() => {
-    // Pre-fetch images into browser cache so they swap instantly
-    // We fetch them sequentially to not block the network
-    const preloadImage = (index: number) => {
-      if (index > FRAME_COUNT) return;
-      const strIndex = index.toString().padStart(3, '0');
-      fetch(`/hero-sequence/ezgif-frame-${strIndex}.jpg`).then(() => {
-        // Fetch next batch of 3
-        if (index + 3 <= FRAME_COUNT) preloadImage(index + 3);
-      }).catch(() => {
-        if (index + 3 <= FRAME_COUNT) preloadImage(index + 3);
-      });
+    // Aggressive memory prefetch using HTMLImageElement
+    // Loads them into JS memory so they can be painted instantly to canvas (60fps)
+    const loadImages = async () => {
+      // Load first 10 frames sequentially and instantly
+      for (let i = 0; i < 10; i++) {
+        if (i >= FRAME_COUNT) break;
+        const img = new Image();
+        const strIndex = (i + 1).toString().padStart(3, '0');
+        img.src = `/hero-sequence/ezgif-frame-${strIndex}.jpg`;
+        await new Promise(r => img.onload = r);
+        imagesRef.current[i] = img;
+        
+        // Draw the very first frame to the canvas immediately
+        if (i === 0 && canvasRef.current) {
+          const ctx = canvasRef.current.getContext('2d');
+          if (ctx) {
+            canvasRef.current.width = img.width;
+            canvasRef.current.height = img.height;
+            ctx.drawImage(img, 0, 0);
+          }
+        }
+      }
+      
+      // Load the rest in the background
+      for (let i = 10; i < FRAME_COUNT; i++) {
+        const img = new Image();
+        const strIndex = (i + 1).toString().padStart(3, '0');
+        img.src = `/hero-sequence/ezgif-frame-${strIndex}.jpg`;
+        img.onload = () => {
+          imagesRef.current[i] = img;
+        };
+      }
     };
-    preloadImage(1);
-    preloadImage(2);
-    preloadImage(3);
+    loadImages();
   }, []);
 
   useEffect(() => {
     const unsubscribe = scrollYProgress.onChange((progress) => {
       let nextFrame = Math.floor(progress * (FRAME_COUNT - 1));
       nextFrame = Math.max(0, Math.min(nextFrame, FRAME_COUNT - 1));
-      setFrameIndex(nextFrame);
+      
+      if (canvasRef.current) {
+        const img = imagesRef.current[nextFrame];
+        const ctx = canvasRef.current.getContext('2d');
+        if (img && ctx && img.complete) {
+          if (canvasRef.current.width !== img.width) {
+            canvasRef.current.width = img.width;
+            canvasRef.current.height = img.height;
+          }
+          requestAnimationFrame(() => {
+            ctx.drawImage(img, 0, 0);
+          });
+        }
+      }
     });
     return () => unsubscribe();
   }, [scrollYProgress]);
@@ -52,19 +85,15 @@ export default function HeroScrollAnimation() {
   // Fade out the entire hero to white at the end of the scroll
   const sectionOpacity = useTransform(scrollYProgress, [0.85, 1], [1, 0]);
 
-  const strIndex = (frameIndex + 1).toString().padStart(3, '0');
-  const currentSrc = `/hero-sequence/ezgif-frame-${strIndex}.jpg`;
-
   return (
     <div ref={containerRef} className="h-[400vh] bg-transparent relative">
       <motion.div 
         style={{ opacity: sectionOpacity }}
         className="sticky top-0 h-screen w-full overflow-hidden bg-[#1a1814]"
       >
-        {/* Simple image tag relies on browser memory management and hardware acceleration */}
-        <img
-          src={currentSrc}
-          alt=""
+        {/* Hardware accelerated canvas rendering */}
+        <canvas
+          ref={canvasRef}
           className="absolute inset-0 w-full h-full object-cover"
         />
         
