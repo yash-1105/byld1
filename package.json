@@ -10,9 +10,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "supabase:types": "npx supabase gen types typescript --project-id qnriqsnuebcxxzcfxfsv --schema public > src/integrations/supabase/types.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -47,6 +49,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.4.2",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^11.0.0",
     "input-otp": "^1.4.2",

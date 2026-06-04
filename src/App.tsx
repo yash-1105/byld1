@@ -31,7 +31,13 @@ const ProcurementPage = lazy(() => import("@/pages/ProcurementPage"));
 const TimelinePage = lazy(() => import("@/pages/TimelinePage"));
 const StaticPage = lazy(() => import("@/pages/StaticPage"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function PageLoader() {
   return (
@@ -45,7 +51,8 @@ function PageLoader() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return <PageLoader />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }

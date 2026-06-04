@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
 ];
 
 export default function AppSidebar() {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -122,7 +122,7 @@ export default function AppSidebar() {
         </div>
         <div className="flex gap-1">
           <button
-            onClick={logout}
+            onClick={signOut}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors flex-1"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />

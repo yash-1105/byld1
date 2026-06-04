@@ -55,7 +55,7 @@ export default function ProjectsPage() {
           <h1 className="text-2xl font-bold text-foreground">{isClient ? 'My Project' : 'Projects'}</h1>
           <p className="text-muted-foreground text-sm mt-1">{visible.length} {visible.length === 1 ? 'project' : 'projects'} total</p>
         </div>
-        {!isClient && (
+        {(user?.role === 'architect' || user?.role === 'contractor') && (
           <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2 shadow-lg shadow-primary/20">
             <Plus className="w-4 h-4" /> Add New Project
           </button>

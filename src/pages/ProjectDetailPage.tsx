@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Users, DollarSign, CheckSquare, ClipboardCheck, ShoppingCart, Layers, Clock, TrendingUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Users, DollarSign, CheckSquare, ClipboardCheck, ShoppingCart, Layers, Clock, TrendingUp, X, Trash2 } from 'lucide-react';
 import SegmentMapView from '@/components/projects/SegmentMapView';
 
 const workflowTabs = [
@@ -22,9 +22,12 @@ const timelineItems = [
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { projects, tasks } = useData();
+  const { projects, tasks, users, projectMembers, addTeamMember, removeTeamMember } = useData();
   const project = projects.find(p => p.id === id);
   const [activeTab, setActiveTab] = useState('map');
+  const [showTeamModal, setShowTeamModal] = useState(false);
+
+  const clients = users.filter((u: any) => u.role === 'client');
 
   if (!project) {
     return (
@@ -73,7 +76,14 @@ export default function ProjectDetailPage() {
           { label: 'Budget Used', value: `$${(project.spent / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-warning', bg: 'bg-warning/10' },
           { label: 'Team', value: project.team.length.toString(), icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
         ].map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="soft-card p-5">
+          <motion.div 
+            key={s.label} 
+            initial={{ opacity: 0, y: 12 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: i * 0.05 }} 
+            onClick={() => s.label === 'Team' && setShowTeamModal(true)}
+            className={`soft-card p-5 ${s.label === 'Team' ? 'cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all' : ''}`}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">{s.label}</p>
@@ -222,6 +232,50 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Team Management Modal */}
+      <AnimatePresence>
+        {showTeamModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+              className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden"
+            >
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <h3 className="font-semibold text-lg">Manage Team (Clients)</h3>
+                <button onClick={() => setShowTeamModal(false)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-2 max-h-[60vh] overflow-y-auto">
+                {clients.length === 0 ? (
+                  <p className="p-4 text-center text-sm text-muted-foreground">No clients found in the system.</p>
+                ) : clients.map((client: any) => {
+                  const isMember = projectMembers.some((m: any) => m.project_id === project.id && m.user_id === client.id);
+                  return (
+                    <div key={client.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors">
+                      <div>
+                        <div className="font-medium text-sm text-foreground">{client.full_name || client.email}</div>
+                        <div className="text-xs text-muted-foreground">{client.email}</div>
+                      </div>
+                      {isMember ? (
+                        <button onClick={() => removeTeamMember(project.id, client.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button onClick={() => addTeamMember(project.id, client.id, 'client')} className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-medium rounded-lg hover:bg-primary/20 transition-colors">
+                          Add
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

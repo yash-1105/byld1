@@ -3,29 +3,28 @@ import { motion } from 'framer-motion';
 import { FolderKanban, CheckSquare, DollarSign, AlertTriangle, ArrowUpRight, CheckCircle, XCircle, Activity, ClipboardCheck, Layers, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 import { Link } from 'react-router-dom';
-import { useState } from 'react';
 import { toast } from 'sonner';
 
 const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
 
 export default function ArchitectDashboard() {
-  const { projects, tasks, siteUpdates } = useData();
+  const { projects, tasks, siteUpdates, updateTask } = useData();
 
   const totalBudget = projects.reduce((s, p) => s + p.budget, 0);
   const totalSpent = projects.reduce((s, p) => s + p.spent, 0);
   const tasksDone = tasks.filter(t => t.status === 'done').length;
   const tasksTotal = tasks.length;
-  const overdueTasks = tasks.filter(t => t.status !== 'done' && new Date(t.deadline) < new Date()).length;
+  const overdueTasks = tasks.filter(t => t.status !== 'done' && t.deadline && new Date(t.deadline) < new Date()).length;
 
   const stats = [
     { label: 'Active Projects', value: projects.filter(p => p.status !== 'completed').length, icon: FolderKanban, color: 'text-primary', bg: 'bg-primary/10' },
     { label: 'Tasks Complete', value: `${tasksDone}/${tasksTotal}`, icon: CheckSquare, color: 'text-success', bg: 'bg-success/10' },
-    { label: 'Budget Utilized', value: `${Math.round((totalSpent / totalBudget) * 100)}%`, icon: DollarSign, color: 'text-warning', bg: 'bg-warning/10' },
+    { label: 'Budget Utilized', value: `${totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0}%`, icon: DollarSign, color: 'text-warning', bg: 'bg-warning/10' },
     { label: 'Overdue Tasks', value: overdueTasks, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
   ];
 
-  const projectProgress = projects.map(p => ({ name: p.name.split(' ')[0], progress: p.progress }));
-  const budgetByProject = projects.map(p => ({ name: p.name.split(' ')[0], budget: p.budget / 1000000, spent: p.spent / 1000000 }));
+  const projectProgress = projects.map(p => ({ name: p.name.split(' ').slice(0, 2).join(' '), progress: p.progress }));
+  const budgetByProject = projects.map(p => ({ name: p.name.split(' ').slice(0, 2).join(' '), budget: p.budget / 1000000, spent: p.spent / 1000000 }));
   const statusColors = ['hsl(30, 25%, 62%)', 'hsl(150, 35%, 55%)', 'hsl(38, 70%, 65%)', 'hsl(220, 20%, 65%)'];
   const tasksByStatus = [
     { name: 'To Do', value: tasks.filter(t => t.status === 'todo').length },
@@ -34,23 +33,28 @@ export default function ArchitectDashboard() {
     { name: 'Done', value: tasks.filter(t => t.status === 'done').length },
   ];
 
-  const [approvals, setApprovals] = useState([
-    { id: 'a1', title: 'Change Order #12 — Additional Steel', project: 'Skyline Tower', amount: '$45,000' },
-    { id: 'a2', title: 'Landscape Design Revision', project: 'Harbor View', amount: '-' },
-  ]);
+  // Map approvals to tasks in 'review' status
+  const approvals = tasks.filter(t => t.status === 'review');
 
   const handleApproval = (id: string, action: 'approved' | 'rejected') => {
-    setApprovals(prev => prev.filter(a => a.id !== id));
-    toast.success(`Item ${action}`);
+    updateTask(id, { status: action === 'approved' ? 'done' : 'in_progress' });
+    toast.success(`Task ${action}`);
   };
 
-  const timeline = [
-    { time: '2h ago', event: 'Concrete pour completed — Level 28', type: 'success' as const },
-    { time: '5h ago', event: 'Budget alert: Skyline Tower at 65%', type: 'warning' as const },
-    { time: '1d ago', event: 'New task assigned to Mike Johnson', type: 'info' as const },
-    { time: '1d ago', event: 'Weather delay reported — High winds', type: 'error' as const },
-    { time: '2d ago', event: 'Foundation inspection passed', type: 'success' as const },
-  ];
+  // Generate dynamic timeline from site updates and recent tasks
+  const timeline = [...siteUpdates.map(u => ({
+    id: u.id,
+    time: new Date(u.createdAt).toLocaleDateString(),
+    timestamp: new Date(u.createdAt).getTime(),
+    event: `Update: ${u.title}`,
+    type: 'info' as const
+  })), ...tasks.slice(0, 5).map(t => ({
+    id: t.id,
+    time: new Date(t.createdAt).toLocaleDateString(),
+    timestamp: new Date(t.createdAt).getTime(),
+    event: `Task created: ${t.title}`,
+    type: t.priority === 'urgent' ? 'error' as const : 'success' as const
+  }))].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
 
   const stageMap: Record<string, number> = { planning: 0, design: 0, approval: 1, construction: 2, finishing: 3, completed: 4 };
   const workflowStages = ['Design', 'Approval', 'Construction', 'Finishing'];
@@ -116,7 +120,7 @@ export default function ArchitectDashboard() {
             <Layers className="w-4 h-4 text-primary" /> Project Workflows
           </h3>
           <div className="space-y-4">
-            {projects.slice(0, 3).map(p => {
+            {projects.length > 0 ? projects.slice(0, 3).map(p => {
               const stage = stageMap[p.status] ?? 0;
               return (
                 <div key={p.id} className="flex items-center gap-4">
@@ -129,7 +133,9 @@ export default function ArchitectDashboard() {
                   <span className="text-xs text-primary font-medium w-20 text-right">{workflowStages[Math.min(stage, 3)]}</span>
                 </div>
               );
-            })}
+            }) : (
+              <div className="text-sm text-muted-foreground">No projects found.</div>
+            )}
           </div>
         </motion.div>
 
@@ -142,27 +148,26 @@ export default function ArchitectDashboard() {
           </div>
           {approvals.length > 0 ? (
             <div className="space-y-3">
-              {approvals.map(a => (
-                <div key={a.id} className="flex items-center justify-between p-3.5 rounded-xl bg-muted/40 border border-border/50">
-                  <div>
-                    <div className="text-sm font-medium text-foreground">{a.title}</div>
-                    <div className="text-xs text-muted-foreground">{a.project} {a.amount !== '-' ? `· ${a.amount}` : ''}</div>
+              {approvals.map(a => {
+                const project = projects.find(p => p.id === a.projectId);
+                return (
+                  <div key={a.id} className="flex items-center justify-between p-3.5 rounded-xl bg-muted/40 border border-border/50">
+                    <div>
+                      <div className="text-sm font-medium text-foreground">{a.title}</div>
+                      <div className="text-xs text-muted-foreground">{project?.name || 'Unknown Project'}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleApproval(a.id, 'approved')} className="p-1.5 rounded-lg text-success hover:bg-success/10 transition-colors"><CheckCircle className="w-4 h-4" /></button>
+                      <button onClick={() => handleApproval(a.id, 'rejected')} className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"><XCircle className="w-4 h-4" /></button>
+                    </div>
                   </div>
-                  <div className="flex gap-1.5">
-                    <button onClick={() => handleApproval(a.id, 'approved')} className="p-2 rounded-xl bg-success/10 text-success hover:bg-success/20 transition-colors">
-                      <CheckCircle className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleApproval(a.id, 'rejected')} className="p-2 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
-                      <XCircle className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <div className="text-center py-8 text-sm text-muted-foreground">
-              <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              All caught up!
+            <div className="h-32 flex flex-col items-center justify-center text-center bg-muted/20 rounded-xl border border-border/40 border-dashed">
+              <CheckCircle className="w-8 h-8 text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground">All caught up!<br />No pending approvals.</p>
             </div>
           )}
         </motion.div>
@@ -170,22 +175,34 @@ export default function ArchitectDashboard() {
 
       {/* Activity Timeline */}
       <motion.div {...fadeIn} transition={{ delay: 0.25 }} className="soft-card p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-4 h-4 text-primary" />
-          <h3 className="font-semibold text-foreground">Activity Timeline</h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" /> Activity Timeline
+          </h3>
+          <Link to="/timeline" className="text-xs text-primary hover:underline">Full timeline</Link>
         </div>
-        <div className="space-y-3">
-          {timeline.map((t, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-xl hover:bg-muted/30 transition-colors">
-              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                t.type === 'success' ? 'bg-success' : t.type === 'warning' ? 'bg-warning' : t.type === 'error' ? 'bg-destructive' : 'bg-primary'
-              }`} />
-              <div className="flex-1">
-                <div className="text-sm text-foreground">{t.event}</div>
-                <div className="text-xs text-muted-foreground">{t.time}</div>
+        <div className="relative">
+          <div className="absolute left-2.5 top-2 bottom-2 w-px bg-border/50" />
+          <div className="space-y-5">
+            {timeline.length > 0 ? timeline.map((item, i) => (
+              <div key={item.id} className="relative flex items-start gap-4">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 z-10 ${
+                  item.type === 'success' ? 'bg-success/10 text-success' :
+                  item.type === 'error' ? 'bg-destructive/10 text-destructive' :
+                  item.type === 'warning' ? 'bg-warning/10 text-warning' :
+                  'bg-primary/10 text-primary'
+                }`}>
+                  <div className="w-2 h-2 rounded-full bg-current" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{item.event}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.time}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            )) : (
+              <div className="text-sm text-muted-foreground">No recent activity.</div>
+            )}
+          </div>
         </div>
       </motion.div>
 
@@ -193,31 +210,32 @@ export default function ArchitectDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div {...fadeIn} transition={{ delay: 0.3 }} className="soft-card p-5">
           <h3 className="font-semibold text-foreground mb-4">Project Progress</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={projectProgress}>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={projectProgress} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(33 18% 88%)" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
-              <Bar dataKey="progress" fill="hsl(30, 25%, 62%)" radius={[8, 8, 0, 0]} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} cursor={{ fill: 'hsl(33 18% 96%)' }} />
+              <Bar dataKey="progress" fill="hsl(30, 25%, 62%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
 
         <motion.div {...fadeIn} transition={{ delay: 0.35 }} className="soft-card p-5">
           <h3 className="font-semibold text-foreground mb-4">Tasks by Status</h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={240}>
             <PieChart>
-              <Pie data={tasksByStatus} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
+              <Pie data={tasksByStatus} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value">
                 {tasksByStatus.map((_, i) => <Cell key={i} fill={statusColors[i]} />)}
               </Pie>
-              <Tooltip contentStyle={{ borderRadius: 16 }} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)' }} />
             </PieChart>
           </ResponsiveContainer>
-          <div className="flex justify-center gap-4 mt-1">
-            {tasksByStatus.map((s, i) => (
-              <div key={s.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="flex justify-center gap-4 mt-2">
+            {tasksByStatus.map((t, i) => (
+              <div key={t.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: statusColors[i] }} />
-                {s.name} ({s.value})
+                {t.name} ({t.value})
               </div>
             ))}
           </div>
@@ -226,39 +244,16 @@ export default function ArchitectDashboard() {
 
       <motion.div {...fadeIn} transition={{ delay: 0.4 }} className="soft-card p-5">
         <h3 className="font-semibold text-foreground mb-4">Budget Overview (M)</h3>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={budgetByProject}>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={budgetByProject} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(33 18% 88%)" />
             <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ borderRadius: 16 }} />
-            <Bar dataKey="budget" fill="hsl(30, 25%, 62%)" radius={[8, 8, 0, 0]} name="Budget" />
-            <Bar dataKey="spent" fill="hsl(38, 70%, 70%)" radius={[8, 8, 0, 0]} name="Spent" />
+            <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)' }} cursor={{ fill: 'hsl(33 18% 96%)' }} />
+            <Bar dataKey="budget" name="Total Budget" fill="hsl(30, 25%, 62%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            <Bar dataKey="spent" name="Amount Spent" fill="hsl(38, 70%, 65%)" radius={[4, 4, 0, 0]} maxBarSize={40} />
           </BarChart>
         </ResponsiveContainer>
-      </motion.div>
-
-      {/* Recent Updates */}
-      <motion.div {...fadeIn} transition={{ delay: 0.45 }} className="soft-card p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-foreground">Recent Site Updates</h3>
-          <Link to="/site-updates" className="text-xs text-primary hover:underline">View all</Link>
-        </div>
-        <div className="space-y-2">
-          {siteUpdates.slice(0, 4).map(u => (
-            <div key={u.id} className="flex items-start gap-3 p-3.5 rounded-xl hover:bg-muted/30 transition-colors">
-              <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                u.type === 'milestone' ? 'bg-success' : u.type === 'issue' ? 'bg-destructive' : 'bg-primary'
-              }`} />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-foreground">{u.title}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{u.author} · {new Date(u.createdAt).toLocaleDateString()}</div>
-              </div>
-              <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${
-                u.type === 'milestone' ? 'bg-success/10 text-success' : u.type === 'issue' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
-              }`}>{u.type}</span>
-            </div>
-          ))}
-        </div>
       </motion.div>
     </div>
   );

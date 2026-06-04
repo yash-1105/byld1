@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Loader2, AlertTriangle, TrendingUp, Clock, DollarSign, ShieldCheck, Users, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface Insight {
   title: string;
@@ -48,22 +48,42 @@ export default function AIInsightsPanel() {
         status: b.status,
       }));
 
-      const { data, error } = await supabase.functions.invoke('ai-insights', {
-        body: {
-          tasks,
-          approvals,
-          budget: {
-            total: totalBudget,
-            spent: totalSpent,
-            utilization: totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0,
-          },
-          projects,
-          siteUpdates,
+      const payload = {
+        tasks,
+        approvals,
+        budget: {
+          total: totalBudget,
+          spent: totalSpent,
+          utilization: totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0,
         },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      setInsights((data as any)?.insights ?? []);
+        projects,
+        siteUpdates,
+      };
+
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      
+      const prompt = `You are an expert construction project manager AI.
+Analyze the following portfolio data and identify 3-5 key risks, blockers, and opportunities.
+Output ONLY a JSON array of objects. Each object must have:
+- title: string (short, punchy)
+- description: string (detailed explanation of the insight)
+- severity: 'low' | 'medium' | 'high'
+- category: 'schedule' | 'budget' | 'quality' | 'approval' | 'resource' | 'opportunity' | 'other'
+
+Data:
+${JSON.stringify(payload)}
+
+Return ONLY valid JSON array. No markdown blocks, no backticks, no other text.`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      const parsed = JSON.parse(cleaned);
+      if (!Array.isArray(parsed)) throw new Error("Invalid response format");
+      
+      setInsights(parsed);
     } catch (e: any) {
       toast.error(e?.message ?? 'Failed to generate insights');
     } finally {

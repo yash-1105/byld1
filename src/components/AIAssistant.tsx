@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface AIMessage {
   role: 'user' | 'assistant';
@@ -18,7 +19,7 @@ const suggestions = [
   'Any overdue items?',
 ];
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 export default function AIAssistant() {
   const [open, setOpen] = useState(false);
@@ -55,89 +56,60 @@ export default function AIAssistant() {
     // Cap history at last 20 messages
     const trimmed = history.slice(-20);
 
-    const resp = await fetch(CHAT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
-      body: JSON.stringify({ messages: trimmed, context }),
-      signal: controller.signal,
-    });
-
-    if (!resp.ok) {
-      if (resp.status === 429) {
-        toast({ title: 'Rate limit reached', description: 'Please wait a moment and try again.', variant: 'destructive' });
-      } else if (resp.status === 402) {
-        toast({ title: 'AI credits exhausted', description: 'Add funds in Settings → Workspace → Usage.', variant: 'destructive' });
-      } else {
-        toast({ title: 'AI error', description: 'Something went wrong. Try again.', variant: 'destructive' });
+    try {
+      if (!API_KEY) {
+        throw new Error("Gemini API key is missing. Please add VITE_GEMINI_API_KEY to your .env file.");
       }
-      throw new Error(`Chat failed: ${resp.status}`);
-    }
-    if (!resp.body) throw new Error('No response body');
+      
+      const genAI = new GoogleGenerativeAI(API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Add empty assistant message to be filled
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      // Add empty assistant message to be filled
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let textBuffer = '';
-    let assistantSoFar = '';
-    let streamDone = false;
+      const systemPrompt = `You are the BYLD AI assistant, an expert construction management AI. 
+      You are talking to: ${JSON.stringify(context.user)}. 
+      Here is the current dashboard data:
+      Projects: ${JSON.stringify(context.projects)}
+      Tasks: ${JSON.stringify(context.tasks)}
+      Budget: ${JSON.stringify(context.budgetItems)}
+      Updates: ${JSON.stringify(context.siteUpdates)}
+      
+      Please assist the user concisely and accurately based ONLY on this provided data. Keep responses relatively short.`;
 
-    const appendDelta = (delta: string) => {
-      assistantSoFar += delta;
-      setMessages(prev => {
-        const next = [...prev];
-        const last = next[next.length - 1];
-        if (last && last.role === 'assistant') {
-          next[next.length - 1] = { ...last, content: assistantSoFar };
-        }
-        return next;
+      const geminiHistory = trimmed.map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+      
+      const lastMessage = geminiHistory.pop()?.parts[0].text || '';
+
+      const chat = model.startChat({
+        history: [
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          { role: 'model', parts: [{ text: 'Understood. I will act as the BYLD AI assistant and answer questions based on the provided dashboard data.' }] },
+          ...geminiHistory
+        ]
       });
-    };
 
-    while (!streamDone) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      textBuffer += decoder.decode(value, { stream: true });
-
-      let newlineIndex: number;
-      while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
-        let line = textBuffer.slice(0, newlineIndex);
-        textBuffer = textBuffer.slice(newlineIndex + 1);
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (line.startsWith(':') || line.trim() === '') continue;
-        if (!line.startsWith('data: ')) continue;
-
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr === '[DONE]') { streamDone = true; break; }
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) appendDelta(content);
-        } catch {
-          textBuffer = line + '\n' + textBuffer;
-          break;
-        }
+      const result = await chat.sendMessageStream(lastMessage);
+      
+      let assistantSoFar = '';
+      for await (const chunk of result.stream) {
+        if (abortRef.current?.signal.aborted) break;
+        assistantSoFar += chunk.text();
+        setMessages(prev => {
+          const next = [...prev];
+          const last = next[next.length - 1];
+          if (last && last.role === 'assistant') {
+            next[next.length - 1] = { ...last, content: assistantSoFar };
+          }
+          return next;
+        });
       }
-    }
-
-    if (textBuffer.trim()) {
-      for (let raw of textBuffer.split('\n')) {
-        if (!raw) continue;
-        if (raw.endsWith('\r')) raw = raw.slice(0, -1);
-        if (raw.startsWith(':') || raw.trim() === '') continue;
-        if (!raw.startsWith('data: ')) continue;
-        const jsonStr = raw.slice(6).trim();
-        if (jsonStr === '[DONE]') continue;
-        try {
-          const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) appendDelta(content);
-        } catch { /* ignore */ }
-      }
+    } catch (err: any) {
+      toast({ title: 'AI error', description: err.message || 'Something went wrong. Try again.', variant: 'destructive' });
+      throw err;
     }
   };
 

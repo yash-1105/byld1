@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Building2, Shield, ArrowRight, Map, Palette, ClipboardCheck, Layers, Camera, Bot } from 'lucide-react';
+import { Building2, Shield, ArrowRight, Map, Palette, ClipboardCheck, Layers, Camera, Bot, Package, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import Footer from '@/components/Footer';
@@ -16,6 +16,8 @@ const pages: Record<string, { title: string; subtitle: string; content: React.Re
           { id: 'approvals', icon: ClipboardCheck, title: 'Approvals', tagline: 'Tinder-style approval cards', points: ['Stack of pending requests with swipe-style decisions.', 'Mandatory reason on every approve or reject.', 'Full history with timestamps and decision-maker.', 'Role-based routing — only the right people see the right requests.'] },
           { id: 'budget', icon: Layers, title: 'Budget Tracking', tagline: 'Per-segment financial control', points: ['Total vs allocated vs spent at a glance.', 'Segment-wise breakdown with drilldown.', 'Payment milestones and tax-inclusive line items.', 'Real-time variance alerts when overspending starts.'] },
           { id: 'site-monitoring', icon: Camera, title: 'Site Monitoring', tagline: 'A digital logbook for every site visit', points: ['Photo and video updates pinned to a date and segment.', 'Weather conditions logged automatically.', 'Inventory tracking with smart reorder hints.', 'Searchable timeline of every change on site.'] },
+          { id: 'procurement', icon: Package, title: 'Procurement', tagline: 'Compare and source materials with ease', points: ['Compare multiple vendor quotes side-by-side.', 'Smart risk scoring and lead time analysis.', 'One-click purchase order generation.', 'Real-time delivery tracking connected to budget.'] },
+          { id: 'timeline', icon: Calendar, title: 'Timeline', tagline: 'Stay on schedule, foresee delays', points: ['Dependency-aware Gantt charts built for construction.', 'Predictive delay detection before they impact critical path.', 'Automatic team assignment and notifications.', 'Clear visibility into project milestones.'] },
           { id: 'ai-assistance', icon: Bot, title: 'AI Assistance', tagline: 'A real chatbot trained on your project data', points: ['Ask anything about your projects, tasks, budget, or approvals.', 'Streaming responses with markdown formatting.', 'Context-aware — knows your role and visible projects.', 'Smart notification summaries and predictive insights.'] },
         ].map((f, i) => (
           <motion.section

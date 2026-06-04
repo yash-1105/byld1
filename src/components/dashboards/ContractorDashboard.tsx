@@ -1,4 +1,5 @@
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { CheckSquare, Clock, AlertTriangle, Camera } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -7,7 +8,10 @@ const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }
 
 export default function ContractorDashboard() {
   const { tasks, siteUpdates } = useData();
-  const myTasks = tasks.filter(t => t.assignee === 'Mike Johnson');
+  const { user } = useAuth();
+  
+  // Filter tasks dynamically for the current contractor
+  const myTasks = tasks.filter(t => t.assignee === user?.id);
   const pending = myTasks.filter(t => t.status !== 'done').length;
   const urgent = myTasks.filter(t => t.priority === 'urgent').length;
   const done = myTasks.filter(t => t.status === 'done').length;
@@ -48,12 +52,12 @@ export default function ContractorDashboard() {
           <Link to="/tasks" className="text-sm text-primary hover:underline">View all</Link>
         </div>
         <div className="space-y-2">
-          {myTasks.filter(t => t.status !== 'done').map(t => (
+          {myTasks.length > 0 ? myTasks.filter(t => t.status !== 'done').map(t => (
             <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted transition-colors">
               <div className={`w-2 h-2 rounded-full ${t.priority === 'urgent' ? 'bg-destructive' : t.priority === 'high' ? 'bg-warning' : 'bg-primary'}`} />
               <div className="flex-1">
                 <div className="text-sm font-medium text-foreground">{t.title}</div>
-                <div className="text-xs text-muted-foreground">Due {new Date(t.deadline).toLocaleDateString()}</div>
+                <div className="text-xs text-muted-foreground">Due {t.deadline ? new Date(t.deadline).toLocaleDateString() : 'N/A'}</div>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                 t.status === 'in_progress' ? 'bg-primary/10 text-primary' : t.status === 'review' ? 'bg-warning/10 text-warning' : 'bg-muted text-muted-foreground'
@@ -61,20 +65,26 @@ export default function ContractorDashboard() {
                 {t.status.replace('_', ' ')}
               </span>
             </div>
-          ))}
+          )) : (
+            <div className="text-sm text-muted-foreground py-4 text-center border border-border border-dashed rounded-lg">
+              No tasks assigned to you right now.
+            </div>
+          )}
         </div>
       </motion.div>
 
       <motion.div {...fadeIn} transition={{ delay: 0.3 }} className="glass-card p-5">
         <h3 className="font-semibold text-foreground mb-4">Recent Site Updates</h3>
         <div className="space-y-3">
-          {siteUpdates.slice(0, 3).map(u => (
-            <div key={u.id} className="p-3 rounded-lg hover:bg-muted transition-colors">
+          {siteUpdates.length > 0 ? siteUpdates.slice(0, 3).map(u => (
+            <div key={u.id} className="p-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
               <div className="text-sm font-medium text-foreground">{u.title}</div>
               <div className="text-xs text-muted-foreground mt-1">{u.description.slice(0, 100)}...</div>
               <div className="text-xs text-muted-foreground mt-1">{new Date(u.createdAt).toLocaleDateString()}</div>
             </div>
-          ))}
+          )) : (
+            <div className="text-sm text-muted-foreground">No recent site updates.</div>
+          )}
         </div>
       </motion.div>
     </div>

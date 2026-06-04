@@ -13,7 +13,7 @@ export default function ClientDashboard() {
   // Client only sees their own project (David Park → Skyline Tower / id '1')
   const clientProjects = projects.filter(p => p.team.includes(user?.name || ''));
   const myProjects = clientProjects.length > 0 ? clientProjects : projects.slice(0, 1);
-  const mainProject = myProjects[0];
+  const mainProject = myProjects[0] || { id: 'empty', name: 'No active project', progress: 0, budget: 0, spent: 0 };
   const projectIds = new Set(myProjects.map(p => p.id));
   const myUpdates = siteUpdates.filter(u => projectIds.has(u.projectId));
   const totalBudget = myProjects.reduce((s, p) => s + p.budget, 0);

@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { Sparkles, RefreshCw, Calendar as CalendarIcon, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays, isAfter, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { useData } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 type Range = 'today' | '7d' | 'custom';
 
@@ -35,18 +35,42 @@ export default function AISummaryPanel({ compact = false }: Props) {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('ai-summarize', {
-        body: {
-          updates: siteUpdates,
-          range,
-          from: from ? from.toISOString() : undefined,
-          to: to ? to.toISOString() : undefined,
-        },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      setSummary((data as any)?.summary ?? '');
-      setCount((data as any)?.count ?? null);
+      let filteredUpdates = siteUpdates;
+      const now = new Date();
+      if (range === 'today') {
+        filteredUpdates = siteUpdates.filter(u => isSameDay(new Date(u.createdAt), now));
+      } else if (range === '7d') {
+        const sevenDaysAgo = subDays(now, 7);
+        filteredUpdates = siteUpdates.filter(u => isAfter(new Date(u.createdAt), sevenDaysAgo));
+      } else if (range === 'custom' && from && to) {
+        filteredUpdates = siteUpdates.filter(u => {
+          const d = new Date(u.createdAt);
+          return d >= from && d <= to;
+        });
+      }
+
+      if (filteredUpdates.length === 0) {
+        setSummary('No site updates found in this date range.');
+        setCount(0);
+        return;
+      }
+
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      
+      const prompt = `You are an expert construction project manager AI.
+Create an executive communication summary for the following site updates.
+Format it in Markdown using bullet points, bold text for emphasis, and clear headings if necessary.
+Keep it concise, professional, and easy to read. Do not include a greeting or sign-off.
+
+Site Updates:
+${JSON.stringify(filteredUpdates)}`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      
+      setSummary(text);
+      setCount(filteredUpdates.length);
     } catch (e: any) {
       const msg = e?.message ?? 'Failed to generate summary';
       toast.error(msg);

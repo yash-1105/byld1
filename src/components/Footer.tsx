@@ -21,13 +21,13 @@ const footerLinks = [
 
 export default function Footer() {
   return (
-    <footer className="bg-card/50 border-t border-border/50 mt-auto backdrop-blur-sm">
+    <footer className="bg-white border-t border-[#e8e4df] mt-auto">
       <div className="max-w-7xl mx-auto px-6 py-14">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2.5 mb-4">
               <img src="/images/byld-logo.jpeg" alt="BYLD" className="w-8 h-8 rounded-lg object-cover" />
-              <span className="tracking-[0.2em] text-foreground" style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}>BYLD</span>
+              <span className="tracking-[0.2em] text-[#1a1814]" style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}>BYLD</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">Construction project management, simplified.</p>
           </div>
