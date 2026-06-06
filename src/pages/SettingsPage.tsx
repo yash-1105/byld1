@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { User, Bell, Shield, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 
+import DriveIntegration from '@/components/drive/DriveIntegration';
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState({ email: true, push: true, updates: false });
@@ -11,7 +13,7 @@ export default function SettingsPage() {
   if (!user) return null;
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-2xl pb-20">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your account preferences</p>
@@ -67,6 +69,11 @@ export default function SettingsPage() {
           <h3 className="font-semibold text-foreground">Security</h3>
         </div>
         <button onClick={() => toast.info('Password change is a demo feature')} className="text-sm text-primary hover:underline">Change password</button>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <h3 className="text-xl font-bold text-foreground mt-10 mb-4">Integrations</h3>
+        <DriveIntegration />
       </motion.div>
     </div>
   );
