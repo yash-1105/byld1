@@ -32,6 +32,7 @@ export default function DocumentsPage() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProject, setUploadProject] = useState<string>('');
+  const [uploadCategory, setUploadCategory] = useState<string>('Reports');
   const [uploadVisibility, setUploadVisibility] = useState<UserRole[]>(['client', 'contractor', 'consultant']);
 
   // Drive Explorer Modal
@@ -78,14 +79,20 @@ export default function DocumentsPage() {
       uploaded_by: d.uploaded_by,
       category: d.category
     })),
-    ...driveDocs.map(d => ({
+    ...driveDocs.filter(d => {
+      if (user?.role === 'architect') return true;
+      if (d.user_id === user?.id) return true;
+      const visible_to = d.metadata_json?.visible_to;
+      if (visible_to && user?.role) return visible_to.includes(user.role);
+      return true;
+    }).map(d => ({
       id: d.id,
       name: d.name,
       source: 'google_drive' as const,
       url: d.drive_link,
       created_at: d.created_at,
       uploaded_by: d.user_id,
-      category: 'Drive Import' // Default category for Drive files
+      category: d.metadata_json?.category || 'Drive Import'
     }))
   ];
 
@@ -102,6 +109,7 @@ export default function DocumentsPage() {
       if (projects.length > 0 && !uploadProject) {
         setUploadProject(projects[0].id);
       }
+      setUploadCategory(selectedFolder === 'All Files' ? 'Reports' : selectedFolder);
     }
   };
 
@@ -114,6 +122,7 @@ export default function DocumentsPage() {
       if (projects.length > 0 && !uploadProject) {
         setUploadProject(projects[0].id);
       }
+      setUploadCategory(selectedFolder === 'All Files' ? 'Reports' : selectedFolder);
     }
   };
 
@@ -141,12 +150,10 @@ export default function DocumentsPage() {
         .from('project-documents')
         .getPublicUrl(filePath);
 
-      const category = selectedFolder === 'All Files' ? 'Reports' : selectedFolder;
-      
       const { error: dbError } = await supabase.from('documents').insert({
         name: selectedFile.name,
         file_url: publicUrl,
-        category: category,
+        category: uploadCategory,
         uploaded_by: user.id,
         project_id: uploadProject || null,
         visible_to: uploadVisibility
@@ -372,6 +379,13 @@ export default function DocumentsPage() {
                   <select value={uploadProject} onChange={e => setUploadProject(e.target.value)} className="w-full bg-background border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="" disabled>Select a project</option>
                     {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-1.5 flex items-center gap-2"><Folder className="w-4 h-4 text-muted-foreground" /> Category</label>
+                  <select value={uploadCategory} onChange={e => setUploadCategory(e.target.value)} className="w-full bg-background border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                    {folders.filter(f => f !== 'All Files').map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </div>
 

@@ -130,6 +130,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .map(m => rawUsers.find(u => u.id === m.user_id)?.full_name || m.user_id)
         .filter(Boolean),
       createdAt: p.created_at,
+      address: p.address,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      geofenceRadius: p.geofence_radius,
     };
   }), [rawProjects, rawProjectMembers, rawUsers, rawBudgetItems, rawTasks]);
 

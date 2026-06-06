@@ -148,7 +148,7 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
   const [filterType, setFilterType] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: '', description: '', type: 'progress' as 'progress' | 'milestone' | 'issue' });
+  const [form, setForm] = useState({ title: '', description: '', type: 'progress' as 'progress' | 'milestone' | 'issue', visibility: 'public' as 'public' | 'private', taggedUserIds: [] as string[] });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -171,6 +171,10 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return;
+    if (form.visibility === 'private' && form.taggedUserIds.length === 0) {
+      toast.error('Please select at least one member for a private update.');
+      return;
+    }
     setUploading(true);
     try {
       const mediaUrls: string[] = [];
@@ -183,7 +187,7 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
           mediaUrls.push(publicUrl);
         }
       }
-      const content = JSON.stringify({ title: form.title, description: form.description, type: form.type });
+      const content = JSON.stringify({ title: form.title, description: form.description, type: form.type, taggedUserIds: form.taggedUserIds });
       const { error } = await supabase.from('site_updates').insert({
         project_id: projectId,
         content,
@@ -192,7 +196,7 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
       });
       if (error) throw error;
       toast.success('Site update posted!');
-      setForm({ title: '', description: '', type: 'progress' });
+      setForm({ title: '', description: '', type: 'progress', visibility: 'public', taggedUserIds: [] });
       setUploadedFiles([]);
       setShowForm(false);
       fetchUpdates();
@@ -214,20 +218,28 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
   const parseUpdate = (u: SiteUpdateRaw) => {
     try {
       const parsed = JSON.parse(u.content || '{}');
-      return { title: parsed.title || u.content?.slice(0, 50) || 'Update', description: parsed.description || '', type: (parsed.type as 'progress' | 'milestone' | 'issue') || 'progress' };
+      return { title: parsed.title || u.content?.slice(0, 50) || 'Update', description: parsed.description || '', type: (parsed.type as 'progress' | 'milestone' | 'issue') || 'progress', taggedUserIds: parsed.taggedUserIds || [] };
     } catch {
-      return { title: u.content?.slice(0, 50) || 'Update', description: u.content || '', type: 'progress' as const };
+      return { title: u.content?.slice(0, 50) || 'Update', description: u.content || '', type: 'progress' as const, taggedUserIds: [] as string[] };
     }
   };
 
   const filteredUpdates = useMemo(() => {
     return updates.filter(u => {
       const parsed = parseUpdate(u);
+      
+      // Privacy check
+      if (parsed.taggedUserIds && parsed.taggedUserIds.length > 0) {
+        if (u.posted_by !== user?.id && !parsed.taggedUserIds.includes(user?.id)) {
+          return false;
+        }
+      }
+
       const matchesType = filterType === 'all' || parsed.type === filterType;
       const matchesSearch = !search || parsed.title.toLowerCase().includes(search.toLowerCase()) || parsed.description.toLowerCase().includes(search.toLowerCase());
       return matchesType && matchesSearch;
     });
-  }, [updates, filterType, search]);
+  }, [updates, filterType, search, user?.id]);
 
   return (
     <div className="space-y-5">
@@ -268,6 +280,50 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
               <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Update title" className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
               <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description (what happened on site today?)" rows={3} className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
               
+              {/* Visibility and Tagging */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Visibility</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setForm(f => ({ ...f, visibility: 'public', taggedUserIds: [] }))} className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border ${form.visibility === 'public' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}>
+                      Public (Everyone)
+                    </button>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, visibility: 'private' }))} className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border ${form.visibility === 'private' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}>
+                      Private (Tagged Members)
+                    </button>
+                  </div>
+                </div>
+
+                {form.visibility === 'private' && (
+                  <div className="flex flex-col gap-2 p-4 rounded-xl bg-muted/30 border border-border/50">
+                    <label className="text-xs font-medium text-muted-foreground">Select members who can see this update</label>
+                    <div className="flex flex-wrap gap-2">
+                      {users.filter(u => u.id !== user?.id).map(u => {
+                        const isTagged = form.taggedUserIds.includes(u.id);
+                        return (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() => setForm(f => ({
+                              ...f,
+                              taggedUserIds: isTagged ? f.taggedUserIds.filter(id => id !== u.id) : [...f.taggedUserIds, u.id]
+                            }))}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex items-center gap-1.5 ${isTagged ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}
+                          >
+                            {u.full_name || u.email || 'Team Member'}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {form.taggedUserIds.length > 0 ? (
+                      <p className="text-[10px] text-primary flex items-center gap-1 mt-1"><Users className="w-3 h-3" /> This update will only be visible to you and the tagged members.</p>
+                    ) : (
+                      <p className="text-[10px] text-destructive flex items-center gap-1 mt-1"><AlertTriangle className="w-3 h-3" /> Please select at least one member.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Type selector */}
               <div className="flex gap-2">
                 {(['progress', 'milestone', 'issue'] as const).map(t => (
@@ -335,6 +391,11 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-foreground text-sm">{parsed.title}</h3>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cfg.bg} ${cfg.color}`}>{parsed.type}</span>
+                            {parsed.taggedUserIds && parsed.taggedUserIds.length > 0 && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground flex items-center gap-1" title="Only visible to tagged members">
+                                <Users className="w-3 h-3" /> Private Update
+                              </span>
+                            )}
                           </div>
                           {parsed.description && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{parsed.description}</p>}
                           

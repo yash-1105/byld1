@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { supabase } from '@/integrations/supabase/client';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, DollarSign, TrendingUp, TrendingDown, CreditCard, AlertTriangle, PieChart as PieIcon, Folder } from 'lucide-react';
+import { Plus, X, DollarSign, TrendingUp, TrendingDown, CreditCard, AlertTriangle, PieChart as PieIcon, Folder, Camera, Loader2 } from 'lucide-react';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, CartesianGrid } from 'recharts';
 import { toast } from 'sonner';
 
@@ -33,8 +35,89 @@ export default function BudgetPage() {
   }, [projects, activeProjectId]);
 
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ category: '', description: '', amount: '', type: 'expense' });
+  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
+  const [lineItems, setLineItems] = useState([{ category: '', description: '', amount: '' }]);
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'expenses'>('overview');
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsScanning(true);
+      toast.loading('Scanning receipt with AI...', { id: 'scan-toast' });
+
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+      const base64Data = await base64Promise;
+
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) throw new Error('VITE_GEMINI_API_KEY is not set in .env');
+      
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+      const prompt = `
+        Analyze this receipt and extract all the line items as well as the date. 
+        Categorize each line item into a common construction category like "Materials", "Labor", "Equipment", "Permits", "Subcontractors", or "Other".
+        Ignore totals, sub-totals, and taxes. Only return an array of the actual line items that were purchased.
+        Return ONLY a raw JSON object with no markdown formatting.
+        Format:
+        {
+          "date": "YYYY-MM-DD",
+          "items": [
+            { "category": "Materials", "description": "Vinyl Flooring", "amount": "2611.87" }
+          ]
+        }
+      `;
+
+      const result = await model.generateContent([
+        { inlineData: { data: base64Data, mimeType: file.type } },
+        prompt
+      ]);
+
+      const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+      let parsed;
+      try {
+        parsed = JSON.parse(text);
+      } catch (err) {
+        throw new Error('AI returned invalid format');
+      }
+
+      const dateStr = parsed.date && !isNaN(new Date(parsed.date).getTime()) 
+        ? new Date(parsed.date).toISOString().split('T')[0] 
+        : new Date().toISOString().split('T')[0];
+      
+      setFormDate(dateStr);
+      
+      if (parsed.items && Array.isArray(parsed.items) && parsed.items.length > 0) {
+        setLineItems(parsed.items.map((i: any) => ({
+          category: i.category || 'Materials',
+          description: i.description || 'Scanned Item',
+          amount: String(i.amount).replace(/[^0-9.]/g, '') || '',
+        })));
+      } else {
+        setLineItems([{ category: '', description: '', amount: '' }]);
+      }
+
+      setShowForm(true);
+      toast.success('Receipt scanned and categorized!', { id: 'scan-toast' });
+      
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Failed to scan: ' + err.message, { id: 'scan-toast' });
+    } finally {
+      setIsScanning(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
   const projectExpenses = budgetItems.filter(b => b.projectId === activeProject?.id);
@@ -84,18 +167,32 @@ export default function BudgetPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.category.trim() || !activeProject) return;
-    addBudgetItem({ 
-      ...form, 
-      projectId: activeProject.id,
-      amount: Number(form.amount) || 0, 
-      type: form.type as any, 
-      date: new Date().toISOString().split('T')[0], 
-      status: 'pending' 
+    if (!activeProject) return;
+    
+    let addedCount = 0;
+    lineItems.forEach(item => {
+      if (item.category.trim() && item.amount) {
+        addBudgetItem({ 
+          category: item.category,
+          description: item.description,
+          projectId: activeProject.id,
+          amount: Number(item.amount) || 0, 
+          type: 'expense', 
+          date: formDate, 
+          status: 'pending' 
+        });
+        addedCount++;
+      }
     });
-    setForm({ category: '', description: '', amount: '', type: 'expense' });
-    setShowForm(false);
-    toast.success('Budget entry added');
+    
+    if (addedCount > 0) {
+      setFormDate(new Date().toISOString().split('T')[0]);
+      setLineItems([{ category: '', description: '', amount: '' }]);
+      setShowForm(false);
+      toast.success(addedCount > 1 ? `${addedCount} budget entries added` : 'Budget entry added');
+    } else {
+      toast.error('Please fill in at least one expense correctly');
+    }
   };
 
   if (projects.length === 0) {
@@ -114,9 +211,20 @@ export default function BudgetPage() {
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Budget & Finance</h1>
           <p className="text-muted-foreground text-sm mt-1">Track expenses, budgets, and payments across your projects</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0">
-          <Plus className="w-4 h-4" /> Add Entry
-        </button>
+        <div className="flex items-center gap-2">
+          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleScanReceipt} />
+          <button 
+            onClick={() => fileInputRef.current?.click()} 
+            disabled={isScanning}
+            className="bg-card border border-border text-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted transition-colors flex items-center gap-2 shadow-sm shrink-0 disabled:opacity-50"
+          >
+            {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 text-primary" />}
+            {isScanning ? 'Scanning...' : 'Scan Receipt'}
+          </button>
+          <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0">
+            <Plus className="w-4 h-4" /> Add Entry
+          </button>
+        </div>
       </div>
 
       {/* Project Tabs */}
@@ -195,15 +303,30 @@ export default function BudgetPage() {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
             <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border/40 p-6 space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">Add Expense — {activeProject?.name}</h3>
-                <button type="button" onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+                <h3 className="font-semibold text-foreground flex items-center gap-2">Add Expense — {activeProject?.name}</h3>
+                <div className="flex items-center gap-3">
+                  <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
+                  <button type="button" onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Category (e.g. Materials)" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
-                <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                <input value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="Amount ($)" type="number" min="0" step="0.01" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
+              
+              <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+                {lineItems.map((item, idx) => (
+                  <div key={idx} className="flex flex-col md:flex-row gap-3 relative">
+                    <input value={item.category} onChange={e => { const newItems = [...lineItems]; newItems[idx].category = e.target.value; setLineItems(newItems); }} placeholder="Category (e.g. Materials)" className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
+                    <input value={item.description} onChange={e => { const newItems = [...lineItems]; newItems[idx].description = e.target.value; setLineItems(newItems); }} placeholder="Description" className="flex-[2] px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    <input value={item.amount} onChange={e => { const newItems = [...lineItems]; newItems[idx].amount = e.target.value; setLineItems(newItems); }} placeholder="Amount ($)" type="number" min="0" step="0.01" className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
+                    {lineItems.length > 1 && (
+                      <button type="button" onClick={() => setLineItems(lineItems.filter((_, i) => i !== idx))} className="absolute -right-2 -top-2 bg-background border border-border text-muted-foreground w-6 h-6 flex items-center justify-center rounded-full hover:text-destructive shadow-sm md:static md:w-auto md:h-auto md:bg-transparent md:border-none md:shadow-none"><X className="w-4 h-4" /></button>
+                    )}
+                  </div>
+                ))}
               </div>
-              <button type="submit" className="gradient-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 shadow-lg shadow-primary/20">Add Expense</button>
+              
+              <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                <button type="button" onClick={() => setLineItems([...lineItems, { category: '', description: '', amount: '' }])} className="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1.5"><Plus className="w-4 h-4" /> Add Line Item</button>
+                <button type="submit" className="gradient-primary text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 shadow-lg shadow-primary/20">Save Expenses</button>
+              </div>
             </form>
           </motion.div>
         )}

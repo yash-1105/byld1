@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Users, DollarSign, CheckSquare, ClipboardCheck, ShoppingCart, Layers, Clock, TrendingUp, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, DollarSign, CheckSquare, ClipboardCheck, ShoppingCart, Layers, Clock, TrendingUp, X, Trash2, Truck } from 'lucide-react';
 import SegmentMapView from '@/components/projects/SegmentMapView';
+import DeliveryTracker from '@/components/maps/DeliveryTracker';
 
 const workflowTabs = [
   { key: 'map', label: 'Segment Map', icon: Layers },
   { key: 'tasks', label: 'Tasks', icon: CheckSquare },
   { key: 'approvals', label: 'Approvals', icon: ClipboardCheck },
   { key: 'procurement', label: 'Procurement', icon: ShoppingCart },
+  { key: 'deliveries', label: 'Deliveries', icon: Truck },
   { key: 'timeline', label: 'Timeline', icon: Clock },
 ];
 
@@ -186,6 +188,13 @@ export default function ProjectDetailPage() {
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {activeTab === 'deliveries' && (
+        <div className="soft-card p-6 space-y-6">
+          <h3 className="font-semibold text-foreground">Delivery Tracking & Geofencing</h3>
+          <DeliveryTracker project={project} />
         </div>
       )}
 

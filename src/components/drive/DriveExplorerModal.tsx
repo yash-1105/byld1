@@ -31,6 +31,8 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
   const navigate = useNavigate();
 
   const [errorState, setErrorState] = useState<string | null>(null);
+  const [uploadCategory, setUploadCategory] = useState<string>('Reports');
+  const [uploadVisibility, setUploadVisibility] = useState<string[]>(['client', 'contractor', 'consultant']);
 
   useEffect(() => {
     if (isOpen) {
@@ -73,7 +75,11 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
           google_file_id: selectedFile.id,
           name: selectedFile.name,
           mime_type: selectedFile.mimeType,
-          drive_link: selectedFile.webViewLink || `https://drive.google.com/file/d/${selectedFile.id}/view`
+          drive_link: selectedFile.webViewLink || `https://drive.google.com/file/d/${selectedFile.id}/view`,
+          metadata_json: {
+            category: uploadCategory,
+            visible_to: uploadVisibility
+          }
         });
 
       if (insertError) {
@@ -193,6 +199,32 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
                 </div>
               )}
             </div>
+
+            {selectedFile && (
+              <div className="p-4 border-t border-border/60 bg-muted/10 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1.5 flex items-center gap-2">Category</label>
+                  <select value={uploadCategory} onChange={e => setUploadCategory(e.target.value)} className="w-full bg-background border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#4285F4]/20 border-border">
+                    {['Contracts', 'Drawings', 'Invoices', 'Reports', 'Permits'].map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+                {user?.role === 'architect' && (
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 flex items-center gap-2">Who can view this document?</label>
+                    <div className="space-y-1">
+                      {[{value:'client', label:'Client'}, {value:'contractor', label:'Contractor'}, {value:'consultant', label:'Consultant'}].map(role => (
+                        <label key={role.value} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-background/50 cursor-pointer text-sm">
+                          <input type="checkbox" checked={uploadVisibility.includes(role.value)} onChange={() => {
+                            setUploadVisibility(prev => prev.includes(role.value) ? prev.filter(r => r !== role.value) : [...prev, role.value])
+                          }} className="w-4 h-4 rounded border-border text-[#4285F4] focus:ring-[#4285F4]/20" />
+                          <span>{role.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="p-4 border-t border-border/60 bg-muted/30 flex justify-between items-center">
               <p className="text-xs text-muted-foreground">

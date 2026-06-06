@@ -9,6 +9,10 @@ export interface Project {
   deadline: string;
   team: string[];
   createdAt: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  geofenceRadius?: number;
 }
 
 export interface Task {
@@ -32,6 +36,7 @@ export interface SiteUpdate {
   author: string;
   createdAt: string;
   images?: string[];
+  taggedUserIds?: string[];
 }
 
 export interface BudgetItem {
@@ -64,10 +69,10 @@ export interface Notification {
 }
 
 export const initialProjects: Project[] = [
-  { id: '1', name: 'Skyline Tower', description: 'Modern 45-story mixed-use tower with retail podium', status: 'construction', progress: 65, budget: 12500000, spent: 8125000, deadline: '2025-12-15', team: ['Sarah Chen', 'Mike Johnson', 'David Park'], createdAt: '2024-01-15' },
-  { id: '2', name: 'Harbor View Residences', description: 'Luxury waterfront residential complex with 120 units', status: 'design', progress: 30, budget: 8200000, spent: 2460000, deadline: '2026-06-30', team: ['Sarah Chen', 'Lisa Wang'], createdAt: '2024-06-01' },
-  { id: '3', name: 'Green Valley Mall', description: 'Sustainable shopping center with rooftop gardens', status: 'approval', progress: 15, budget: 15000000, spent: 2250000, deadline: '2027-03-01', team: ['Sarah Chen', 'Mike Johnson'], createdAt: '2024-09-10' },
-  { id: '4', name: 'Metro Station Plaza', description: 'Transit-oriented development with office and retail', status: 'planning', progress: 5, budget: 6800000, spent: 340000, deadline: '2027-08-15', team: ['Sarah Chen'], createdAt: '2025-01-05' },
+  { id: '1', name: 'Skyline Tower', description: 'Modern 45-story mixed-use tower with retail podium', status: 'construction', progress: 65, budget: 12500000, spent: 8125000, deadline: '2025-12-15', team: ['Sarah Chen', 'Mike Johnson', 'David Park'], createdAt: '2024-01-15', address: "1 World Trade Center, New York, NY", latitude: 40.7128, longitude: -74.0060, geofenceRadius: 500 },
+  { id: '2', name: 'Harbor View Residences', description: 'Luxury waterfront residential complex with 120 units', status: 'design', progress: 30, budget: 8200000, spent: 2460000, deadline: '2026-06-30', team: ['Sarah Chen', 'Lisa Wang'], createdAt: '2024-06-01', address: "Embarcadero, San Francisco, CA", latitude: 37.7749, longitude: -122.4194, geofenceRadius: 500 },
+  { id: '3', name: 'Green Valley Mall', description: 'Sustainable shopping center with rooftop gardens', status: 'approval', progress: 15, budget: 15000000, spent: 2250000, deadline: '2027-03-01', team: ['Sarah Chen', 'Mike Johnson'], createdAt: '2024-09-10', address: "The Domain, Austin, TX", latitude: 30.2672, longitude: -97.7431, geofenceRadius: 500 },
+  { id: '4', name: 'Metro Station Plaza', description: 'Transit-oriented development with office and retail', status: 'planning', progress: 5, budget: 6800000, spent: 340000, deadline: '2027-08-15', team: ['Sarah Chen'], createdAt: '2025-01-05', address: "Union Station, Chicago, IL", latitude: 41.8781, longitude: -87.6298, geofenceRadius: 500 },
 ];
 
 export const initialTasks: Task[] = [

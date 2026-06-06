@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Search, Users, ArrowUpRight } from 'lucide-react';
+import { Plus, X, Search, Users, ArrowUpRight, Map, LayoutGrid } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import ProjectMap from '@/components/maps/ProjectMap';
 
 const statusLabels: Record<string, string> = { planning: 'Planning', design: 'Design', approval: 'Approval', construction: 'Construction', finishing: 'Finishing', completed: 'Completed' };
 const statusColors: Record<string, string> = { planning: 'bg-muted text-muted-foreground', design: 'bg-primary/10 text-primary', approval: 'bg-warning/10 text-warning', construction: 'bg-success/10 text-success', finishing: 'bg-primary/10 text-primary', completed: 'bg-success/10 text-success' };
@@ -21,6 +22,7 @@ export default function ProjectsPage() {
   const { user } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [form, setForm] = useState({ name: '', description: '', deadline: '', budget: '' });
 
   // Clients only see projects they're a part of
@@ -62,9 +64,26 @@ export default function ProjectsPage() {
         )}
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects..." className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" />
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="relative flex-1 w-full max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects..." className="w-full pl-11 pr-4 py-3 rounded-2xl border border-border bg-card text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" />
+        </div>
+        
+        <div className="flex items-center bg-card border border-border rounded-xl p-1 shadow-sm shrink-0">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'grid' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <LayoutGrid className="w-4 h-4" /> Grid
+          </button>
+          <button
+            onClick={() => setViewMode('map')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'map' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <Map className="w-4 h-4" /> Map
+          </button>
+        </div>
       </div>
 
       {/* New Project Form */}
@@ -88,8 +107,13 @@ export default function ProjectsPage() {
         )}
       </AnimatePresence>
 
-      {/* Project Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      {/* Project Views */}
+      {viewMode === 'map' ? (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full">
+          <ProjectMap projects={filtered} />
+        </motion.div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {filtered.map((p, i) => (
           <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Link to={`/projects/${p.id}`} className="block soft-card-hover overflow-hidden group">
@@ -146,7 +170,8 @@ export default function ProjectsPage() {
             </Link>
           </motion.div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
