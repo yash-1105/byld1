@@ -105,7 +105,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   });
 
   // Transformers
-  const projects = useMemo<Project[]>(() => rawProjects.map(p => {
+  const projects = useMemo<Project[]>(() => rawProjects.filter(p => {
+    // Show projects the user owns or is a member of
+    const isOwner = p.owner_id === user?.id;
+    const isMember = rawProjectMembers.some(m => m.project_id === p.id && m.user_id === user?.id);
+    return isOwner || isMember;
+  }).map(p => {
     // Calculate total spent from budget items
     const pSpent = rawBudgetItems
       .filter(b => b.project_id === p.id)
@@ -135,9 +140,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       longitude: p.longitude,
       geofenceRadius: p.geofence_radius,
     };
-  }), [rawProjects, rawProjectMembers, rawUsers, rawBudgetItems, rawTasks]);
+  }), [rawProjects, rawProjectMembers, rawUsers, rawBudgetItems, rawTasks, user?.id]);
 
-  const tasks = useMemo<Task[]>(() => rawTasks.map(t => ({
+  const accessibleProjectIds = useMemo(() => new Set(projects.map(p => p.id)), [projects]);
+
+  const tasks = useMemo<Task[]>(() => rawTasks.filter(t => accessibleProjectIds.has(t.project_id)).map(t => ({
     id: t.id,
     title: t.title,
     description: t.description || '',
@@ -147,9 +154,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     projectId: t.project_id,
     deadline: t.due_date || '',
     createdAt: t.created_at,
-  })), [rawTasks]);
+  })), [rawTasks, accessibleProjectIds]);
 
-  const siteUpdates = useMemo<SiteUpdate[]>(() => rawSiteUpdates.map(s => {
+  const siteUpdates = useMemo<SiteUpdate[]>(() => rawSiteUpdates.filter(s => accessibleProjectIds.has(s.project_id)).map(s => {
     // Try to parse new JSON content format { title, description, type }
     let title = s.content?.substring(0, 40) + '...' || 'Update';
     let description = s.content || '';
@@ -172,9 +179,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       createdAt: s.created_at,
       images: s.media_urls || undefined
     };
-  }), [rawSiteUpdates]);
+  }), [rawSiteUpdates, accessibleProjectIds]);
 
-  const budgetItems = useMemo<BudgetItem[]>(() => rawBudgetItems.map(b => ({
+  const budgetItems = useMemo<BudgetItem[]>(() => rawBudgetItems.filter(b => accessibleProjectIds.has(b.project_id)).map(b => ({
     id: b.id,
     projectId: b.project_id,
     category: b.category,
@@ -183,7 +190,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     type: 'expense',
     date: b.created_at,
     status: 'pending'
-  })), [rawBudgetItems]);
+  })), [rawBudgetItems, accessibleProjectIds]);
 
   const notifications = useMemo<Notification[]>(() => rawNotifications.map(n => ({
     id: n.id,

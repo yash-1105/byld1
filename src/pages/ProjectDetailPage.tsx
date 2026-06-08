@@ -281,6 +281,11 @@ export default function ProjectDetailPage() {
                   );
                 })}
               </div>
+              <div className="p-4 border-t border-border bg-muted/10">
+                <Link to="/team" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 transition-all">
+                  <Users className="w-4 h-4" /> Manage Full Team
+                </Link>
+              </div>
             </motion.div>
           </motion.div>
         )}

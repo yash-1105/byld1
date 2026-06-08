@@ -1,4 +1,5 @@
 import { useData } from '@/contexts/DataContext';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FolderKanban, CheckSquare, DollarSign, AlertTriangle, ArrowUpRight, CheckCircle, XCircle, Activity, ClipboardCheck, Layers, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid } from 'recharts';
@@ -9,32 +10,37 @@ const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } }
 
 export default function ArchitectDashboard() {
   const { projects, tasks, siteUpdates, updateTask } = useData();
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
 
-  const totalBudget = projects.reduce((s, p) => s + p.budget, 0);
-  const totalSpent = projects.reduce((s, p) => s + p.spent, 0);
-  const tasksDone = tasks.filter(t => t.status === 'done').length;
-  const tasksTotal = tasks.length;
-  const overdueTasks = tasks.filter(t => t.status !== 'done' && t.deadline && new Date(t.deadline) < new Date()).length;
+  const filteredProjects = selectedProjectId === 'all' ? projects : projects.filter(p => p.id === selectedProjectId);
+  const filteredTasks = selectedProjectId === 'all' ? tasks : tasks.filter(t => t.projectId === selectedProjectId);
+  const filteredUpdates = selectedProjectId === 'all' ? siteUpdates : siteUpdates.filter(u => u.projectId === selectedProjectId);
+
+  const totalBudget = filteredProjects.reduce((s, p) => s + p.budget, 0);
+  const totalSpent = filteredProjects.reduce((s, p) => s + p.spent, 0);
+  const tasksDone = filteredTasks.filter(t => t.status === 'done').length;
+  const tasksTotal = filteredTasks.length;
+  const overdueTasks = filteredTasks.filter(t => t.status !== 'done' && t.deadline && new Date(t.deadline) < new Date()).length;
 
   const stats = [
-    { label: 'Active Projects', value: projects.filter(p => p.status !== 'completed').length, icon: FolderKanban, color: 'text-primary', bg: 'bg-primary/10' },
+    { label: 'Active Projects', value: filteredProjects.filter(p => p.status !== 'completed').length, icon: FolderKanban, color: 'text-primary', bg: 'bg-primary/10' },
     { label: 'Tasks Complete', value: `${tasksDone}/${tasksTotal}`, icon: CheckSquare, color: 'text-success', bg: 'bg-success/10' },
     { label: 'Budget Utilized', value: `${totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0}%`, icon: DollarSign, color: 'text-warning', bg: 'bg-warning/10' },
     { label: 'Overdue Tasks', value: overdueTasks, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
   ];
 
-  const projectProgress = projects.map(p => ({ name: p.name.split(' ').slice(0, 2).join(' '), progress: p.progress }));
-  const budgetByProject = projects.map(p => ({ name: p.name.split(' ').slice(0, 2).join(' '), budget: p.budget / 1000000, spent: p.spent / 1000000 }));
+  const projectProgress = filteredProjects.map(p => ({ name: p.name.split(' ').slice(0, 2).join(' '), progress: p.progress }));
+  const budgetByProject = filteredProjects.map(p => ({ name: p.name.split(' ').slice(0, 2).join(' '), budget: p.budget / 1000000, spent: p.spent / 1000000 }));
   const statusColors = ['hsl(30, 25%, 62%)', 'hsl(150, 35%, 55%)', 'hsl(38, 70%, 65%)', 'hsl(220, 20%, 65%)'];
   const tasksByStatus = [
-    { name: 'To Do', value: tasks.filter(t => t.status === 'todo').length },
-    { name: 'In Progress', value: tasks.filter(t => t.status === 'in_progress').length },
-    { name: 'Review', value: tasks.filter(t => t.status === 'review').length },
-    { name: 'Done', value: tasks.filter(t => t.status === 'done').length },
+    { name: 'To Do', value: filteredTasks.filter(t => t.status === 'todo').length },
+    { name: 'In Progress', value: filteredTasks.filter(t => t.status === 'in_progress').length },
+    { name: 'Review', value: filteredTasks.filter(t => t.status === 'review').length },
+    { name: 'Done', value: filteredTasks.filter(t => t.status === 'done').length },
   ];
 
   // Map approvals to tasks in 'review' status
-  const approvals = tasks.filter(t => t.status === 'review');
+  const approvals = filteredTasks.filter(t => t.status === 'review');
 
   const handleApproval = (id: string, action: 'approved' | 'rejected') => {
     updateTask(id, { status: action === 'approved' ? 'done' : 'in_progress' });
@@ -42,13 +48,13 @@ export default function ArchitectDashboard() {
   };
 
   // Generate dynamic timeline from site updates and recent tasks
-  const timeline = [...siteUpdates.map(u => ({
+  const timeline = [...filteredUpdates.map(u => ({
     id: u.id,
     time: new Date(u.createdAt).toLocaleDateString(),
     timestamp: new Date(u.createdAt).getTime(),
     event: `Update: ${u.title}`,
     type: 'info' as const
-  })), ...tasks.slice(0, 5).map(t => ({
+  })), ...filteredTasks.slice(0, 5).map(t => ({
     id: t.id,
     time: new Date(t.createdAt).toLocaleDateString(),
     timestamp: new Date(t.createdAt).getTime(),
@@ -61,14 +67,26 @@ export default function ArchitectDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground text-sm mt-1">Welcome back, here's your project overview</p>
         </div>
-        <Link to="/projects" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
-          View all projects <ArrowUpRight className="w-3.5 h-3.5" />
-        </Link>
+        <div className="flex items-center gap-4">
+          <select 
+            value={selectedProjectId} 
+            onChange={e => setSelectedProjectId(e.target.value)}
+            className="bg-background border rounded-xl px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="all">All Projects</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <Link to="/projects" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+            View all projects <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
@@ -100,7 +118,7 @@ export default function ArchitectDashboard() {
           </div>
           <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
             <div className="text-xs text-muted-foreground">Active Tasks</div>
-            <div className="text-xl font-bold text-primary mt-1">{tasks.filter(t => t.status === 'in_progress').length}</div>
+            <div className="text-xl font-bold text-primary mt-1">{filteredTasks.filter(t => t.status === 'in_progress').length}</div>
           </div>
           <div className="p-4 rounded-xl bg-success/5 border border-success/10">
             <div className="text-xs text-muted-foreground">Procurement</div>
@@ -120,7 +138,7 @@ export default function ArchitectDashboard() {
             <Layers className="w-4 h-4 text-primary" /> Project Workflows
           </h3>
           <div className="space-y-4">
-            {projects.length > 0 ? projects.slice(0, 3).map(p => {
+            {filteredProjects.length > 0 ? filteredProjects.slice(0, 3).map(p => {
               const stage = stageMap[p.status] ?? 0;
               return (
                 <div key={p.id} className="flex items-center gap-4">
