@@ -62,7 +62,6 @@ export default function BudgetPage() {
       if (!apiKey) throw new Error('VITE_GEMINI_API_KEY is not set in .env');
       
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
       const prompt = `
         Analyze this receipt and extract all the line items as well as the date. 
@@ -78,10 +77,28 @@ export default function BudgetPage() {
         }
       `;
 
-      const result = await model.generateContent([
-        { inlineData: { data: base64Data, mimeType: file.type } },
-        prompt
-      ]);
+      let result;
+      let lastError;
+      const modelsToTry = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"];
+      
+      for (const modelName of modelsToTry) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+          result = await model.generateContent([
+            { inlineData: { data: base64Data, mimeType: file.type } },
+            prompt
+          ]);
+          break; // Success
+        } catch (err: any) {
+          console.warn(`Model ${modelName} failed:`, err.message);
+          lastError = err;
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+      }
+
+      if (!result) {
+        throw lastError || new Error('All Gemini models failed. Please try again later.');
+      }
 
       const text = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
       let parsed;
