@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, HardHat, User, Briefcase, ArrowRight, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import BrandLogo from '@/components/BrandLogo';
 
 const roles: { role: UserRole; label: string; icon: React.ElementType; desc: string; stat: string }[] = [
   { role: 'architect', label: 'Architect', icon: Building2, desc: 'Full project control', stat: 'Full Access' },
@@ -86,11 +87,10 @@ export default function LoginPage() {
           Back to home
         </Link>
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-3 mb-4">
-            <img src="/images/byld-logo.jpeg" alt="BYLD" className="w-11 h-11 rounded-xl object-cover shadow-lg shadow-primary/20" />
-            <span className="text-2xl tracking-[0.2em] text-foreground" style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}>BYLD</span>
+          <div className="flex items-center justify-center mb-3 mt-2">
+            <BrandLogo size="xl" dark />
           </div>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-sm mt-4">
             {isLogin ? 'Sign in to your account' : 'Create a new account'}
           </p>
         </div>

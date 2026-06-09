@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { Project, Task, SiteUpdate, BudgetItem, Message, Notification } from '@/data/mockData';
+import { Project, Task, SiteUpdate, BudgetItem, Message, Notification, Approval, PurchaseOrder } from '@/data/mockData';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
@@ -11,6 +11,9 @@ interface DataContextType {
   budgetItems: BudgetItem[];
   messages: Message[];
   notifications: Notification[];
+  approvals: Approval[];
+  purchaseOrders: PurchaseOrder[];
+  segments: any[];
   users: any[];
   projectMembers: any[];
   addProject: (p: Omit<Project, 'id' | 'createdAt'>) => void;
@@ -25,6 +28,10 @@ interface DataContextType {
   markAllNotificationsRead: () => void;
   addTeamMember: (projectId: string, userId: string, role: string) => void;
   removeTeamMember: (projectId: string, userId: string) => void;
+  addApproval: (a: Omit<Approval, 'id' | 'createdAt'>) => void;
+  updateApproval: (id: string, updates: Partial<Approval>) => void;
+  addPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'createdAt'>) => void;
+  updatePurchaseOrder: (id: string, updates: Partial<PurchaseOrder>) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -98,6 +105,36 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     queryKey: ['project_members'],
     queryFn: async () => {
       const { data, error } = await supabase.from('project_members').select('*');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
+  const { data: rawApprovals = [] } = useQuery({
+    queryKey: ['approvals'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('approvals').select('*');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
+  const { data: rawSegments = [] } = useQuery({
+    queryKey: ['segments'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('segments').select('*');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
+  const { data: rawPurchaseOrders = [] } = useQuery({
+    queryKey: ['purchase_orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('purchase_orders').select('*');
       if (error) throw error;
       return data;
     },
@@ -191,6 +228,62 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     date: b.created_at,
     status: 'pending'
   })), [rawBudgetItems, accessibleProjectIds]);
+
+  const approvals = useMemo<Approval[]>(() =>
+    rawApprovals
+      .filter(a => !a.project_id || accessibleProjectIds.has(a.project_id))
+      .map(a => {
+        // description may be encoded as JSON: { text, images }
+        let description = a.description || '';
+        let images: string[] | undefined;
+        try {
+          const parsed = JSON.parse(a.description || '{}');
+          if (parsed.text !== undefined || parsed.images !== undefined) {
+            description = parsed.text || '';
+            images = parsed.images?.length ? parsed.images : undefined;
+          }
+        } catch { /* plain text description */ }
+        return {
+          id: a.id,
+          title: a.title,
+          category: a.category || 'Design',
+          status: (a.status as Approval['status']) || 'pending',
+          description,
+          images,
+          projectId: a.project_id || '',
+          requestedBy: a.requested_by || '',
+          decidedBy: a.decided_by || undefined,
+          decidedAt: a.decided_at || undefined,
+          reason: a.reason || undefined,
+          createdAt: a.created_at || '',
+        };
+      }),
+    [rawApprovals, accessibleProjectIds]
+  );
+
+  const purchaseOrders = useMemo<PurchaseOrder[]>(() =>
+    rawPurchaseOrders
+      .filter((po: any) => accessibleProjectIds.has(po.project_id))
+      .map((po: any) => ({
+        id: po.id,
+        projectId: po.project_id,
+        segmentId: po.segment_id || undefined,
+        item: po.item,
+        category: po.category || 'General',
+        supplierName: po.supplier_name || '',
+        quantity: po.quantity ?? 1,
+        unit: po.unit || 'units',
+        totalCost: po.total_cost ?? 0,
+        currency: po.currency || 'USD',
+        status: (po.status as PurchaseOrder['status']) || 'requested',
+        expectedDelivery: po.expected_delivery || undefined,
+        deliveredAt: po.delivered_at || undefined,
+        notes: po.notes || undefined,
+        requestedBy: po.requested_by || '',
+        createdAt: po.created_at || '',
+      })),
+    [rawPurchaseOrders, accessibleProjectIds]
+  );
 
   const notifications = useMemo<Notification[]>(() => rawNotifications.map(n => ({
     id: n.id,
@@ -309,6 +402,79 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project_members'] })
   });
 
+  const addApprovalMutation = useMutation({
+    mutationFn: async (a: Omit<Approval, 'id' | 'createdAt'>) => {
+      const encodedDesc = (a.images?.length)
+        ? JSON.stringify({ text: a.description, images: a.images })
+        : a.description;
+      const { data, error } = await supabase.from('approvals').insert({
+        title: a.title,
+        category: a.category,
+        status: 'pending',
+        description: encodedDesc,
+        project_id: a.projectId || null,
+        requested_by: user?.id || null,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['approvals'] })
+  });
+
+  const updateApprovalMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Approval> }) => {
+      const dbUpdates: any = {};
+      if (updates.status !== undefined)    dbUpdates.status = updates.status;
+      if (updates.reason !== undefined)    dbUpdates.reason = updates.reason;
+      if (updates.decidedBy !== undefined) dbUpdates.decided_by = updates.decidedBy;
+      if (updates.decidedAt !== undefined) dbUpdates.decided_at = updates.decidedAt;
+      const { data, error } = await supabase.from('approvals').update(dbUpdates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['approvals'] })
+  });
+
+  const addPurchaseOrderMutation = useMutation({
+    mutationFn: async (po: Omit<PurchaseOrder, 'id' | 'createdAt'>) => {
+      const { data, error } = await supabase.from('purchase_orders').insert({
+        project_id: po.projectId,
+        segment_id: po.segmentId || null,
+        item: po.item,
+        category: po.category,
+        supplier_name: po.supplierName,
+        quantity: po.quantity,
+        unit: po.unit,
+        total_cost: po.totalCost,
+        currency: po.currency || 'USD',
+        status: po.status || 'requested',
+        expected_delivery: po.expectedDelivery || null,
+        notes: po.notes || null,
+        requested_by: user?.id || null,
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['purchase_orders'] })
+  });
+
+  const updatePurchaseOrderMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<PurchaseOrder> }) => {
+      const dbUpdates: any = {};
+      if (updates.status !== undefined)           dbUpdates.status = updates.status;
+      if (updates.deliveredAt !== undefined)      dbUpdates.delivered_at = updates.deliveredAt;
+      if (updates.expectedDelivery !== undefined) dbUpdates.expected_delivery = updates.expectedDelivery;
+      if (updates.supplierName !== undefined)     dbUpdates.supplier_name = updates.supplierName;
+      if (updates.totalCost !== undefined)        dbUpdates.total_cost = updates.totalCost;
+      if (updates.notes !== undefined)            dbUpdates.notes = updates.notes;
+      const { data, error } = await supabase
+        .from('purchase_orders').update(dbUpdates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['purchase_orders'] })
+  });
+
   return (
     <DataContext.Provider value={{
       projects,
@@ -317,6 +483,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       budgetItems,
       messages: [], // Chat feature can be wired up later
       notifications,
+      approvals,
+      purchaseOrders,
+      segments: rawSegments,
       users: rawUsers,
       projectMembers: rawProjectMembers,
       addProject: (p) => addProjectMutation.mutate(p),
@@ -331,6 +500,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       markAllNotificationsRead: () => {}, // TODO
       addTeamMember: (projectId, userId, role) => addTeamMemberMutation.mutate({ projectId, userId, role }),
       removeTeamMember: (projectId, userId) => removeTeamMemberMutation.mutate({ projectId, userId }),
+      addApproval: (a) => addApprovalMutation.mutate(a),
+      updateApproval: (id, updates) => updateApprovalMutation.mutate({ id, updates }),
+      addPurchaseOrder: (po) => addPurchaseOrderMutation.mutate(po),
+      updatePurchaseOrder: (id, updates) => updatePurchaseOrderMutation.mutate({ id, updates }),
     }}>
       {children}
     </DataContext.Provider>

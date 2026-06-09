@@ -50,6 +50,43 @@ export interface BudgetItem {
   status: 'pending' | 'approved' | 'paid';
 }
 
+export interface Approval {
+  id: string;
+  title: string;
+  category: string;
+  status: 'pending' | 'approved' | 'rejected' | 'on_hold';
+  description: string;
+  images?: string[];
+  projectId: string;
+  requestedBy: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  reason?: string;
+  createdAt: string;
+}
+
+export type PurchaseOrderStatus =
+  | 'requested' | 'approved' | 'ordered' | 'in_transit' | 'delivered' | 'cancelled';
+
+export interface PurchaseOrder {
+  id: string;
+  projectId: string;
+  segmentId?: string;
+  item: string;
+  category: string;
+  supplierName: string;
+  quantity: number;
+  unit: string;
+  totalCost: number;
+  currency: string;
+  status: PurchaseOrderStatus;
+  expectedDelivery?: string;
+  deliveredAt?: string;
+  notes?: string;
+  requestedBy: string;
+  createdAt: string;
+}
+
 export interface Message {
   id: string;
   channel: string;

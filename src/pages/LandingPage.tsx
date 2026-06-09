@@ -5,6 +5,7 @@ import {
   Building2, ArrowRight, HardHat, User, Briefcase, ChevronRight
 } from 'lucide-react';
 import Footer from '@/components/Footer';
+import BrandLogo from '@/components/BrandLogo';
 import HeroScrollAnimation from '@/components/HeroScrollAnimation';
 import ProductShowcase from '@/components/ProductShowcase';
 
@@ -36,8 +37,7 @@ export default function LandingPage() {
         }`}
       >
         <Link to="/" className="flex items-center gap-3">
-          <img src="/images/byld-logo.jpeg" alt="BYLD" className="h-8 w-8 rounded-lg object-cover" />
-          
+          <BrandLogo size="lg" dark={isScrolled} />
         </Link>
         <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
           {['Features', 'Pricing', 'About', 'Blog'].map(l => (

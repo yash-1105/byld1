@@ -7,6 +7,7 @@ import {
   DollarSign, Users, MessageSquare, Bot, Bell, Settings, ChevronLeft,
   ChevronRight, Building2, LogOut, ClipboardCheck, HelpCircle, Calendar
 } from 'lucide-react';
+import BrandLogo from '@/components/BrandLogo';
 
 interface NavItem {
   label: string;
@@ -48,22 +49,14 @@ export default function AppSidebar() {
       className="h-screen bg-card border-r border-border flex flex-col sticky top-0 z-30 overflow-hidden"
     >
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-border/60">
-        <img src="/images/byld-logo.jpeg" alt="BYLD" className="w-9 h-9 rounded-xl flex-shrink-0 object-cover" />
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.2 }}
-              className="ml-3 text-lg tracking-[0.2em] text-foreground"
-              style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 300 }}
-            >
-              BYLD
-            </motion.span>
-          )}
-        </AnimatePresence>
+      <div className="h-16 flex items-center px-5 border-b border-border/60">
+        {collapsed ? (
+          <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center mx-auto">
+            <span className="text-primary-foreground font-bold text-sm">B</span>
+          </div>
+        ) : (
+          <BrandLogo size="lg" dark />
+        )}
       </div>
 
       {/* Navigation */}

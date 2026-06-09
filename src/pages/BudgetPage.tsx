@@ -23,6 +23,10 @@ const statusColors: Record<string, string> = {
   overdue: 'bg-destructive/10 text-destructive',
 };
 
+// Procurement-linked entries store a hidden `PO:<id> · ` marker in the description for
+// idempotency — strip it for display so users only see the human-readable part.
+const cleanDescription = (d?: string) => (d || '').replace(/^PO:[0-9a-fA-F-]+\s*·\s*/, '');
+
 export default function BudgetPage() {
   const { projects, budgetItems, addBudgetItem } = useData();
   const [activeProjectId, setActiveProjectId] = useState<string>('');
@@ -466,7 +470,7 @@ export default function BudgetPage() {
                     <td className="px-5 py-4">
                       <span className="text-xs px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-medium">{exp.category}</span>
                     </td>
-                    <td className="px-5 py-4 font-medium text-foreground">{exp.description || '-'}</td>
+                    <td className="px-5 py-4 font-medium text-foreground">{cleanDescription(exp.description) || '-'}</td>
                     <td className="px-5 py-4 font-semibold text-foreground">${exp.amount.toLocaleString()}</td>
                     <td className="px-5 py-4">
                       <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold capitalize ${statusColors[exp.status] || 'bg-muted text-muted-foreground'}`}>

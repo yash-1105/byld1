@@ -14,141 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      conversations: {
-        Row: {
-          id: string
-          project_id: string | null
-          type: string | null
-          name: string | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          project_id?: string | null
-          type?: string | null
-          name?: string | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          project_id?: string | null
-          type?: string | null
-          name?: string | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversations_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      conversation_members: {
-        Row: {
-          id: string
-          conversation_id: string | null
-          user_id: string | null
-          role: string | null
-          joined_at: string | null
-        }
-        Insert: {
-          id?: string
-          conversation_id?: string | null
-          user_id?: string | null
-          role?: string | null
-          joined_at?: string | null
-        }
-        Update: {
-          id?: string
-          conversation_id?: string | null
-          user_id?: string | null
-          role?: string | null
-          joined_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversation_members_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversation_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      messages: {
-        Row: {
-          id: string
-          conversation_id: string | null
-          sender_id: string | null
-          type: string | null
-          content: string | null
-          file_url: string | null
-          file_size: number | null
-          duration: number | null
-          reply_to_id: string | null
-          is_read: boolean | null
-          created_at: string | null
-        }
-        Insert: {
-          id?: string
-          conversation_id?: string | null
-          sender_id?: string | null
-          type?: string | null
-          content?: string | null
-          file_url?: string | null
-          file_size?: number | null
-          duration?: number | null
-          reply_to_id?: string | null
-          is_read?: boolean | null
-          created_at?: string | null
-        }
-        Update: {
-          id?: string
-          conversation_id?: string | null
-          sender_id?: string | null
-          type?: string | null
-          content?: string | null
-          file_url?: string | null
-          file_size?: number | null
-          duration?: number | null
-          reply_to_id?: string | null
-          is_read?: boolean | null
-          created_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "messages_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_reply_to_id_fkey"
-            columns: ["reply_to_id"]
-            isOneToOne: false
-            referencedRelation: "messages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       approvals: {
         Row: {
           category: string | null
@@ -278,6 +143,62 @@ export type Database = {
           },
         ]
       }
+      conversation_members: {
+        Row: {
+          conversation_id: string | null
+          id: string
+          joined_at: string | null
+          role: string | null
+          user_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          id?: string
+          joined_at?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          id?: string
+          joined_at?: string | null
+          role?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string | null
+          project_id: string | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          project_id?: string | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          project_id?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           category: string | null
@@ -332,6 +253,194 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drive_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          google_account_email: string
+          id: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          google_account_email: string
+          id?: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          google_account_email?: string
+          id?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drive_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drive_files: {
+        Row: {
+          created_at: string
+          drive_link: string
+          google_file_id: string
+          id: string
+          last_synced_at: string
+          metadata_json: Json
+          mime_type: string
+          name: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          drive_link: string
+          google_file_id: string
+          id?: string
+          last_synced_at?: string
+          metadata_json?: Json
+          mime_type: string
+          name: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          drive_link?: string
+          google_file_id?: string
+          id?: string
+          last_synced_at?: string
+          metadata_json?: Json
+          mime_type?: string
+          name?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drive_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drive_files_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drive_folder_mappings: {
+        Row: {
+          created_at: string
+          google_folder_id: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          google_folder_id: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          google_folder_id?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drive_folder_mappings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drive_folder_mappings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string | null
+          conversation_id: string | null
+          created_at: string | null
+          duration: number | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          is_read: boolean | null
+          reply_to_id: string | null
+          sender_id: string | null
+          type: string | null
+        }
+        Insert: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          duration?: number | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          is_read?: boolean | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+          type?: string | null
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string | null
+          duration?: number | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          is_read?: boolean | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -431,39 +540,51 @@ export type Database = {
       }
       projects: {
         Row: {
+          address: string | null
           budget: number | null
           cover_image_url: string | null
           created_at: string | null
           description: string | null
           end_date: string | null
+          geofence_radius: number | null
           id: string
+          latitude: number | null
           location: string | null
+          longitude: number | null
           name: string
           owner_id: string | null
           start_date: string | null
           type: string | null
         }
         Insert: {
+          address?: string | null
           budget?: number | null
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string | null
+          geofence_radius?: number | null
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           name: string
           owner_id?: string | null
           start_date?: string | null
           type?: string | null
         }
         Update: {
+          address?: string | null
           budget?: number | null
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string | null
+          geofence_radius?: number | null
           id?: string
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           name?: string
           owner_id?: string | null
           start_date?: string | null
@@ -475,6 +596,85 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          category: string | null
+          created_at: string
+          currency: string | null
+          delivered_at: string | null
+          expected_delivery: string | null
+          id: string
+          item: string
+          notes: string | null
+          project_id: string
+          quantity: number | null
+          requested_by: string | null
+          segment_id: string | null
+          status: string
+          supplier_name: string | null
+          total_cost: number | null
+          unit: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          delivered_at?: string | null
+          expected_delivery?: string | null
+          id?: string
+          item: string
+          notes?: string | null
+          project_id: string
+          quantity?: number | null
+          requested_by?: string | null
+          segment_id?: string | null
+          status?: string
+          supplier_name?: string | null
+          total_cost?: number | null
+          unit?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          currency?: string | null
+          delivered_at?: string | null
+          expected_delivery?: string | null
+          id?: string
+          item?: string
+          notes?: string | null
+          project_id?: string
+          quantity?: number | null
+          requested_by?: string | null
+          segment_id?: string | null
+          status?: string
+          supplier_name?: string | null
+          total_cost?: number | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "segments"
             referencedColumns: ["id"]
           },
         ]

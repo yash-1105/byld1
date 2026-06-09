@@ -1,38 +1,65 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, X, Pause, MessageSquare, Clock, User } from 'lucide-react';
+import {
+  Check, X, Pause, MessageSquare, Clock, User, Layers, ShoppingCart,
+  DollarSign, FileText, Wrench, AlertTriangle, ClipboardCheck, FolderKanban,
+  CheckCircle, XCircle, PauseCircle, ChevronLeft, ChevronRight, ImageOff
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 export interface ApprovalItem {
   id: string;
   title: string;
   category: string;
-  image: string;
   status: 'pending' | 'approved' | 'rejected' | 'on_hold';
   requestedBy: string;
   date: string;
-  cost?: string;
   description?: string;
+  images?: string[];
+  reason?: string;
+  decidedBy?: string;
+  projectName?: string;
 }
 
-const statusStyles: Record<string, { bg: string; text: string; label: string }> = {
-  pending: { bg: 'bg-warning/10', text: 'text-warning', label: 'Pending Approval' },
-  approved: { bg: 'bg-success/10', text: 'text-success', label: 'Approved' },
-  rejected: { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Rejected' },
-  on_hold: { bg: 'bg-muted', text: 'text-muted-foreground', label: 'On Hold' },
+const STATUS_STYLES = {
+  pending:  { bg: 'bg-warning/15',     text: 'text-warning',         label: 'Pending',   icon: Clock },
+  approved: { bg: 'bg-success/15',     text: 'text-success',         label: 'Approved',  icon: CheckCircle },
+  rejected: { bg: 'bg-destructive/15', text: 'text-destructive',     label: 'Rejected',  icon: XCircle },
+  on_hold:  { bg: 'bg-muted',          text: 'text-muted-foreground', label: 'On Hold',  icon: PauseCircle },
 };
+
+const CATEGORY_CONFIG: Record<string, { icon: React.ElementType; bg: string; iconColor: string }> = {
+  design:       { icon: Layers,        bg: 'bg-primary/10',          iconColor: 'text-primary' },
+  procurement:  { icon: ShoppingCart,  bg: 'bg-warning/10',          iconColor: 'text-warning' },
+  financial:    { icon: DollarSign,    bg: 'bg-success/10',          iconColor: 'text-success' },
+  contracts:    { icon: FileText,      bg: 'bg-blue-50',             iconColor: 'text-blue-600' },
+  execution:    { icon: Wrench,        bg: 'bg-orange-50',           iconColor: 'text-orange-600' },
+  issues:       { icon: AlertTriangle, bg: 'bg-destructive/10',      iconColor: 'text-destructive' },
+};
+
+function getCategoryConfig(category: string) {
+  return CATEGORY_CONFIG[category.toLowerCase()] ?? { icon: ClipboardCheck, bg: 'bg-muted', iconColor: 'text-muted-foreground' };
+}
 
 interface Props {
   item: ApprovalItem;
   index: number;
   onAction: (id: string, action: 'approved' | 'rejected' | 'on_hold', reason?: string) => void;
+  canDecide?: boolean;
 }
 
-export default function ApprovalCard({ item, index, onAction }: Props) {
+export default function ApprovalCard({ item, index, onAction, canDecide = true }: Props) {
   const [reason, setReason] = useState('');
   const [showReasonInput, setShowReasonInput] = useState(false);
   const [pendingAction, setPendingAction] = useState<'rejected' | 'on_hold' | null>(null);
-  const st = statusStyles[item.status];
+  const [photoIndex, setPhotoIndex] = useState(0);
+
+  const st = STATUS_STYLES[item.status];
+  const StatusIcon = st.icon;
+  const catCfg = getCategoryConfig(item.category);
+  const CatIcon = catCfg.icon;
+  const photos = item.images ?? [];
+  const hasPhotos = photos.length > 0;
 
   const handleAction = (action: 'approved' | 'rejected' | 'on_hold') => {
     if (action === 'approved') {
@@ -58,99 +85,159 @@ export default function ApprovalCard({ item, index, onAction }: Props) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, rotate: -1 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={{ delay: index * 0.06, type: 'spring', stiffness: 180, damping: 20 }}
-      whileHover={{ y: -8, boxShadow: '0 24px 64px -16px rgba(0,0,0,0.14)' }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, type: 'spring', stiffness: 200, damping: 22 }}
+      whileHover={{ y: -4, boxShadow: '0 16px 48px -12px rgba(0,0,0,0.1)' }}
       className="soft-card overflow-hidden group"
     >
-      {/* Image */}
-      <div className="relative h-52 overflow-hidden">
-        <img
-          src={item.image}
-          alt={item.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 via-foreground/10 to-transparent" />
-        <span className={`absolute top-3 right-3 text-[11px] px-3 py-1.5 rounded-full font-semibold ${st.bg} ${st.text} backdrop-blur-md border border-current/10`}>
+      {/* Header: photo carousel if images present, else category icon */}
+      <div className="relative h-32 border-b border-border/40 overflow-hidden">
+        {hasPhotos ? (
+          <>
+            <img
+              src={photos[photoIndex]}
+              alt={`Photo ${photoIndex + 1}`}
+              className="w-full h-full object-cover"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            {photos.length > 1 && (
+              <>
+                <button
+                  onClick={e => { e.stopPropagation(); setPhotoIndex(i => (i - 1 + photos.length) % photos.length); }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setPhotoIndex(i => (i + 1) % photos.length); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  {photos.map((_, i) => (
+                    <div key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === photoIndex ? 'bg-white' : 'bg-white/40'}`} />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <div className={`w-full h-full ${catCfg.bg} flex flex-col items-center justify-center gap-2`}>
+            <div className="w-14 h-14 rounded-2xl bg-white/60 backdrop-blur-sm flex items-center justify-center shadow-sm">
+              <CatIcon className={`w-7 h-7 ${catCfg.iconColor}`} />
+            </div>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{item.category}</span>
+          </div>
+        )}
+        <span className={`absolute top-3 right-3 flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full font-semibold backdrop-blur-sm ${hasPhotos ? 'bg-black/50 text-white' : `${st.bg} ${st.text}`}`}>
+          <StatusIcon className="w-3 h-3" />
           {st.label}
         </span>
-        {item.cost && (
-          <span className="absolute top-3 left-3 text-[11px] px-3 py-1.5 rounded-full font-semibold bg-card/80 text-foreground backdrop-blur-md border border-border/30">
-            {item.cost}
+        {item.projectName && (
+          <span className="absolute top-3 left-3 flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-card/80 text-muted-foreground backdrop-blur-sm border border-border/30">
+            <FolderKanban className="w-3 h-3" />
+            {item.projectName}
           </span>
         )}
-        <div className="absolute bottom-4 left-5 right-5">
-          <h3 className="text-primary-foreground font-bold text-lg drop-shadow-lg">{item.title}</h3>
-          <p className="text-primary-foreground/70 text-xs mt-0.5">{item.category}</p>
-        </div>
+        {hasPhotos && (
+          <span className="absolute bottom-2 right-3 text-[10px] px-2 py-0.5 rounded-full bg-black/50 text-white backdrop-blur-sm">
+            {item.category}
+          </span>
+        )}
       </div>
 
       {/* Content */}
-      <div className="p-5 space-y-4">
+      <div className="p-5 space-y-3">
+        <h3 className="text-sm font-bold text-foreground leading-snug">{item.title}</h3>
+
         {item.description && (
-          <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
         )}
 
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{item.requestedBy}</span>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+          <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{item.requestedBy || 'Unknown'}</span>
           <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{item.date}</span>
         </div>
 
-        {/* Actions */}
-        {item.status === 'pending' && !showReasonInput && (
+        {/* Decided reason (for non-pending) */}
+        {item.status !== 'pending' && item.reason && (
+          <div className={`text-xs px-3 py-2.5 rounded-xl ${st.bg} ${st.text} border border-current/10`}>
+            <span className="font-semibold">Reason: </span>{item.reason}
+          </div>
+        )}
+        {item.status !== 'pending' && item.decidedBy && (
+          <p className="text-xs text-muted-foreground">
+            Decided by <span className="font-medium text-foreground">{item.decidedBy}</span>
+          </p>
+        )}
+
+        {/* Actions — only for pending + canDecide */}
+        {item.status === 'pending' && canDecide && !showReasonInput && (
           <div className="flex gap-2 pt-1">
             <motion.button
-              whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => handleAction('approved')}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-success/10 text-success text-sm font-semibold hover:bg-success/20 transition-colors border border-success/20"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-success/10 text-success text-xs font-semibold hover:bg-success/20 transition-colors border border-success/20"
             >
-              <Check className="w-4 h-4" /> Approve
+              <Check className="w-3.5 h-3.5" /> Approve
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => handleAction('rejected')}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors border border-destructive/20"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-destructive/10 text-destructive text-xs font-semibold hover:bg-destructive/20 transition-colors border border-destructive/20"
             >
-              <X className="w-4 h-4" /> Reject
+              <X className="w-3.5 h-3.5" /> Reject
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleAction('on_hold')}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-warning/10 text-warning text-sm font-semibold hover:bg-warning/20 transition-colors border border-warning/20"
+              className="flex items-center justify-center px-3 py-2.5 rounded-xl bg-warning/10 text-warning text-xs font-semibold hover:bg-warning/20 transition-colors border border-warning/20"
+              title="Put on hold"
             >
-              <Pause className="w-4 h-4" />
+              <Pause className="w-3.5 h-3.5" />
             </motion.button>
           </div>
         )}
 
-        {/* Reason Input */}
+        {item.status === 'pending' && !canDecide && (
+          <div className="pt-1 text-xs text-center text-muted-foreground py-2 bg-muted/30 rounded-xl">
+            Awaiting decision
+          </div>
+        )}
+
+        {/* Reason input */}
         {showReasonInput && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-3">
             <div className="relative">
-              <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+              <MessageSquare className="absolute left-3 top-3 w-3.5 h-3.5 text-muted-foreground" />
               <textarea
                 value={reason}
                 onChange={e => setReason(e.target.value)}
                 placeholder="Reason for decision..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-muted/20 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 resize-none transition-all"
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-border bg-muted/20 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/20 resize-none transition-all"
                 rows={2}
+                autoFocus
               />
             </div>
-            <p className="text-[10px] text-muted-foreground">To confirm your decision, you must provide a reason.</p>
             <div className="flex gap-2">
               <motion.button
-                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={submitWithReason}
-                className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-colors border ${pendingAction === 'rejected' ? 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20' : 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20'}`}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-colors border ${
+                  pendingAction === 'rejected'
+                    ? 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20'
+                    : 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20'
+                }`}
               >
                 Confirm {pendingAction === 'rejected' ? 'Rejection' : 'Hold'}
               </motion.button>
-              <button onClick={() => { setShowReasonInput(false); setPendingAction(null); }} className="px-5 py-3 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors">
+              <button
+                onClick={() => { setShowReasonInput(false); setPendingAction(null); setReason(''); }}
+                className="px-4 py-2.5 rounded-xl text-xs text-muted-foreground hover:bg-muted transition-colors"
+              >
                 Cancel
               </button>
             </div>
