@@ -8,16 +8,28 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  avatar?: string;
+  avatar?: string;      // initials, derived from name (fallback when no photo)
+  avatarUrl?: string;   // uploaded profile photo URL
   studio_name?: string;
+}
+
+export interface ProfileUpdate {
+  name?: string;
+  studio_name?: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  updateProfile: (updates: ProfileUpdate) => Promise<{ error?: string }>;
   isAuthenticated: boolean;
 }
+
+/** Two-letter initials from a name (or email), uppercased. */
+const initialsFrom = (value: string) =>
+  value.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -40,12 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         userRef.current = null;
       } else {
-        const profile = {
+        const profile: User = {
           id: data.id,
           name: data.full_name,
           email: data.email,
           role: (data.role || 'client').toLowerCase() as UserRole,
-          avatar: data.avatar_url || undefined,
+          avatar: initialsFrom(data.full_name || data.email || ''),
+          avatarUrl: data.avatar_url || undefined,
           studio_name: data.studio_name || undefined,
         };
         setUser(profile);
@@ -95,8 +108,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const updateProfile = async (updates: ProfileUpdate): Promise<{ error?: string }> => {
+    const current = userRef.current;
+    if (!current) return { error: 'Not signed in' };
+
+    const dbUpdates: Record<string, string | null> = {};
+    if (updates.name !== undefined) dbUpdates.full_name = updates.name;
+    if (updates.studio_name !== undefined) dbUpdates.studio_name = updates.studio_name || null;
+    if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl || null;
+
+    const { error } = await supabase.from('users').update(dbUpdates).eq('id', current.id);
+    if (error) return { error: error.message };
+
+    const next: User = {
+      ...current,
+      ...(updates.name !== undefined ? { name: updates.name, avatar: initialsFrom(updates.name) } : {}),
+      ...(updates.studio_name !== undefined ? { studio_name: updates.studio_name || undefined } : {}),
+      ...(updates.avatarUrl !== undefined ? { avatarUrl: updates.avatarUrl || undefined } : {}),
+    };
+    setUser(next);
+    userRef.current = next;
+    return {};
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signOut, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, loading, signOut, updateProfile, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

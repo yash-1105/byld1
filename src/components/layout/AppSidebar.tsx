@@ -8,6 +8,7 @@ import {
   ChevronRight, Building2, LogOut, ClipboardCheck, HelpCircle, Calendar
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
+import UserAvatar from '@/components/UserAvatar';
 
 interface NavItem {
   label: string;
@@ -101,9 +102,7 @@ export default function AppSidebar() {
       {/* User + Collapse */}
       <div className="p-3 border-t border-border/60 space-y-2">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-xs font-semibold text-primary-foreground flex-shrink-0 shadow-sm shadow-primary/15">
-            {user.avatar}
-          </div>
+          <UserAvatar initials={user.avatar} avatarUrl={user.avatarUrl} name={user.name} className="w-8 h-8 text-xs shadow-sm shadow-primary/15" />
           <AnimatePresence>
             {!collapsed && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 min-w-0">

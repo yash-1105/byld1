@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, X, Package, Truck, ClipboardList, CheckCircle2, Clock, AlertTriangle,
@@ -37,6 +38,7 @@ const CATEGORIES = ['Materials', 'Flooring', 'Lighting', 'Fixtures', 'Furniture'
 const UNITS = ['units', 'pcs', 'bags', 'tons', 'kg', 'm²', 'm³', 'litres', 'rolls', 'sets'];
 
 // Orders at or above this cost raise a Procurement approval in the Approval Center on creation.
+// Threshold is in the USD base the amounts are stored in.
 const APPROVAL_THRESHOLD = 10000;
 
 const isOverdue = (po: PurchaseOrder) =>
@@ -50,6 +52,7 @@ const fmtMoney = (n: number) => `$${Math.round(n).toLocaleString()}`;
 export default function ProcurementPage() {
   const { projects, purchaseOrders, segments, budgetItems, addPurchaseOrder, updatePurchaseOrder, addBudgetItem, addApproval } = useData();
   const { user } = useAuth();
+  const { formatCurrency, formatCurrencyCompact } = usePreferences();
 
   const [activeProjectId, setActiveProjectId] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'pipeline' | 'suppliers' | 'analytics'>('pipeline');
@@ -290,7 +293,7 @@ export default function ProcurementPage() {
       {/* KPI summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Committed Spend', value: fmtMoney(kpis.committed), icon: DollarSign, color: 'text-foreground', bg: 'bg-muted/50' },
+          { label: 'Committed Spend', value: formatCurrencyCompact(kpis.committed), icon: DollarSign, color: 'text-foreground', bg: 'bg-muted/50' },
           { label: 'Pending Delivery', value: String(kpis.pending), icon: Truck, color: 'text-warning', bg: 'bg-warning/10' },
           { label: 'Overdue', value: String(kpis.overdue), icon: AlertTriangle, color: kpis.overdue > 0 ? 'text-destructive' : 'text-success', bg: kpis.overdue > 0 ? 'bg-destructive/10' : 'bg-success/10' },
           { label: 'Delivered (mo.)', value: String(kpis.deliveredThisMonth), icon: CheckCircle2, color: 'text-success', bg: 'bg-success/10' },
@@ -488,7 +491,7 @@ export default function ProcurementPage() {
                             </div>
 
                             <div className="flex items-center justify-between mt-2.5">
-                              <span className="text-sm font-bold text-foreground">{fmtMoney(po.totalCost)}</span>
+                              <span className="text-sm font-bold text-foreground">{formatCurrency(po.totalCost)}</span>
                               {activeProjectId === 'all' && <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{resolveProject(po.projectId)}</span>}
                             </div>
 
@@ -541,7 +544,7 @@ export default function ProcurementPage() {
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cancelled ({cancelledOrders.length})</h3>
                 <div className="flex flex-wrap gap-2">
                   {cancelledOrders.map(po => (
-                    <span key={po.id} className="text-xs px-3 py-1.5 rounded-lg bg-muted/60 text-muted-foreground line-through">{po.item} · {fmtMoney(po.totalCost)}</span>
+                    <span key={po.id} className="text-xs px-3 py-1.5 rounded-lg bg-muted/60 text-muted-foreground line-through">{po.item} · {formatCurrency(po.totalCost)}</span>
                   ))}
                 </div>
               </div>
@@ -573,7 +576,7 @@ export default function ProcurementPage() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <div>
-                    <p className="text-lg font-bold text-foreground">{fmtMoney(s.totalSpend)}</p>
+                    <p className="text-lg font-bold text-foreground">{formatCurrency(s.totalSpend)}</p>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total spend</p>
                   </div>
                   {s.openOrders > 0 && (
@@ -605,7 +608,7 @@ export default function ProcurementPage() {
                     <Pie data={spendByCategory} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={3} dataKey="value">
                       {spendByCategory.map((e, i) => <Cell key={i} fill={e.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} formatter={(v: number) => fmtMoney(v)} />
+                    <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} formatter={(v: number) => formatCurrency(v)} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
@@ -627,9 +630,9 @@ export default function ProcurementPage() {
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={spendBySupplier} layout="vertical" margin={{ left: 10, right: 16 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(33 18% 88%)" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v)} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
-                  <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)' }} formatter={(v: number) => fmtMoney(v)} />
+                  <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)' }} formatter={(v: number) => formatCurrency(v)} />
                   <Bar dataKey="spend" fill="hsl(28, 60%, 48%)" radius={[0, 6, 6, 0]} barSize={18} />
                 </BarChart>
               </ResponsiveContainer>

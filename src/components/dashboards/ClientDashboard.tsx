@@ -1,5 +1,6 @@
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { motion } from 'framer-motion';
 import { TrendingUp, DollarSign, Camera, ClipboardCheck, Calendar, MapPin, CheckCircle, AlertCircle, Clock, ArrowUpRight } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -18,6 +19,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 export default function ClientDashboard() {
   const { projects, siteUpdates, tasks, approvals } = useData();
+  const { formatCurrencyCompact } = usePreferences();
   const { user } = useAuth();
 
   const today = new Date();
@@ -51,11 +53,11 @@ export default function ClientDashboard() {
       sub: mainProject ? STATUS_CONFIG[mainProject.status]?.label : 'No project',
     },
     {
-      label: 'Budget Spent', value: `$${(totalSpent / 1000000).toFixed(1)}M`,
+      label: 'Budget Spent', value: formatCurrencyCompact(totalSpent),
       icon: DollarSign,
       color: budgetPct > 85 ? 'text-destructive' : 'text-warning',
       bg:    budgetPct > 85 ? 'bg-destructive/10' : 'bg-warning/10',
-      sub: `${budgetPct}% of $${(totalBudget / 1000000).toFixed(1)}M`,
+      sub: `${budgetPct}% of ${formatCurrencyCompact(totalBudget)}`,
     },
     {
       label: 'Site Updates', value: myUpdates.length,
@@ -170,14 +172,14 @@ export default function ClientDashboard() {
         {/* Budget Breakdown */}
         <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="glass-card p-5">
           <h3 className="font-semibold text-foreground mb-1">Budget Breakdown</h3>
-          <p className="text-xs text-muted-foreground mb-4">Total allocation: ${(totalBudget / 1000000).toFixed(1)}M</p>
+          <p className="text-xs text-muted-foreground mb-4">Total allocation: {formatCurrencyCompact(totalBudget)}</p>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
               <Pie data={budgetData} cx="50%" cy="50%" innerRadius={48} outerRadius={70} paddingAngle={4} dataKey="value">
                 {budgetData.map((_, i) => <Cell key={i} fill={budgetColors[i]} />)}
               </Pie>
               <Tooltip
-                formatter={(v: number) => [`$${(v / 1000000).toFixed(2)}M`]}
+                formatter={(v: number) => [formatCurrencyCompact(v)]}
                 contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)' }}
               />
             </PieChart>
@@ -187,7 +189,7 @@ export default function ClientDashboard() {
               <div key={d.name} className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budgetColors[i] }} />
                 <div>
-                  <div className="font-semibold text-foreground">${(d.value / 1000000).toFixed(1)}M</div>
+                  <div className="font-semibold text-foreground">{formatCurrencyCompact(d.value)}</div>
                   <div className="text-xs text-muted-foreground">{d.name}</div>
                 </div>
               </div>

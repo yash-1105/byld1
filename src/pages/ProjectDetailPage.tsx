@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Users, DollarSign, CheckSquare, ClipboardCheck, ShoppingCart, Layers, Clock, TrendingUp, X, Trash2, Truck } from 'lucide-react';
 import SegmentMapView from '@/components/projects/SegmentMapView';
@@ -25,6 +26,7 @@ const timelineItems = [
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { projects, tasks, users, projectMembers, addTeamMember, removeTeamMember } = useData();
+  const { formatCurrencyCompact } = usePreferences();
   const project = projects.find(p => p.id === id);
   const [activeTab, setActiveTab] = useState('map');
   const [showTeamModal, setShowTeamModal] = useState(false);
@@ -75,7 +77,7 @@ export default function ProjectDetailPage() {
         {[
           { label: 'Progress', value: `${project.progress}%`, icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/10' },
           { label: 'Tasks Done', value: `${doneTasks}/${projectTasks.length}`, icon: CheckSquare, color: 'text-success', bg: 'bg-success/10' },
-          { label: 'Budget Used', value: `$${(project.spent / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'text-warning', bg: 'bg-warning/10' },
+          { label: 'Budget Used', value: formatCurrencyCompact(project.spent), icon: DollarSign, color: 'text-warning', bg: 'bg-warning/10' },
           { label: 'Team', value: project.team.length.toString(), icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
         ].map((s, i) => (
           <motion.div 

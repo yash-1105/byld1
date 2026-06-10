@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Search, Users, ArrowUpRight, Map, LayoutGrid } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -20,6 +21,7 @@ const projectImages = [
 export default function ProjectsPage() {
   const { projects, addProject } = useData();
   const { user } = useAuth();
+  const { formatCurrencyCompact } = usePreferences();
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
@@ -150,7 +152,7 @@ export default function ProjectsPage() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Budget: ${(p.budget / 1000000).toFixed(1)}M</span>
+                  <span>Budget: {formatCurrencyCompact(p.budget)}</span>
                   <span>Due: {new Date(p.deadline).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center justify-between mt-4">

@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { PreferencesProvider } from "@/contexts/PreferencesContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { Suspense, lazy } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -110,11 +111,13 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <DataProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </DataProvider>
+        <PreferencesProvider>
+          <DataProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </DataProvider>
+        </PreferencesProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { supabase } from '@/integrations/supabase/client';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,6 +30,7 @@ const cleanDescription = (d?: string) => (d || '').replace(/^PO:[0-9a-fA-F-]+\s*
 
 export default function BudgetPage() {
   const { projects, budgetItems, addBudgetItem } = useData();
+  const { formatCurrency, formatCurrencyCompact, formatDate } = usePreferences();
   const [activeProjectId, setActiveProjectId] = useState<string>('');
   
   // Set initial active project
@@ -183,7 +185,7 @@ export default function BudgetPage() {
       }
     });
 
-    return Array.from(data.entries()).map(([month, amount]) => ({ month, amount: amount / 1000 }));
+    return Array.from(data.entries()).map(([month, amount]) => ({ month, amount }));
   }, [projectExpenses]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -268,9 +270,9 @@ export default function BudgetPage() {
       {/* Top Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Budget', value: `$${totalBudget.toLocaleString()}`, icon: DollarSign, color: 'text-foreground', bg: 'bg-muted/50' },
-          { label: 'Total Spent', value: `$${totalSpent.toLocaleString()}`, icon: TrendingDown, color: 'text-warning', bg: 'bg-warning/10', sub: `${pctUsed}% utilized` },
-          { label: 'Remaining', value: `$${remaining.toLocaleString()}`, icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
+          { label: 'Total Budget', value: formatCurrencyCompact(totalBudget), icon: DollarSign, color: 'text-foreground', bg: 'bg-muted/50' },
+          { label: 'Total Spent', value: formatCurrencyCompact(totalSpent), icon: TrendingDown, color: 'text-warning', bg: 'bg-warning/10', sub: `${pctUsed}% utilized` },
+          { label: 'Remaining', value: formatCurrencyCompact(remaining), icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-card rounded-2xl border border-border/40 p-5 shadow-sm">
             <div className="flex items-center justify-between">
@@ -365,7 +367,7 @@ export default function BudgetPage() {
                     <Pie data={expenseCategories} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={3} dataKey="value">
                       {expenseCategories.map((e, i) => <Cell key={i} fill={e.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+                    <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} formatter={(v: number) => formatCurrency(v)} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
@@ -385,7 +387,7 @@ export default function BudgetPage() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-card rounded-2xl border border-border/40 p-6 shadow-sm">
-            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" /> Spending Trend ($K)</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" /> Spending Trend</h3>
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={monthlySpend}>
                 <defs>
@@ -396,8 +398,8 @@ export default function BudgetPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(33 18% 88%)" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)' }} />
+                <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={52} tickFormatter={(v: number) => formatCurrencyCompact(v)} />
+                <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)' }} formatter={(v: number) => formatCurrency(v)} />
                 <Area type="monotone" dataKey="amount" stroke="hsl(28, 60%, 48%)" fill="url(#spendGrad)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
@@ -416,7 +418,7 @@ export default function BudgetPage() {
                   <div>
                     <h4 className="text-sm font-semibold text-foreground">{cat.name}</h4>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      ${cat.value.toLocaleString()} spent
+                      {formatCurrency(cat.value)} spent
                     </p>
                   </div>
                   <div className="text-right">
@@ -465,13 +467,13 @@ export default function BudgetPage() {
                     className="border-b border-border/20 hover:bg-muted/10 transition-colors"
                   >
                     <td className="px-5 py-4 text-muted-foreground whitespace-nowrap">
-                      {exp.date ? new Date(exp.date).toLocaleDateString() : 'N/A'}
+                      {formatDate(exp.date)}
                     </td>
                     <td className="px-5 py-4">
                       <span className="text-xs px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-medium">{exp.category}</span>
                     </td>
                     <td className="px-5 py-4 font-medium text-foreground">{cleanDescription(exp.description) || '-'}</td>
-                    <td className="px-5 py-4 font-semibold text-foreground">${exp.amount.toLocaleString()}</td>
+                    <td className="px-5 py-4 font-semibold text-foreground">{formatCurrency(exp.amount)}</td>
                     <td className="px-5 py-4">
                       <span className={`text-[10px] px-2.5 py-1 rounded-full font-semibold capitalize ${statusColors[exp.status] || 'bg-muted text-muted-foreground'}`}>
                         {exp.status}

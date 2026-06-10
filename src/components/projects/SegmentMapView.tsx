@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, Clock, AlertTriangle, DollarSign, ClipboardCheck, ListTodo, MessageSquare, Palette } from 'lucide-react';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import DesignBoard from './DesignBoard';
 
 interface Segment {
@@ -98,6 +99,7 @@ const statusConfig: Record<string, { label: string; color: string; bg: string; b
 type DetailTab = 'design' | 'tasks' | 'approvals' | 'budget' | 'issues';
 
 export default function SegmentMapView({ projectId }: { projectId?: string } = {}) {
+  const { formatCurrencyCompact } = usePreferences();
   const [activeSegment, setActiveSegment] = useState<typeof segments[0] | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>('design');
 
@@ -197,7 +199,7 @@ export default function SegmentMapView({ projectId }: { projectId?: string } = {
                   </span>
                 </div>
                 <p className="text-primary-foreground/70 text-sm mt-1">
-                  {activeSegment.progress}% complete · ${(activeSegment.spent / 1000).toFixed(0)}k of ${(activeSegment.budget / 1000).toFixed(0)}k budget
+                  {activeSegment.progress}% complete · {formatCurrencyCompact(activeSegment.spent)} of {formatCurrencyCompact(activeSegment.budget)} budget
                 </p>
               </div>
             </div>
@@ -291,9 +293,9 @@ export default function SegmentMapView({ projectId }: { projectId?: string } = {
                 <div className="space-y-5">
                   <div className="grid grid-cols-3 gap-4">
                     {[
-                      { label: 'Total Budget', value: `$${(activeSegment.budget / 1000).toFixed(0)}k`, color: 'text-foreground' },
-                      { label: 'Spent', value: `$${(activeSegment.spent / 1000).toFixed(0)}k`, color: 'text-primary' },
-                      { label: 'Remaining', value: `$${((activeSegment.budget - activeSegment.spent) / 1000).toFixed(0)}k`, color: 'text-success' },
+                      { label: 'Total Budget', value: formatCurrencyCompact(activeSegment.budget), color: 'text-foreground' },
+                      { label: 'Spent', value: formatCurrencyCompact(activeSegment.spent), color: 'text-primary' },
+                      { label: 'Remaining', value: formatCurrencyCompact(activeSegment.budget - activeSegment.spent), color: 'text-success' },
                     ].map(s => (
                       <div key={s.label} className="p-4 rounded-xl bg-muted/30 border border-border/50">
                         <div className="text-xs text-muted-foreground">{s.label}</div>

@@ -1,5 +1,6 @@
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -28,6 +29,7 @@ const STATUS_COLORS = ['hsl(220,15%,70%)', 'hsl(30,25%,62%)', 'hsl(38,70%,65%)',
 
 export default function ArchitectDashboard() {
   const { projects, tasks, siteUpdates, approvals, purchaseOrders, updateApproval } = useData();
+  const { formatCurrencyCompact } = usePreferences();
   const { user } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
 
@@ -82,7 +84,7 @@ export default function ArchitectDashboard() {
       icon: DollarSign,
       color: budgetPct > 85 ? 'text-destructive' : 'text-warning',
       bg:    budgetPct > 85 ? 'bg-destructive/10' : 'bg-warning/10',
-      sub: `$${((totalBudget - totalSpent) / 1000000).toFixed(1)}M remaining`,
+      sub: `${formatCurrencyCompact(totalBudget - totalSpent)} remaining`,
     },
     {
       label: 'Overdue Tasks', value: overdueTasks,
@@ -137,8 +139,8 @@ export default function ArchitectDashboard() {
 
   const budgetByProject = fp.map(p => ({
     name: p.name.split(' ').slice(0, 2).join(' '),
-    Budget: +(p.budget / 1000000).toFixed(2),
-    Spent:  +(p.spent  / 1000000).toFixed(2),
+    Budget: p.budget,
+    Spent:  p.spent,
     pct: p.budget > 0 ? Math.round((p.spent / p.budget) * 100) : 0,
   }));
 
@@ -392,19 +394,19 @@ export default function ArchitectDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <motion.div {...fadeIn} transition={{ delay: 0.3 }} className="soft-card p-5 lg:col-span-2">
           <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-warning" /> Budget vs Spend (M)
+            <BarChart3 className="w-4 h-4 text-warning" /> Budget vs Spend
           </h3>
           {budgetByProject.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={budgetByProject} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={budgetByProject} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(33 18% 88%)" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatCurrencyCompact(v)} width={52} />
                   <Tooltip
                     contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
                     cursor={{ fill: 'hsl(33 18% 96%)' }}
-                    formatter={(v: number) => [`$${v}M`]}
+                    formatter={(v: number) => [formatCurrencyCompact(v)]}
                   />
                   <Legend iconType="circle" iconSize={8} />
                   <Bar dataKey="Budget" fill="hsl(30,25%,62%)"  radius={[4,4,0,0]} maxBarSize={36} />

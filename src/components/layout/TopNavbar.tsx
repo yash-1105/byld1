@@ -4,6 +4,7 @@ import { useData } from '@/contexts/DataContext';
 import { Search, Bell, X, Command } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import UserAvatar from '@/components/UserAvatar';
 
 export default function TopNavbar() {
   const { user } = useAuth();
@@ -175,11 +176,8 @@ export default function TopNavbar() {
         </div>
 
         {/* Avatar */}
-        <motion.div
-          whileHover={{ scale: 1.08 }}
-          className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-xs font-semibold text-primary-foreground cursor-pointer shadow-sm shadow-primary/15"
-        >
-          {user.avatar}
+        <motion.div whileHover={{ scale: 1.08 }} className="cursor-pointer">
+          <UserAvatar initials={user.avatar} avatarUrl={user.avatarUrl} name={user.name} className="w-8 h-8 text-xs shadow-sm shadow-primary/15" />
         </motion.div>
       </div>
     </header>
