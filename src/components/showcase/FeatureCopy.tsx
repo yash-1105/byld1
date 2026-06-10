@@ -39,14 +39,6 @@ export default function FeatureCopy({ meta, index, progress }: Props) {
         <span className="text-[13px] font-bold tracking-[0.04em] text-[#9a7d5e]">{meta.label}</span>
       </motion.div>
 
-      {/* eyebrow */}
-      <motion.span
-        variants={item}
-        className="block mb-5 text-[12px] font-bold tracking-[0.16em] uppercase text-[#908b82]"
-      >
-        <span className="text-[#9a7d5e] tabular-nums">{num}</span> — {meta.label}
-      </motion.span>
-
       {/* heading */}
       <motion.h2
         variants={item}
