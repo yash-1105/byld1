@@ -31,6 +31,7 @@ const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
 const ProcurementPage = lazy(() => import("@/pages/ProcurementPage"));
 const TimelinePage = lazy(() => import("@/pages/TimelinePage"));
 const StaticPage = lazy(() => import("@/pages/StaticPage"));
+const FeaturesTourPage = lazy(() => import("@/features-tour/FeaturesTourPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,8 +88,10 @@ function AppRoutes() {
           <Route path="/timeline" element={<Suspense fallback={<PageLoader />}><TimelinePage /></Suspense>} />
         </Route>
 
+        {/* Interactive features tour (replaces the old static features page) */}
+        <Route path="/features" element={<Suspense fallback={<PageLoader />}><FeaturesTourPage /></Suspense>} />
+
         {/* Static/footer pages */}
-        <Route path="/features" element={<Suspense fallback={<PageLoader />}><StaticPage page="features" /></Suspense>} />
         <Route path="/pricing" element={<Suspense fallback={<PageLoader />}><StaticPage page="pricing" /></Suspense>} />
         <Route path="/integrations" element={<Suspense fallback={<PageLoader />}><StaticPage page="integrations" /></Suspense>} />
         <Route path="/about" element={<Suspense fallback={<PageLoader />}><StaticPage page="about" /></Suspense>} />
