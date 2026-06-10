@@ -44,7 +44,7 @@ export default function FeatureShowcase() {
             className="mx-auto mt-5 max-w-[560px] leading-[1.5] text-[#3a3833] text-[clamp(17px,1.35vw,21px)]"
           >
             Scroll through the five pillars that take a project from first sketch to final
-            walkthrough — every one of them interactive.
+            walkthrough.
           </motion.p>
         </motion.div>
       </div>
