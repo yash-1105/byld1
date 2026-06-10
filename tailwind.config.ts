@@ -119,6 +119,10 @@ export default {
           from: { filter: "blur(8px)", opacity: "0" },
           to: { filter: "blur(0)", opacity: "1" },
         },
+        "pin-pulse": {
+          "0%": { transform: "scale(1)", opacity: "0.5" },
+          "70%, 100%": { transform: "scale(2.4)", opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -130,6 +134,7 @@ export default {
         "scale-up": "scale-up 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
         "slide-up": "slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
         "blur-in": "blur-in 0.6s ease-out",
+        "pin-pulse": "pin-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite",
       },
     },
   },

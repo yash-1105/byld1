@@ -3,6 +3,7 @@ import { Building2, Shield, ArrowRight, Map, Palette, ClipboardCheck, Layers, Ca
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 import Footer from '@/components/Footer';
+import BrandLogo from '@/components/BrandLogo';
 
 const pages: Record<string, { title: string; subtitle: string; content: React.ReactNode }> = {
   features: {
@@ -103,8 +104,8 @@ export default function StaticPage({ page }: { page: string }) {
   return (
     <div className="min-h-screen bg-background">
       <nav className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
-        <Link to="/" className="flex items-center gap-2">
-          <img src="/images/byld-logo.png" alt="BYLD / SPACE" className="h-16 w-auto object-contain scale-[3] origin-left ml-4 drop-shadow-sm" />
+        <Link to="/" className="flex items-center">
+          <BrandLogo size="lg" dark />
         </Link>
         <Link to="/login" className="gradient-primary text-primary-foreground px-4 py-2 rounded-xl text-sm font-medium hover:opacity-90">Sign In</Link>
       </nav>

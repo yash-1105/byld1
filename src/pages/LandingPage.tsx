@@ -7,7 +7,7 @@ import {
 import Footer from '@/components/Footer';
 import BrandLogo from '@/components/BrandLogo';
 import HeroScrollAnimation from '@/components/HeroScrollAnimation';
-import ProductShowcase from '@/components/ProductShowcase';
+import FeatureShowcase from '@/components/showcase/FeatureShowcase';
 
 
 
@@ -56,7 +56,7 @@ export default function LandingPage() {
       </motion.nav>
 
       <HeroScrollAnimation />
-      <ProductShowcase />
+      <FeatureShowcase />
 
 
       {/* Workflow */}
