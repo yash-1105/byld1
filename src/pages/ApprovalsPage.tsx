@@ -8,6 +8,8 @@ import {
 import ApprovalCard from '@/components/projects/ApprovalCard';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePreferences } from '@/contexts/PreferencesContext';
+import { USD_RATES } from '@/lib/preferences';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -32,8 +34,9 @@ const STATUS_FILTERS: { key: StatusFilter; label: string; icon: React.ElementTyp
 ];
 
 export default function ApprovalsPage() {
-  const { approvals, addApproval, updateApproval, projects, users } = useData();
+  const { approvals, addApproval, updateApproval, addBudgetItem, budgetItems, projects, users } = useData();
   const { user } = useAuth();
+  const { preferences, formatCurrency } = usePreferences();
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -45,16 +48,39 @@ export default function ApprovalsPage() {
   const [newCategory, setNewCategory] = useState('Design');
   const [newProject, setNewProject]   = useState('');
   const [newDesc, setNewDesc]         = useState('');
+  const [shareRoles, setShareRoles]   = useState<string[]>([]); // extra roles beyond architect+client
+  const [costType, setCostType]       = useState<'none' | 'fixed' | 'variable'>('none');
+  const [costInput, setCostInput]     = useState('');
   const [submitting, setSubmitting]   = useState(false);
   const [photoFiles, setPhotoFiles]   = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const canDecide = user?.role === 'architect' || user?.role === 'client';
+  const toggleShareRole = (role: string) =>
+    setShareRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
+
+  // Who may decide a given approval:
+  //  - never your own request
+  //  - architect's request → only a client decides; client's request → only an architect
+  //  - other requesters (contractor/consultant) → any architect or client decides
+  const canDecideApproval = (requestedById: string): boolean => {
+    if (!user) return false;
+    if (requestedById === user.id) return false;
+    const requesterRole = users.find(u => u.id === requestedById)?.role;
+    if (requesterRole === 'architect') return user.role === 'client';
+    if (requesterRole === 'client') return user.role === 'architect';
+    return user.role === 'architect' || user.role === 'client';
+  };
 
   // Resolve user display name
   const resolveUser = (userId: string) => {
     const u = users.find(u => u.id === userId);
     return u?.full_name || u?.name || 'Unknown';
+  };
+
+  // Resolve a user's role (architect / client / contractor / consultant)
+  const resolveRole = (userId: string): string | undefined => {
+    const u = users.find(u => u.id === userId);
+    return u?.role || undefined;
   };
 
   // Filtered approvals
@@ -92,6 +118,31 @@ export default function ApprovalsPage() {
       decidedBy: user?.id,
       decidedAt: new Date().toISOString(),
     });
+
+    // On approval, push any attached cost into the project budget (idempotent via APR marker).
+    if (action === 'approved') {
+      const appr = approvals.find(a => a.id === id);
+      if (appr && appr.costAmount && appr.projectId) {
+        const alreadyLogged = budgetItems.some(b => b.description.startsWith(`APR:${id}`));
+        if (!alreadyLogged) {
+          const estTag = appr.costType === 'variable' ? ' [est]' : '';
+          addBudgetItem({
+            projectId: appr.projectId,
+            category: appr.category || 'Approvals',
+            description: `APR:${id}${estTag} · ${appr.title}`,
+            amount: appr.costAmount, // stored in USD base
+            type: 'expense',
+            date: new Date().toISOString().split('T')[0],
+            status: 'approved',
+          });
+          toast.success(
+            appr.costType === 'variable'
+              ? 'Approved — estimated cost added to Budget (editable when work is done)'
+              : 'Approved — cost added to Budget'
+          );
+        }
+      }
+    }
   };
 
   const handleSubmitNew = async (e: React.FormEvent) => {
@@ -109,6 +160,12 @@ export default function ApprovalsPage() {
           uploadedUrls.push(publicUrl);
         }
       }
+      // Convert entered cost (in the user's display currency) to the app's USD base.
+      const rate = USD_RATES[preferences.currency] ?? 1;
+      const costUSD = costType !== 'none' && costInput
+        ? parseFloat(costInput) / rate
+        : undefined;
+
       addApproval({
         title: newTitle.trim(),
         category: newCategory,
@@ -117,9 +174,13 @@ export default function ApprovalsPage() {
         images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
         projectId: newProject || '',
         requestedBy: user?.id || '',
+        visibleRoles: shareRoles, // architect + client added automatically in DataContext
+        costType: costType === 'none' ? undefined : costType,
+        costAmount: costUSD,
       });
       toast.success('Approval request submitted');
-      setNewTitle(''); setNewCategory('Design'); setNewProject(''); setNewDesc(''); setPhotoFiles([]);
+      setNewTitle(''); setNewCategory('Design'); setNewProject(''); setNewDesc(''); setPhotoFiles([]); setShareRoles([]);
+      setCostType('none'); setCostInput('');
       setShowNewForm(false);
     } catch {
       toast.error('Failed to submit request');
@@ -267,16 +328,20 @@ export default function ApprovalsPage() {
                     category: item.category,
                     status: item.status,
                     requestedBy: resolveUser(item.requestedBy),
+                    requestedByRole: resolveRole(item.requestedBy),
                     date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—',
                     description: item.description,
                     images: item.images,
                     reason: item.reason,
                     decidedBy: decidedByName,
+                    decidedByRole: item.decidedBy ? resolveRole(item.decidedBy) : undefined,
                     projectName: project?.name,
+                    cost: item.costAmount !== undefined ? formatCurrency(item.costAmount) : undefined,
+                    costType: item.costType,
                   }}
                   index={i}
                   onAction={handleAction}
-                  canDecide={canDecide}
+                  canDecide={canDecideApproval(item.requestedBy)}
                 />
               );
             })}
@@ -367,6 +432,71 @@ export default function ApprovalsPage() {
                     rows={3}
                     className="w-full px-4 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none transition-all"
                   />
+                </div>
+
+                {/* Cost */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Cost</label>
+                    <select
+                      value={costType}
+                      onChange={e => setCostType(e.target.value as 'none' | 'fixed' | 'variable')}
+                      className="w-full px-3 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="none">No cost</option>
+                      <option value="fixed">Fixed cost</option>
+                      <option value="variable">Variable cost (estimate)</option>
+                    </select>
+                  </div>
+                  {costType !== 'none' && (
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">
+                        {costType === 'variable' ? `Approx. Amount (${preferences.currency})` : `Amount (${preferences.currency})`}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={costInput}
+                        onChange={e => setCostInput(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full px-4 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  )}
+                </div>
+                {costType === 'variable' && (
+                  <p className="text-[11px] text-muted-foreground -mt-2">
+                    This is an estimate. Once approved it's added to the Budget, where the assignee can set the final cost after the work is done.
+                  </p>
+                )}
+
+                {/* Share with additional roles */}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Share with</label>
+                  <p className="text-[11px] text-muted-foreground mb-2">Architects & clients always see this. Optionally share it with:</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { role: 'contractor', label: 'Contractor' },
+                      { role: 'consultant', label: 'Consultant' },
+                    ].map(({ role, label }) => {
+                      const active = shareRoles.includes(role);
+                      return (
+                        <button
+                          key={role}
+                          type="button"
+                          onClick={() => toggleShareRole(role)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition-all ${
+                            active
+                              ? 'bg-primary/10 border-primary/30 text-primary'
+                              : 'bg-background border-border text-muted-foreground hover:border-foreground/30'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Photo upload */}

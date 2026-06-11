@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, X, Search, Loader2, HardDrive, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { FileText, X, Search, Loader2, HardDrive, ArrowRight, CheckCircle2, Users, Lock, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,6 +24,7 @@ interface GoogleFile {
 
 export default function DriveExplorerModal({ isOpen, onClose, projectId }: DriveExplorerModalProps) {
   const { user } = useAuth();
+  const { users, projectMembers } = useData();
   const [files, setFiles] = useState<GoogleFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -32,7 +34,14 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
 
   const [errorState, setErrorState] = useState<string | null>(null);
   const [uploadCategory, setUploadCategory] = useState<string>('Reports');
-  const [uploadVisibility, setUploadVisibility] = useState<string[]>(['client', 'contractor', 'consultant']);
+  const [visMode, setVisMode] = useState<'public' | 'private'>('public');
+  const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
+
+  const memberOptions = useMemo(() => {
+    const ids = new Set(projectMembers.filter((m: any) => m.project_id === projectId).map((m: any) => m.user_id));
+    const scoped = users.filter((u: any) => ids.has(u.id));
+    return (scoped.length > 0 ? scoped : users).filter((u: any) => u.id !== user?.id);
+  }, [users, projectMembers, projectId, user?.id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -65,6 +74,10 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
 
   const handleLinkFile = async () => {
     if (!user || !selectedFile) return;
+    if (visMode === 'private' && taggedUserIds.length === 0) {
+      toast.error('Select at least one member, or set the document to Everyone.');
+      return;
+    }
     setIsLinking(true);
     try {
       const { error: insertError } = await supabase
@@ -78,7 +91,7 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
           drive_link: selectedFile.webViewLink || `https://drive.google.com/file/d/${selectedFile.id}/view`,
           metadata_json: {
             category: uploadCategory,
-            visible_to: uploadVisibility
+            visible_to: visMode === 'private' ? taggedUserIds : null
           }
         });
 
@@ -201,28 +214,49 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
             </div>
 
             {selectedFile && (
-              <div className="p-4 border-t border-border/60 bg-muted/10 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+              <div className="p-4 border-t border-border/60 bg-muted/10 space-y-4">
+                <div className="sm:max-w-xs">
                   <label className="text-sm font-medium mb-1.5 flex items-center gap-2">Category</label>
                   <select value={uploadCategory} onChange={e => setUploadCategory(e.target.value)} className="w-full bg-background border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#4285F4]/20 border-border">
                     {['Contracts', 'Drawings', 'Invoices', 'Reports', 'Permits'].map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </div>
-                {user?.role === 'architect' && (
-                  <div>
-                    <label className="text-sm font-medium mb-1.5 flex items-center gap-2">Who can view this document?</label>
-                    <div className="space-y-1">
-                      {[{value:'client', label:'Client'}, {value:'contractor', label:'Contractor'}, {value:'consultant', label:'Consultant'}].map(role => (
-                        <label key={role.value} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-background/50 cursor-pointer text-sm">
-                          <input type="checkbox" checked={uploadVisibility.includes(role.value)} onChange={() => {
-                            setUploadVisibility(prev => prev.includes(role.value) ? prev.filter(r => r !== role.value) : [...prev, role.value])
-                          }} className="w-4 h-4 rounded border-border text-[#4285F4] focus:ring-[#4285F4]/20" />
-                          <span>{role.label}</span>
-                        </label>
-                      ))}
-                    </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 flex items-center gap-2"><Users className="w-4 h-4 text-muted-foreground" /> Who can view this document?</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { setVisMode('public'); setTaggedUserIds([]); }} className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border ${visMode === 'public' ? 'bg-[#4285F4]/10 border-[#4285F4]/30 text-[#4285F4]' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}>
+                      Public (Everyone)
+                    </button>
+                    <button type="button" onClick={() => setVisMode('private')} className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border ${visMode === 'private' ? 'bg-[#4285F4]/10 border-[#4285F4]/30 text-[#4285F4]' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}>
+                      Private (Tagged Members)
+                    </button>
                   </div>
-                )}
+                  {visMode === 'private' && (
+                    <div className="flex flex-col gap-2 p-3 mt-2 rounded-xl bg-background/50 border border-border/50 max-h-40 overflow-y-auto">
+                      <label className="text-xs font-medium text-muted-foreground">Select members who can see this document</label>
+                      {memberOptions.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground">No other members on this project yet.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {memberOptions.map((u: any) => {
+                            const isTagged = taggedUserIds.includes(u.id);
+                            return (
+                              <button key={u.id} type="button" onClick={() => setTaggedUserIds(prev => prev.includes(u.id) ? prev.filter(x => x !== u.id) : [...prev, u.id])}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${isTagged ? 'bg-[#4285F4]/10 border-[#4285F4]/30 text-[#4285F4]' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}>
+                                {u.full_name || u.email || 'Team Member'}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {taggedUserIds.length > 0 ? (
+                        <p className="text-[10px] text-[#4285F4] flex items-center gap-1"><Lock className="w-3 h-3" /> Only you and the tagged members will see this document.</p>
+                      ) : (
+                        <p className="text-[10px] text-destructive flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Please select at least one member.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

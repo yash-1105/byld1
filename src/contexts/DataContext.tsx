@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { Project, Task, SiteUpdate, BudgetItem, Message, Notification, Approval, PurchaseOrder } from '@/data/mockData';
+import { Project, Task, SiteUpdate, BudgetItem, Message, Notification, Approval, PurchaseOrder, Reimbursement, ReimbursementStatus } from '@/data/mockData';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
@@ -13,6 +13,7 @@ interface DataContextType {
   notifications: Notification[];
   approvals: Approval[];
   purchaseOrders: PurchaseOrder[];
+  reimbursements: Reimbursement[];
   segments: any[];
   users: any[];
   projectMembers: any[];
@@ -23,6 +24,7 @@ interface DataContextType {
   deleteTask: (id: string) => void;
   addSiteUpdate: (u: Omit<SiteUpdate, 'id'>) => void;
   addBudgetItem: (b: Omit<BudgetItem, 'id'>) => void;
+  updateBudgetItem: (id: string, updates: Partial<BudgetItem>) => void;
   addMessage: (m: Omit<Message, 'id'>) => void;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
@@ -32,6 +34,9 @@ interface DataContextType {
   updateApproval: (id: string, updates: Partial<Approval>) => void;
   addPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'createdAt'>) => void;
   updatePurchaseOrder: (id: string, updates: Partial<PurchaseOrder>) => void;
+  addReimbursement: (r: Omit<Reimbursement, 'id' | 'submissionDate' | 'status'>) => void;
+  updateReimbursement: (id: string, updates: Partial<Reimbursement>) => void;
+  deleteReimbursement: (id: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -141,6 +146,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     enabled: !!user
   });
 
+  const { data: rawReimbursements = [] } = useQuery({
+    queryKey: ['reimbursements'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('reimbursements').select('*').order('created_at', { ascending: false });
+      if (error && error.code !== '42P01') throw error;
+      return data || [];
+    },
+    enabled: !!user
+  });
+
   // Transformers
   const projects = useMemo<Project[]>(() => rawProjects.filter(p => {
     // Show projects the user owns or is a member of
@@ -243,6 +258,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             images = parsed.images?.length ? parsed.images : undefined;
           }
         } catch { /* plain text description */ }
+        // Architects & clients always see every approval (decision-makers);
+        // contractors/consultants only see ones explicitly shared with their role.
+        const visibleRoles: string[] = (a.visible_roles && a.visible_roles.length)
+          ? a.visible_roles
+          : ['architect', 'client'];
         return {
           id: a.id,
           title: a.title,
@@ -256,9 +276,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           decidedAt: a.decided_at || undefined,
           reason: a.reason || undefined,
           createdAt: a.created_at || '',
+          visibleRoles,
+          costType: (a.cost_type as Approval['costType']) || undefined,
+          costAmount: a.cost_amount ?? undefined,
         };
+      })
+      .filter(a => {
+        const role = user?.role;
+        if (role === 'architect' || role === 'client') return true; // decision-makers see all
+        if (a.requestedBy === user?.id) return true;                // your own request
+        return !!role && a.visibleRoles!.includes(role);            // shared with your role
       }),
-    [rawApprovals, accessibleProjectIds]
+    [rawApprovals, accessibleProjectIds, user]
   );
 
   const purchaseOrders = useMemo<PurchaseOrder[]>(() =>
@@ -293,6 +322,35 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     read: !!n.read_at,
     createdAt: n.created_at
   })), [rawNotifications]);
+
+  const reimbursements = useMemo<Reimbursement[]>(() =>
+    (rawReimbursements as any[])
+      .filter(r => accessibleProjectIds.has(r.project_id))
+      .map(r => ({
+        id: r.id,
+        projectId: r.project_id,
+        projectName: r.project_name || '',
+        clientId: r.client_id || '',
+        clientName: r.client_name || '',
+        submittedBy: r.submitted_by || '',
+        submittedByName: r.submitted_by_name || '',
+        expenseType: r.expense_type,
+        amount: r.amount,
+        currency: r.currency || 'AED',
+        description: r.description || '',
+        dateIncurred: r.date_incurred || '',
+        submissionDate: r.submission_date || '',
+        paymentDueDate: r.payment_due_date || '',
+        status: (r.status as ReimbursementStatus) || 'draft',
+        receiptUrl: r.receipt_url || undefined,
+        supportingDocs: r.supporting_docs || undefined,
+        notes: r.notes || undefined,
+        decidedAt: r.decided_at || undefined,
+        decidedBy: r.decided_by || undefined,
+        rejectionReason: r.rejection_reason || undefined,
+      })),
+    [rawReimbursements, accessibleProjectIds]
+  );
 
   // Mutations
   const addProjectMutation = useMutation({
@@ -377,6 +435,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['budget_entries'] })
   });
 
+  const updateBudgetItemMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<BudgetItem> }) => {
+      const dbUpdates: any = {};
+      if (updates.amount !== undefined)      dbUpdates.amount = updates.amount;
+      if (updates.category !== undefined)    dbUpdates.category = updates.category;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      const { data, error } = await supabase.from('budget_entries').update(dbUpdates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['budget_entries'] })
+  });
+
   const addTeamMemberMutation = useMutation({
     mutationFn: async ({ projectId, userId, role }: { projectId: string, userId: string, role: string }) => {
       const { data, error } = await supabase.from('project_members').insert({
@@ -407,6 +478,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const encodedDesc = (a.images?.length)
         ? JSON.stringify({ text: a.description, images: a.images })
         : a.description;
+      // Architects & clients are always decision-makers; merge in any extra shared roles.
+      const visibleRoles = Array.from(new Set(['architect', 'client', ...(a.visibleRoles || [])]));
       const { data, error } = await supabase.from('approvals').insert({
         title: a.title,
         category: a.category,
@@ -414,6 +487,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         description: encodedDesc,
         project_id: a.projectId || null,
         requested_by: user?.id || null,
+        visible_roles: visibleRoles,
+        cost_type: a.costType || null,
+        cost_amount: a.costAmount ?? null,
       }).select().single();
       if (error) throw error;
       return data;
@@ -475,6 +551,55 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['purchase_orders'] })
   });
 
+  const addReimbursementMutation = useMutation({
+    mutationFn: async (r: Omit<Reimbursement, 'id' | 'submissionDate' | 'status'>) => {
+      const { data, error } = await supabase.from('reimbursements').insert({
+        project_id: r.projectId,
+        project_name: r.projectName,
+        client_id: r.clientId,
+        client_name: r.clientName,
+        submitted_by: user?.id || null,
+        submitted_by_name: r.submittedByName,
+        expense_type: r.expenseType,
+        amount: r.amount,
+        currency: r.currency || 'AED',
+        description: r.description,
+        date_incurred: r.dateIncurred,
+        payment_due_date: r.paymentDueDate,
+        notes: r.notes || null,
+        receipt_url: r.receiptUrl || null,
+        status: 'draft',
+      }).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reimbursements'] })
+  });
+
+  const updateReimbursementMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Reimbursement> }) => {
+      const dbUpdates: any = {};
+      if (updates.status !== undefined)          dbUpdates.status = updates.status;
+      if (updates.submissionDate !== undefined)  dbUpdates.submission_date = updates.submissionDate || null;
+      if (updates.decidedAt !== undefined)       dbUpdates.decided_at = updates.decidedAt || null;
+      if (updates.decidedBy !== undefined)       dbUpdates.decided_by = updates.decidedBy || null;
+      if (updates.rejectionReason !== undefined) dbUpdates.rejection_reason = updates.rejectionReason || null;
+      if (updates.receiptUrl !== undefined)      dbUpdates.receipt_url = updates.receiptUrl || null;
+      const { data, error } = await supabase.from('reimbursements').update(dbUpdates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reimbursements'] })
+  });
+
+  const deleteReimbursementMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('reimbursements').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['reimbursements'] })
+  });
+
   return (
     <DataContext.Provider value={{
       projects,
@@ -485,6 +610,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       notifications,
       approvals,
       purchaseOrders,
+      reimbursements,
       segments: rawSegments,
       users: rawUsers,
       projectMembers: rawProjectMembers,
@@ -495,6 +621,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       deleteTask: () => {}, // TODO
       addSiteUpdate: (u) => addSiteUpdateMutation.mutate(u),
       addBudgetItem: (b) => addBudgetItemMutation.mutate(b),
+      updateBudgetItem: (id, updates) => updateBudgetItemMutation.mutate({ id, updates }),
       addMessage: () => {}, // TODO
       markNotificationRead: () => {}, // TODO
       markAllNotificationsRead: () => {}, // TODO
@@ -504,6 +631,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       updateApproval: (id, updates) => updateApprovalMutation.mutate({ id, updates }),
       addPurchaseOrder: (po) => addPurchaseOrderMutation.mutate(po),
       updatePurchaseOrder: (id, updates) => updatePurchaseOrderMutation.mutate({ id, updates }),
+      addReimbursement: (r) => addReimbursementMutation.mutate(r),
+      updateReimbursement: (id, updates) => updateReimbursementMutation.mutate({ id, updates }),
+      deleteReimbursement: (id) => deleteReimbursementMutation.mutate(id),
     }}>
       {children}
     </DataContext.Provider>

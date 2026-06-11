@@ -37,4 +37,8 @@ export interface NormalizedDocument {
   created_at: string;
   uploaded_by?: string;
   mime_type?: string;
+  category?: string;
+  visibleTo?: string[] | null;
+  projectId?: string;
+  approvalStatus?: string;
 }

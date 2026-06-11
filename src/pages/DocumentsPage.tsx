@@ -1,24 +1,44 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Folder, Upload, Search, Tag, Eye, Download, X, Grid, List, Building2, Users, Trash2, HardDrive, Loader2 } from 'lucide-react';
+import { FileText, Folder, Upload, Search, Tag, Eye, Download, X, Grid, List, Building2, Users, Trash2, HardDrive, Loader2, Lock, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { NormalizedDocument } from '@/types/drive';
 import DriveExplorerModal from '@/components/drive/DriveExplorerModal';
+import GovernmentApprovalsTable from '@/components/documents/GovernmentApprovalsTable';
 
-const folders = ['All Files', 'Contracts', 'Drawings', 'Invoices', 'Reports', 'Permits'];
-const allRoles: { value: UserRole, label: string }[] = [
-  { value: 'client', label: 'Client' },
-  { value: 'contractor', label: 'Contractor' },
-  { value: 'consultant', label: 'Consultant' }
-];
+const folders = ['All Files', 'Contracts', 'Drawings', 'Reports', 'Permits', 'Government Approvals', 'Invoices'];
+
+// `visible_to` now holds tagged user IDs (private) or is null/empty (public).
+// Older documents stored role names here — treat those as public for back-compat.
+const KNOWN_ROLES = ['client', 'contractor', 'consultant', 'architect'];
+const isRoleBasedVis = (vis?: string[] | null) => !!vis && vis.length > 0 && vis.some(v => KNOWN_ROLES.includes(v));
+const isPrivateVis = (vis?: string[] | null) => !!vis && vis.length > 0 && !isRoleBasedVis(vis);
+
+/** Chip showing whether a document is public or privately tagged to specific members. */
+function VisibilityBadge({ vis, users, className = '' }: { vis?: string[] | null; users: any[]; className?: string }) {
+  if (!isPrivateVis(vis)) {
+    return (
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground ${className}`}>
+        <Users className="w-3 h-3" /> Everyone
+      </span>
+    );
+  }
+  const names = vis!.map(id => { const u = users.find(x => x.id === id); return u?.full_name || u?.email; }).filter(Boolean) as string[];
+  const label = names.length ? names.join(', ') : `${vis!.length} member${vis!.length > 1 ? 's' : ''}`;
+  return (
+    <span title={`Private · visible to: ${label}`} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-warning/10 text-warning ${className}`}>
+      <Lock className="w-3 h-3" /> Private · {names.length || vis!.length}
+    </span>
+  );
+}
 
 export default function DocumentsPage() {
   const { user } = useAuth();
-  const { projects } = useData();
+  const { projects, users, projectMembers } = useData();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,7 +53,17 @@ export default function DocumentsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProject, setUploadProject] = useState<string>('');
   const [uploadCategory, setUploadCategory] = useState<string>('Reports');
-  const [uploadVisibility, setUploadVisibility] = useState<UserRole[]>(['client', 'contractor', 'consultant']);
+  const [uploadApprovalStatus, setUploadApprovalStatus] = useState<string>('Submitted');
+  const [uploadVisMode, setUploadVisMode] = useState<'public' | 'private'>('public');
+  const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
+
+  // Project members that can be tagged (members of the chosen project, minus you;
+  // falls back to all users if the project has no explicit members yet).
+  const memberOptions = useMemo(() => {
+    const ids = new Set(projectMembers.filter((m: any) => m.project_id === uploadProject).map((m: any) => m.user_id));
+    const scoped = users.filter((u: any) => ids.has(u.id));
+    return (scoped.length > 0 ? scoped : users).filter((u: any) => u.id !== user?.id);
+  }, [users, projectMembers, uploadProject, user?.id]);
 
   // Drive Explorer Modal
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
@@ -66,10 +96,9 @@ export default function DocumentsPage() {
   // Filter and Normalize
   const normalizedDocs: NormalizedDocument[] = [
     ...supabaseDocs.filter(d => {
-      if (user?.role === 'architect') return true;
-      if (d.uploaded_by === user?.id) return true;
-      if (d.visible_to && user?.role) return d.visible_to.includes(user.role);
-      return true;
+      if (d.uploaded_by === user?.id) return true;          // your own upload
+      if (isPrivateVis(d.visible_to)) return d.visible_to!.includes(user?.id ?? ''); // private → tagged only
+      return true;                                          // public (or legacy role-based)
     }).map(d => ({
       id: d.id,
       name: d.name,
@@ -77,13 +106,14 @@ export default function DocumentsPage() {
       url: d.file_url,
       created_at: d.created_at,
       uploaded_by: d.uploaded_by,
-      category: d.category
+      category: d.category,
+      visibleTo: d.visible_to,
+      approvalStatus: (d as any).approval_status || undefined,
     })),
     ...driveDocs.filter(d => {
-      if (user?.role === 'architect') return true;
       if (d.user_id === user?.id) return true;
-      const visible_to = d.metadata_json?.visible_to;
-      if (visible_to && user?.role) return visible_to.includes(user.role);
+      const visible_to = d.metadata_json?.visible_to as string[] | undefined;
+      if (isPrivateVis(visible_to)) return visible_to!.includes(user?.id ?? '');
       return true;
     }).map(d => ({
       id: d.id,
@@ -92,7 +122,8 @@ export default function DocumentsPage() {
       url: d.drive_link,
       created_at: d.created_at,
       uploaded_by: d.user_id,
-      category: d.metadata_json?.category || 'Drive Import'
+      category: d.metadata_json?.category || 'Drive Import',
+      visibleTo: d.metadata_json?.visible_to
     }))
   ];
 
@@ -132,7 +163,11 @@ export default function DocumentsPage() {
       return;
     }
     if (!selectedFile) return;
-    
+    if (uploadVisMode === 'private' && taggedUserIds.length === 0) {
+      toast.error('Select at least one member, or set the document to Everyone.');
+      return;
+    }
+
     setIsUploading(true);
     toast.info('Uploading file...');
     try {
@@ -156,7 +191,8 @@ export default function DocumentsPage() {
         category: uploadCategory,
         uploaded_by: user.id,
         project_id: uploadProject || null,
-        visible_to: uploadVisibility
+        visible_to: uploadVisMode === 'private' ? taggedUserIds : null,
+        ...(uploadCategory === 'Government Approvals' ? { approval_status: uploadApprovalStatus } : {}),
       });
 
       if (dbError) throw dbError;
@@ -165,6 +201,9 @@ export default function DocumentsPage() {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       setIsUploadModalOpen(false);
       setSelectedFile(null);
+      setUploadVisMode('public');
+      setTaggedUserIds([]);
+      setUploadApprovalStatus('Submitted');
     } catch (error: any) {
       console.error(error);
       toast.error(`Upload failed: ${error.message}`);
@@ -174,10 +213,8 @@ export default function DocumentsPage() {
     }
   };
 
-  const toggleVisibility = (role: UserRole) => {
-    setUploadVisibility(prev => 
-      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
-    );
+  const toggleMember = (id: string) => {
+    setTaggedUserIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
   const deleteDocument = async (id: string, url: string, source: 'supabase' | 'google_drive') => {
@@ -266,91 +303,106 @@ export default function DocumentsPage() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search documents..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
 
-          {/* Drop zone */}
-          <div
-            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center text-sm transition-colors cursor-pointer ${dragOver ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
-          >
-            <Upload className="w-6 h-6 mx-auto mb-2 opacity-50" />
-            <div className="font-medium mb-1">Drop files here or click to browse</div>
-            <div className="text-xs text-muted-foreground">Support for PDF, DOCX, JPG, PNG</div>
-          </div>
-
-          {isLoading ? (
-            <div className="py-12 flex justify-center">
-              <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-            </div>
-          ) : viewMode === 'list' ? (
-            <div className="space-y-2">
-              {filtered.map((d, i) => (
-                <motion.div key={d.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="glass-card-hover p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    {d.source === 'google_drive' ? (
-                       <HardDrive className="w-5 h-5 text-[#4285F4]" />
-                    ) : (
-                       <FileText className="w-5 h-5 text-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">{d.name}</div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                      {d.source === 'google_drive' ? (
-                        <span className="bg-[#4285F4]/10 text-[#4285F4] px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">Drive</span>
-                      ) : (
-                        <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">Storage</span>
-                      )}
-                      <span>·</span>
-                      <span>{new Date(d.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-1 shrink-0">
-                    {(user?.role === 'architect' || user?.id === d.uploaded_by) && (
-                      <button onClick={() => deleteDocument(d.id, d.url, d.source)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-4 h-4" /></button>
-                    )}
-                    <button onClick={() => window.open(d.url, '_blank')} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><Eye className="w-4 h-4" /></button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+          {selectedFolder === 'Government Approvals' ? (
+            <GovernmentApprovalsTable
+              documents={normalizedDocs.filter(d => (d as any).category === 'Government Approvals')}
+              canEdit={user?.role === 'architect'}
+            />
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-              {filtered.map((d, i) => (
-                <motion.div key={d.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }} className="glass-card-hover p-4 text-center group relative">
-                  {d.source === 'google_drive' ? (
-                    <div className="absolute top-2 left-2 bg-[#4285F4]/10 text-[#4285F4] px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Drive</div>
-                  ) : (
-                    <div className="absolute top-2 left-2 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Storage</div>
-                  )}
-                  
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 mt-4">
-                    {d.source === 'google_drive' ? (
-                       <HardDrive className="w-6 h-6 text-[#4285F4]" />
-                    ) : (
-                       <FileText className="w-6 h-6 text-primary" />
-                    )}
-                  </div>
-                  <div className="text-sm font-medium text-foreground truncate" title={d.name}>{d.name}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{new Date(d.created_at).toLocaleDateString()}</div>
-                  <div className="mt-3 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {(user?.role === 'architect' || user?.id === d.uploaded_by) && (
-                      <button onClick={() => deleteDocument(d.id, d.url, d.source)} className="p-1.5 rounded-md bg-muted text-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                    )}
-                    <button onClick={() => window.open(d.url, '_blank')} className="p-1.5 rounded-md bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"><Eye className="w-3.5 h-3.5" /></button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
+            <>
+              {/* Drop zone */}
+              <div
+                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 text-center text-sm transition-colors cursor-pointer ${dragOver ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+              >
+                <Upload className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                <div className="font-medium mb-1">Drop files here or click to browse</div>
+                <div className="text-xs text-muted-foreground">Support for PDF, DOCX, JPG, PNG</div>
+              </div>
 
-          {!isLoading && filtered.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="text-sm">No documents found</p>
-              <button onClick={() => fileInputRef.current?.click()} className="text-sm text-primary hover:underline mt-2">Upload a document</button>
-            </div>
+              {isLoading ? (
+                <div className="py-12 flex justify-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                </div>
+              ) : viewMode === 'list' ? (
+                <div className="space-y-2">
+                  {filtered.map((d, i) => (
+                    <motion.div key={d.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="glass-card-hover p-4 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        {d.source === 'google_drive' ? (
+                           <HardDrive className="w-5 h-5 text-[#4285F4]" />
+                        ) : (
+                           <FileText className="w-5 h-5 text-primary" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-foreground truncate">{d.name}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                          {d.source === 'google_drive' ? (
+                            <span className="bg-[#4285F4]/10 text-[#4285F4] px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">Drive</span>
+                          ) : (
+                            <span className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider">Storage</span>
+                          )}
+                          <span>·</span>
+                          <span>{new Date(d.created_at).toLocaleDateString()}</span>
+                          {(user?.role === 'architect' || user?.id === d.uploaded_by) && (
+                            <><span>·</span><VisibilityBadge vis={d.visibleTo} users={users} /></>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        {(user?.role === 'architect' || user?.id === d.uploaded_by) && (
+                          <button onClick={() => deleteDocument(d.id, d.url, d.source)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        )}
+                        <button onClick={() => window.open(d.url, '_blank')} className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><Eye className="w-4 h-4" /></button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filtered.map((d, i) => (
+                    <motion.div key={d.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.03 }} className="glass-card-hover p-4 text-center group relative">
+                      {d.source === 'google_drive' ? (
+                        <div className="absolute top-2 left-2 bg-[#4285F4]/10 text-[#4285F4] px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Drive</div>
+                      ) : (
+                        <div className="absolute top-2 left-2 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">Storage</div>
+                      )}
+
+                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 mt-4">
+                        {d.source === 'google_drive' ? (
+                           <HardDrive className="w-6 h-6 text-[#4285F4]" />
+                        ) : (
+                           <FileText className="w-6 h-6 text-primary" />
+                        )}
+                      </div>
+                      <div className="text-sm font-medium text-foreground truncate" title={d.name}>{d.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{new Date(d.created_at).toLocaleDateString()}</div>
+                      {(user?.role === 'architect' || user?.id === d.uploaded_by) && (
+                        <div className="mt-1.5 flex justify-center"><VisibilityBadge vis={d.visibleTo} users={users} /></div>
+                      )}
+                      <div className="mt-3 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {(user?.role === 'architect' || user?.id === d.uploaded_by) && (
+                          <button onClick={() => deleteDocument(d.id, d.url, d.source)} className="p-1.5 rounded-md bg-muted text-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                        )}
+                        <button onClick={() => window.open(d.url, '_blank')} className="p-1.5 rounded-md bg-muted text-foreground hover:bg-primary/10 hover:text-primary transition-colors"><Eye className="w-3.5 h-3.5" /></button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+
+              {!isLoading && filtered.length === 0 && (
+                <div className="text-center py-16 text-muted-foreground">
+                  <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">No documents found</p>
+                  <button onClick={() => fileInputRef.current?.click()} className="text-sm text-primary hover:underline mt-2">Upload a document</button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -389,19 +441,55 @@ export default function DocumentsPage() {
                   </select>
                 </div>
 
-                {user?.role === 'architect' && (
+                {uploadCategory === 'Government Approvals' && (
                   <div>
-                    <label className="text-sm font-medium mb-1.5 flex items-center gap-2"><Users className="w-4 h-4 text-muted-foreground" /> Who can view this document?</label>
-                    <div className="space-y-2">
-                      {allRoles.map(role => (
-                        <label key={role.value} className="flex items-center gap-3 p-2.5 rounded-xl border bg-background/50 cursor-pointer">
-                          <input type="checkbox" checked={uploadVisibility.includes(role.value)} onChange={() => toggleVisibility(role.value)} className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" />
-                          <span className="text-sm font-medium">{role.label}</span>
-                        </label>
-                      ))}
-                    </div>
+                    <label className="text-sm font-medium mb-1.5 flex items-center gap-2"><Tag className="w-4 h-4 text-muted-foreground" /> Approval Status</label>
+                    <select value={uploadApprovalStatus} onChange={e => setUploadApprovalStatus(e.target.value)} className="w-full bg-background border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                      <option value="Pending">Pending</option>
+                      <option value="Submitted">Submitted</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
                   </div>
                 )}
+
+                <div>
+                  <label className="text-sm font-medium mb-1.5 flex items-center gap-2"><Users className="w-4 h-4 text-muted-foreground" /> Who can view this document?</label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { setUploadVisMode('public'); setTaggedUserIds([]); }} className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border ${uploadVisMode === 'public' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}>
+                      Public (Everyone)
+                    </button>
+                    <button type="button" onClick={() => setUploadVisMode('private')} className={`px-4 py-2 rounded-xl text-xs font-medium transition-all border ${uploadVisMode === 'private' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}>
+                      Private (Tagged Members)
+                    </button>
+                  </div>
+
+                  {uploadVisMode === 'private' && (
+                    <div className="flex flex-col gap-2 p-4 mt-2 rounded-xl bg-muted/30 border border-border/50">
+                      <label className="text-xs font-medium text-muted-foreground">Select members who can see this document</label>
+                      {memberOptions.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground">No other members on this project yet.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {memberOptions.map((u: any) => {
+                            const isTagged = taggedUserIds.includes(u.id);
+                            return (
+                              <button key={u.id} type="button" onClick={() => toggleMember(u.id)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${isTagged ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-background border-border text-muted-foreground hover:border-foreground/30'}`}>
+                                {u.full_name || u.email || 'Team Member'}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {taggedUserIds.length > 0 ? (
+                        <p className="text-[10px] text-primary flex items-center gap-1 mt-1"><Lock className="w-3 h-3" /> Only you and the tagged members will see this document.</p>
+                      ) : (
+                        <p className="text-[10px] text-destructive flex items-center gap-1 mt-1"><AlertTriangle className="w-3 h-3" /> Please select at least one member.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="p-4 border-t border-border/60 bg-muted/30 flex justify-end gap-2">

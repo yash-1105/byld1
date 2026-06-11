@@ -17,6 +17,8 @@ export type Database = {
       approvals: {
         Row: {
           category: string | null
+          cost_amount: number | null
+          cost_type: string | null
           created_at: string | null
           decided_at: string | null
           decided_by: string | null
@@ -28,9 +30,12 @@ export type Database = {
           segment_id: string | null
           status: string | null
           title: string
+          visible_roles: string[] | null
         }
         Insert: {
           category?: string | null
+          cost_amount?: number | null
+          cost_type?: string | null
           created_at?: string | null
           decided_at?: string | null
           decided_by?: string | null
@@ -42,9 +47,12 @@ export type Database = {
           segment_id?: string | null
           status?: string | null
           title: string
+          visible_roles?: string[] | null
         }
         Update: {
           category?: string | null
+          cost_amount?: number | null
+          cost_type?: string | null
           created_at?: string | null
           decided_at?: string | null
           decided_by?: string | null
@@ -56,6 +64,7 @@ export type Database = {
           segment_id?: string | null
           status?: string | null
           title?: string
+          visible_roles?: string[] | null
         }
         Relationships: [
           {
@@ -201,6 +210,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          approval_status: string | null
           category: string | null
           created_at: string | null
           file_url: string
@@ -212,6 +222,7 @@ export type Database = {
           visible_to: string[] | null
         }
         Insert: {
+          approval_status?: string | null
           category?: string | null
           created_at?: string | null
           file_url: string
@@ -223,6 +234,7 @@ export type Database = {
           visible_to?: string[] | null
         }
         Update: {
+          approval_status?: string | null
           category?: string | null
           created_at?: string | null
           file_url?: string
@@ -493,6 +505,72 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string
+          due_date: string
+          id: string
+          paid_date: string | null
+          payee: string
+          project_id: string
+          project_name: string
+          reference: string | null
+          status: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string
+          due_date: string
+          id?: string
+          paid_date?: string | null
+          payee: string
+          project_id: string
+          project_name?: string
+          reference?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string
+          due_date?: string
+          id?: string
+          paid_date?: string | null
+          payee?: string
+          project_id?: string
+          project_name?: string
+          reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           accepted_at: string | null
@@ -675,6 +753,96 @@ export type Database = {
             columns: ["segment_id"]
             isOneToOne: false
             referencedRelation: "segments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reimbursements: {
+        Row: {
+          amount: number
+          client_id: string
+          client_name: string
+          created_at: string
+          currency: string
+          date_incurred: string
+          decided_at: string | null
+          decided_by: string | null
+          description: string
+          expense_type: string
+          id: string
+          notes: string | null
+          payment_due_date: string
+          project_id: string
+          project_name: string
+          receipt_url: string | null
+          rejection_reason: string | null
+          status: string
+          submission_date: string | null
+          submitted_by: string | null
+          submitted_by_name: string
+          supporting_docs: string[] | null
+        }
+        Insert: {
+          amount?: number
+          client_id?: string
+          client_name?: string
+          created_at?: string
+          currency?: string
+          date_incurred: string
+          decided_at?: string | null
+          decided_by?: string | null
+          description?: string
+          expense_type: string
+          id?: string
+          notes?: string | null
+          payment_due_date: string
+          project_id: string
+          project_name?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submission_date?: string | null
+          submitted_by?: string | null
+          submitted_by_name?: string
+          supporting_docs?: string[] | null
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          client_name?: string
+          created_at?: string
+          currency?: string
+          date_incurred?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          description?: string
+          expense_type?: string
+          id?: string
+          notes?: string | null
+          payment_due_date?: string
+          project_id?: string
+          project_name?: string
+          receipt_url?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submission_date?: string | null
+          submitted_by?: string | null
+          submitted_by_name?: string
+          supporting_docs?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reimbursements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reimbursements_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

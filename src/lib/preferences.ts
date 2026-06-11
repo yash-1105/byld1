@@ -37,7 +37,7 @@ const CURRENCY_LOCALE: Record<Currency, string> = {
  * All amounts in the app are stored/entered as USD, so display values are
  * converted from this base. Rates are static (no live FX feed).
  */
-const USD_RATES: Record<Currency, number> = {
+export const USD_RATES: Record<Currency, number> = {
   USD: 1,
   EUR: 0.92,
   GBP: 0.79,

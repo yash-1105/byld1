@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Check, X, Pause, MessageSquare, Clock, User, Layers, ShoppingCart,
   DollarSign, FileText, Wrench, AlertTriangle, ClipboardCheck, FolderKanban,
-  CheckCircle, XCircle, PauseCircle, ChevronLeft, ChevronRight, ImageOff
+  CheckCircle, XCircle, PauseCircle, ChevronLeft, ChevronRight, ImageOff, Coins
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,13 +13,21 @@ export interface ApprovalItem {
   category: string;
   status: 'pending' | 'approved' | 'rejected' | 'on_hold';
   requestedBy: string;
+  requestedByRole?: string;
   date: string;
   description?: string;
   images?: string[];
   reason?: string;
   decidedBy?: string;
+  decidedByRole?: string;
   projectName?: string;
+  cost?: string;                       // formatted, in display currency
+  costType?: 'fixed' | 'variable';
 }
+
+// Pretty-print a role for display, e.g. "architect" → "Architect".
+const formatRole = (role?: string) =>
+  role ? role.charAt(0).toUpperCase() + role.slice(1) : '';
 
 const STATUS_STYLES = {
   pending:  { bg: 'bg-warning/15',     text: 'text-warning',         label: 'Pending',   icon: Clock },
@@ -158,9 +166,30 @@ export default function ApprovalCard({ item, index, onAction, canDecide = true }
         )}
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-          <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{item.requestedBy || 'Unknown'}</span>
+          <span className="flex items-center gap-1.5">
+            <User className="w-3.5 h-3.5" />
+            {item.requestedBy || 'Unknown'}
+            {item.requestedByRole && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">{formatRole(item.requestedByRole)}</span>
+            )}
+          </span>
           <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{item.date}</span>
         </div>
+
+        {/* Cost */}
+        {item.cost && (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground bg-muted/60 px-2.5 py-1 rounded-lg">
+              <Coins className="w-3.5 h-3.5 text-primary" />
+              {item.cost}
+            </span>
+            {item.costType && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${item.costType === 'variable' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}`}>
+                {item.costType === 'variable' ? 'Est.' : 'Fixed'}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Decided reason (for non-pending) */}
         {item.status !== 'pending' && item.reason && (
@@ -169,8 +198,11 @@ export default function ApprovalCard({ item, index, onAction, canDecide = true }
           </div>
         )}
         {item.status !== 'pending' && item.decidedBy && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
             Decided by <span className="font-medium text-foreground">{item.decidedBy}</span>
+            {item.decidedByRole && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/10 text-success font-semibold">{formatRole(item.decidedByRole)}</span>
+            )}
           </p>
         )}
 

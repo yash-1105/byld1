@@ -63,6 +63,13 @@ export interface Approval {
   decidedAt?: string;
   reason?: string;
   createdAt: string;
+  // Roles allowed to view this approval. Architects & clients (the decision-makers)
+  // are always included; the requester may additionally share with contractors/consultants.
+  visibleRoles?: string[];
+  // Optional cost. 'fixed' is final; 'variable' is an estimate the assignee finalises
+  // later in Budget. costAmount is stored in the app's USD base.
+  costType?: 'fixed' | 'variable';
+  costAmount?: number;
 }
 
 export type PurchaseOrderStatus =
@@ -164,3 +171,38 @@ export const teamMembers = [
   { id: '5', name: 'Alex Rivera', role: 'contractor', email: 'alex@byld.io', avatar: 'AR', projects: ['Skyline Tower'] },
   { id: '6', name: 'Emily Foster', role: 'architect', email: 'emily@byld.io', avatar: 'EF', projects: ['Metro Station'] },
 ];
+
+export type ReimbursementStatus =
+  | 'draft'
+  | 'pending_client_review'
+  | 'approved'
+  | 'rejected'
+  | 'paid'
+  | 'overdue';
+
+export interface Reimbursement {
+  id: string;
+  projectId: string;
+  projectName: string;
+  clientId: string;
+  clientName: string;
+  submittedBy: string;
+  submittedByName: string;
+  expenseType: string;
+  amount: number;
+  currency: string;
+  description: string;
+  dateIncurred: string;
+  submissionDate: string;
+  paymentDueDate: string;
+  status: ReimbursementStatus;
+  receiptUrl?: string;
+  supportingDocs?: string[];
+  notes?: string;
+  decidedAt?: string;
+  decidedBy?: string;
+  rejectionReason?: string;
+}
+
+// Reimbursement data is loaded live from Supabase via DataContext (useData()).
+

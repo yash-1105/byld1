@@ -49,8 +49,10 @@ When adding a new entity, follow the established pattern exactly (it repeats per
 Four roles: `architect`, `contractor`, `client`, `consultant`. Role is stored in the `users` table and drives:
 - Which dashboard variant renders in `DashboardPage.tsx`
 - Which sidebar nav items appear in `AppSidebar.tsx`
-- Whether a user can approve/reject in `ApprovalsPage.tsx` (architect + client only)
+- Approval decisions in `ApprovalsPage.tsx`: only architects & clients decide, **and never on their own request** — an architect's request can only be decided by a client and vice versa (`canDecideApproval()`). Requests from other roles fall back to any architect/client.
 - Procurement permissions in `ProcurementPage.tsx`: contractors/architects create and advance orders; only architects/clients can approve (Requested → Approved); the requester or an architect can cancel
+- Reimbursement workflow in `ReimbursementsTab.tsx`: architects/contractors create & submit; only the **client** approves/rejects/marks-paid
+- Approval visibility: contractors & consultants have **no Approvals page**. They see approvals explicitly shared with their role via the `SharedApprovalsWidget` on their dashboard (see below)
 
 ### Routing
 
@@ -74,11 +76,37 @@ Three integrations connect procurement to the rest of the app — preserve these
 - **Large order → Approval.** Creating an order whose cost ≥ `APPROVAL_THRESHOLD` (a constant in `ProcurementPage.tsx`, currently `$10,000`) also calls `addApproval` with category `'Procurement'`. This is **one-directional** — approving in the Approval Center does NOT auto-advance the order's pipeline status.
 - **Dashboard KPI.** Architect & Contractor dashboards show a "Pending Deliveries" KPI derived from `purchaseOrders` (statuses `approved|ordered|in_transit`).
 
-### The `PO:<id>` marker convention (idempotency without a link column)
+### The `PO:<id>` / `APR:<id>` marker convention (idempotency without a link column)
 
-`budget_entries` has no column to reference its source order, so a procurement-generated budget entry encodes the link inside its `description` as a prefix: `` `PO:${po.id} · <readable text>` ``. This serves two purposes:
-- **Idempotency:** before logging a delivered order to the budget, `ProcurementPage.tsx` checks `budgetItems.some(b => b.description.startsWith('PO:' + po.id))` and skips if already present — so re-delivering an order never double-counts.
-- **Display:** `BudgetPage.tsx` strips the marker for display via `cleanDescription()` (regex `^PO:[0-9a-fA-F-]+\s*·\s*`). If you surface budget descriptions anywhere else, strip the marker the same way.
+`budget_entries` has no column to reference its source order/approval, so generated budget entries encode the link inside their `description` as a prefix:
+- Procurement: `` `PO:${po.id} · <readable text>` ``
+- Approvals: `` `APR:${approval.id}[ [est]] · <readable text>` `` — the `[est]` flag marks a **variable-cost** estimate (see Approvals → Budget below)
+
+This serves two purposes:
+- **Idempotency:** before logging to the budget, the source page checks `budgetItems.some(b => b.description.startsWith('PO:' + id))` (or `'APR:' + id`) and skips if already present — so re-delivering/re-approving never double-counts.
+- **Display:** `BudgetPage.tsx` strips both markers for display via `cleanDescription()` (regexes `^PO:[0-9a-fA-F-]+\s*·\s*` and `^APR:[0-9a-fA-F-]+(\s*\[est\])?\s*·\s*`). If you surface budget descriptions anywhere else, strip the markers the same way.
+
+### Budget & Finance workspace (`BudgetPage.tsx`)
+
+The Budget module is a 3-tab workspace per project: **Financial Dashboard** (pie + trend charts, category breakdown), **Expenses** (unified table of budget entries **+** reimbursements), and **Reimbursements** (`ReimbursementsTab.tsx`). There is intentionally **no** Payments or Cost Reports tab (both were removed).
+
+- **Single display currency.** All money is stored in a **USD base** and rendered through `formatCurrency`/`formatCurrencyCompact` (from `usePreferences()`), which convert to the user's chosen settings currency. Reimbursements/approvals capture amounts in the user's display currency and are converted to USD on save via `USD_RATES` (exported from `src/lib/preferences.ts`): `usd = entered / USD_RATES[currency]`. Never display a raw stored amount without `formatCurrency`.
+- **Total Spent** = budget entries + active reimbursements (`pending_client_review|approved|paid`), all summed in USD.
+- **Expense categories** are a fixed list (`EXPENSE_CATEGORIES` in `BudgetPage.tsx`) surfaced as a dropdown; the AI receipt scanner is prompted to pick from it and its output is run through `normalizeCategory()`.
+
+### Approvals → Budget integration & variable cost
+
+`ApprovalsPage.tsx` lets a requester attach a **cost** to an approval: `cost_type` is `fixed` (final) or `variable` (an estimate), with `cost_amount` stored in USD base (`approvals.cost_type` / `approvals.cost_amount`).
+- **On approval**, `handleAction()` auto-creates a `budget_entries` row (idempotent via the `APR:<id>` marker; `[est]` appended for variable).
+- **Finalising a variable cost:** in the Budget **Expenses** tab, only `[est]`-flagged entries show a **"Set final cost"** action, visible to the approval's requester (assignee) or an architect (`canEditApprovalCost()`). Saving (`saveCostEdit()`) updates the amount **and strips the `[est]` flag**, so a variable estimate can be finalised exactly **once**. Fixed-cost entries are never editable.
+
+### Shared approvals for contractors & consultants (`SharedApprovalsWidget.tsx`)
+
+Because contractors/consultants have no Approvals page, `DashboardPage.tsx` renders `SharedApprovalsWidget` for those two roles. It lists approvals shared with them (pending first) and opens a read-only detail **popup** on click. The DataContext `approvals` transformer already scopes the list: architects/clients see everything; other roles see only approvals where their role is in `visible_roles`, or which they requested. The New Request form's **"Share with"** chips (`shareRoles`) add `contractor`/`consultant` to `visible_roles` (architect + client are merged in automatically by `addApprovalMutation`).
+
+### Documents → Government Approvals
+
+`DocumentsPage.tsx` has a **Government Approvals** category. Documents in it render through `GovernmentApprovalsTable.tsx` (not the normal file grid), showing an `approval_status` badge (`Pending`/`Submitted`/`Approved`/`Rejected`, stored on `documents.approval_status`). Architects can change the status inline. The upload modal exposes the status selector only when the chosen category is `Government Approvals`. The `NormalizedDocument` type (`src/types/drive.ts`) carries `projectId` and `approvalStatus` to unify Supabase + Drive docs.
 
 ### Image Uploads
 
@@ -90,7 +118,7 @@ const { error } = await supabase.storage.from('chat-media').upload(path, file);
 const { data: { publicUrl } } = supabase.storage.from('chat-media').getPublicUrl(path);
 ```
 
-Folders in use: `site-updates/<projectId>/`, `approvals/`, `chat/<conversationId>/`.
+Folders in use: `site-updates/<projectId>/`, `approvals/`, `chat/<conversationId>/`, `reimbursements/<projectId>/`.
 
 ### AI Integration
 
@@ -127,7 +155,15 @@ VITE_GOOGLE_MAPS_API_KEY
 
 SQL migrations live in `supabase/migrations/<timestamp>_name.sql` (RLS-enabled tables follow the convention in `20260605000000_add_google_drive_integration.sql` and `20260609000000_add_purchase_orders.sql`). The remote project is hosted (`qnriqsnuebcxxzcfxfsv`); apply changes with `supabase db push`, then regenerate types with `npm run supabase:types`.
 
-**Caveat:** the `purchase_orders` table was created directly in the Supabase SQL editor, so its migration file exists in the repo but is **not** recorded in the remote migration history. A future `supabase db push` may error trying to re-create it — resolve with `npx supabase migration repair --status applied 20260609000000`.
+Reimbursements & approvals additions (all applied to remote):
+- `20260611000000_add_reimbursements.sql` — `reimbursements` table (RLS: any project member can view/update; submitter inserts/deletes)
+- `20260611000002_add_document_approval_status.sql` — `documents.approval_status` column
+- `20260612000000_add_approval_visible_roles.sql` — `approvals.visible_roles TEXT[]` (defaults to `{architect,client}`)
+- `20260612000001_add_approval_cost.sql` — `approvals.cost_type` (`fixed`/`variable`) + `cost_amount` (USD base)
+
+**Caveats:**
+- The `purchase_orders` table was created directly in the Supabase SQL editor, so its migration file exists in the repo but is **not** recorded in the remote migration history. A future `supabase db push` may error trying to re-create it — resolve with `npx supabase migration repair --status applied 20260609000000`.
+- `20260611000001_add_payments.sql` created a `payments` table that is **no longer used** (the Payments feature was removed). The migration file is kept for history integrity; the orphaned remote table can be dropped with a future migration if desired. No app code references it.
 
 ### Deployment
 
