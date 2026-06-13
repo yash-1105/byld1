@@ -79,7 +79,6 @@ export default function CinematicShowcase() {
     };
     if (s1video.readyState >= 1) onMeta();
     else s1video.addEventListener('loadedmetadata', onMeta);
-    s1video.load();
     // windows tuned to the fly-through footage (≈8s):
     // exterior 0–1.6s · living 1.7–3.3s · kitchen 3.4–5.3s · master 5.4–6.6s · office 6.8–8s
     const s1Windows = [
@@ -139,7 +138,6 @@ export default function CinematicShowcase() {
     };
     if (s2video.readyState >= 1) onMeta2();
     else s2video.addEventListener('loadedmetadata', onMeta2);
-    s2video.load();
     // windows tuned to the footage: oak 0–1s · marble 1.1–2.5s · brass 2.7–4.8s · glass 5–8s
     const s2Windows = [
       [0.02, 0.13], // oak
@@ -183,7 +181,6 @@ export default function CinematicShowcase() {
     };
     if (s3video.readyState >= 1) onMeta3();
     else s3video.addEventListener('loadedmetadata', onMeta3);
-    s3video.load();
     // windows tuned to the footage: marble 0–1.7s · oak 2–3.6s · brass 4.2–6s · glass 6.2–8s
     const s3Windows = [
       [0.02, 0.20], // marble (approved)
@@ -230,7 +227,6 @@ export default function CinematicShowcase() {
     };
     if (s4video.readyState >= 1) onMeta4();
     else s4video.addEventListener('loadedmetadata', onMeta4);
-    s4video.load();
     const renderS4 = (p: number, visible = true) => {
       const staticView = reduce || isMobile();
       // copy greets over the empty early frames, then hands off to the demo (desktop only)
@@ -258,7 +254,6 @@ export default function CinematicShowcase() {
     };
     if (s5video.readyState >= 1) onMeta5();
     else s5video.addEventListener('loadedmetadata', onMeta5);
-    s5video.load();
     const renderS5 = (p: number, visible = true) => {
       const staticView = reduce || isMobile();
       // copy greets over the early frames, then hands off to the demo (desktop only)
@@ -311,6 +306,19 @@ export default function CinematicShowcase() {
     );
     qa('.cin-rev-el').forEach((n) => io.observe(n));
 
+    /* ---------- lazy-load each scene video as it nears the viewport ---------- */
+    const videoIO = new IntersectionObserver(
+      (entries) => entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const v = e.target as HTMLVideoElement;
+        v.preload = 'auto';
+        v.load();
+        videoIO.unobserve(v);
+      }),
+      { rootMargin: '200% 0px 200% 0px' },
+    );
+    qa<HTMLVideoElement>('.cin-video').forEach((v) => videoIO.observe(v));
+
     /* ---------- re-evaluate engine on resize ---------- */
     const onResize = () => {
       cancelAnimationFrame(raf);
@@ -324,6 +332,7 @@ export default function CinematicShowcase() {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', onResize);
       io.disconnect();
+      videoIO.disconnect();
       s1video.removeEventListener('loadedmetadata', onMeta);
       s2video.removeEventListener('loadedmetadata', onMeta2);
       s3video.removeEventListener('loadedmetadata', onMeta3);
@@ -345,7 +354,7 @@ export default function CinematicShowcase() {
                 className="cin-video"
                 muted
                 playsInline
-                preload="auto"
+                preload="none"
                 tabIndex={-1}
                 poster="/segment-map-poster.jpg"
                 aria-label="Fly-through of the project, room by room"
@@ -411,7 +420,7 @@ export default function CinematicShowcase() {
                 className="cin-video"
                 muted
                 playsInline
-                preload="auto"
+                preload="none"
                 tabIndex={-1}
                 poster="/design-board-poster.jpg"
                 aria-label="Material studies: oak, marble, brass and glass"
@@ -472,7 +481,7 @@ export default function CinematicShowcase() {
                 className="cin-video"
                 muted
                 playsInline
-                preload="auto"
+                preload="none"
                 tabIndex={-1}
                 poster="/approvals-board-poster.jpg"
                 aria-label="Approval decisions: accepted items move right, rejected move left"
@@ -547,7 +556,7 @@ export default function CinematicShowcase() {
                 className="cin-video"
                 muted
                 playsInline
-                preload="auto"
+                preload="none"
                 tabIndex={-1}
                 poster="/procurement-board-poster.jpg"
                 aria-label="Supplier comparison: bids, risk scores, recommendation and PO"
@@ -584,7 +593,7 @@ export default function CinematicShowcase() {
                 className="cin-video"
                 muted
                 playsInline
-                preload="auto"
+                preload="none"
                 tabIndex={-1}
                 poster="/timeline-board-poster.jpg"
                 aria-label="Project timeline: tasks mapped, a conflict detected and resolved"
