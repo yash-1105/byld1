@@ -1,0 +1,904 @@
+/* ============================================================
+   BYLD / SPACE — Cinematic scroll showcase
+   Self-contained scoped styles. All scroll-driven transforms are
+   applied from JS (no CSS transitions on those elements — they
+   would fight the scroll). CSS transitions are reserved for hover.
+   ============================================================ */
+
+.cin {
+  --bg: #F0EDE8;
+  --bg-card: #FFFFFF;
+  --tp: #1A1814;
+  --ts: #6B6560;
+  --accent: #9B7E5C;
+  --green: #22A05B;
+  --orange: #E07A2F;
+  --red: #D94F3D;
+  --shadow-card: 0 4px 32px rgba(0, 0, 0, 0.09);
+  --line: #E3DDD3;
+
+  position: relative;
+  background: var(--bg);
+  color: var(--tp);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: clip;
+}
+
+/* ---------- Sticky scene scaffolding ---------- */
+.cin-wrap {
+  position: relative;
+  height: 400vh;
+}
+.cin-scene {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+.cin-grid {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 clamp(24px, 5vw, 64px);
+  display: grid;
+  grid-template-columns: 1fr 1.18fr;
+  align-items: center;
+  gap: clamp(32px, 5vw, 80px);
+}
+.cin-grid.cin-rev .cin-left { order: 2; }
+.cin-grid.cin-rev .cin-stage { order: 1; }
+
+/* ---------- Left text column ---------- */
+.cin-left { will-change: transform, opacity; }
+.cin-eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 20px;
+}
+.cin-h {
+  font-size: clamp(32px, 4.2vw, 56px);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  margin: 0 0 22px;
+}
+.cin-narrate {
+  font-size: clamp(16px, 1.4vw, 19px);
+  font-weight: 600;
+  color: var(--ts);
+  min-height: 3em;
+  max-width: 30ch;
+  line-height: 1.45;
+  margin: 0 0 26px;
+}
+.cin-reveal { will-change: transform, opacity; }
+.cin-check {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cin-check li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tp);
+}
+.cin-check .tick {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(155, 126, 92, 0.14);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+}
+.cin-check .tick svg { width: 13px; height: 13px; }
+.cin-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tp);
+  text-decoration: none;
+  padding-bottom: 3px;
+  border-bottom: 2px solid var(--tp);
+  transition: gap 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+.cin-cta:hover { gap: 13px; color: var(--accent); border-color: var(--accent); }
+.cin-cta svg { width: 15px; height: 15px; }
+
+/* ---------- Generic stage card ---------- */
+.cin-stage {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow-card);
+  min-height: 480px;
+  padding: 28px;
+  overflow: hidden;
+  will-change: transform, opacity;
+}
+
+/* ============================================================
+   SCENE 1 — Segment map (3D dollhouse)
+   ============================================================ */
+.cin-video-wrap {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  pointer-events: none;
+  background: #0c0d10;
+}
+.cin-video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+/* Scene 1 immersive hero: large video with copy overlaid */
+.cin-scene--hero {
+  padding: 0 clamp(20px, 4vw, 56px);
+}
+.cin-hero-stage {
+  position: relative;
+  width: 100%;
+  max-width: 1300px;
+  margin: 0 auto;
+  height: clamp(460px, 80vh, 820px);
+  border-radius: 26px;
+  overflow: hidden;
+  background: #0c0d10;
+  box-shadow: var(--shadow-card);
+}
+.cin-hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    rgba(8, 9, 11, 0.82) 0%,
+    rgba(8, 9, 11, 0.55) 28%,
+    rgba(8, 9, 11, 0.12) 52%,
+    rgba(8, 9, 11, 0) 66%
+  );
+}
+.cin-hero-copy {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  padding: 0 clamp(28px, 5vw, 76px);
+  pointer-events: none;
+}
+.cin-hero-copy .cin-left {
+  max-width: 540px;
+  color: #fff;
+  pointer-events: auto;
+}
+.cin-hero-copy .cin-eyebrow { color: #e7d8c2; }
+.cin-hero-copy .cin-h { color: #fff; }
+.cin-hero-copy .cin-check li { color: #f3efe9; }
+.cin-hero-copy .cin-check .tick { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.cin-hero-copy .cin-cta { color: #fff; border-color: rgba(255, 255, 255, 0.85); }
+.cin-hero-copy .cin-cta:hover { color: #e7d8c2; border-color: #e7d8c2; }
+/* flipped hero: copy on the right (keeps left-side video content visible) */
+.cin-hero--flip .cin-hero-copy { justify-content: flex-end; }
+.cin-hero--flip .cin-hero-scrim {
+  background: linear-gradient(
+    260deg,
+    rgba(8, 9, 11, 0.82) 0%,
+    rgba(8, 9, 11, 0.55) 28%,
+    rgba(8, 9, 11, 0.12) 52%,
+    rgba(8, 9, 11, 0) 66%
+  );
+}
+/* room cards + stats sit above the scrim/copy */
+.cin-hero-stage .cin-roomcard,
+.cin-hero-stage .cin-stats { z-index: 4; }
+.cin-roomcard {
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  width: 230px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  padding: 16px 18px;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.cin-roomcard h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cin-statusdot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.cin-statusdot.pulse { animation: cinPulse 1.8s ease-in-out infinite; }
+@keyframes cinPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 160, 91, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(34, 160, 91, 0); }
+}
+/* approve (tick) / reject (X) decision chip */
+.cin-decision {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+}
+.cin-decision.approve { background: var(--green); }
+.cin-decision.reject { background: var(--red); }
+.cin-decision svg { width: 11px; height: 11px; }
+
+/* tinder-style verdict badge, pinned to the right-middle of the video */
+.cin-verdict {
+  position: absolute;
+  right: clamp(20px, 2.6vw, 44px);
+  top: 50%;
+  margin-top: -29px;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.cin-verdict-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+}
+.cin-verdict-icon svg { width: 26px; height: 26px; }
+.cin-verdict-icon.approve { color: var(--green); border: 2px solid rgba(34, 160, 91, 0.35); }
+.cin-verdict-icon.reject { color: var(--red); border: 2px solid rgba(217, 79, 61, 0.35); }
+.cin-roomcard .sub { font-size: 12.5px; color: var(--ts); font-weight: 600; }
+.cin-bgt { margin-top: 12px; }
+.cin-bgt-track { height: 8px; border-radius: 6px; background: #EFEAE2; overflow: hidden; }
+.cin-bgt-fill { height: 100%; border-radius: 6px; background: var(--orange); width: 0%; }
+.cin-tasklist { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.cin-tasklist span { font-size: 12.5px; font-weight: 600; color: var(--green); opacity: 0; }
+.cin-alertmini {
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--red);
+  background: rgba(217, 79, 61, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.cin-stats {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  justify-content: space-around;
+  gap: 10px;
+  background: var(--tp);
+  color: #fff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.cin-stats div { text-align: center; }
+.cin-stats .k { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.6; }
+.cin-stats .v { font-size: 17px; font-weight: 800; }
+
+/* ============================================================
+   SCENE 2 — Design board (kanban)
+   ============================================================ */
+.cin-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.cin-col { will-change: transform, opacity; opacity: 0; }
+.cin-colhead {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--ts);
+  text-transform: uppercase;
+  padding: 4px 2px 12px;
+  border-bottom: 2px solid var(--line);
+  margin-bottom: 14px;
+}
+.cin-coldrop { display: flex; flex-direction: column; gap: 12px; min-height: 60px; }
+.cin-mat {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.cin-swatch { height: 56px; border-radius: 9px; margin-bottom: 9px; position: relative; overflow: hidden; }
+.cin-mat .name { font-size: 13px; font-weight: 700; line-height: 1.25; }
+.cin-mat .type { font-size: 11px; color: var(--ts); font-weight: 600; margin-top: 1px; }
+.cin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #EFEAE2;
+  color: var(--ts);
+}
+.cin-badge.review { background: rgba(224, 122, 47, 0.14); color: var(--orange); }
+.cin-badge.confirmed { background: rgba(34, 160, 91, 0.14); color: var(--green); }
+.cin-badge .chk { width: 12px; height: 12px; display: inline-grid; place-items: center; }
+
+/* ============================================================
+   SCENE 3 — Approvals
+   ============================================================ */
+.cin-queue { display: flex; flex-direction: column; height: 100%; }
+.cin-queuehead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.cin-queuehead .t { font-size: 15px; font-weight: 800; }
+.cin-count {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #EFEAE2;
+  color: var(--ts);
+}
+.cin-count.zero { background: rgba(34, 160, 91, 0.14); color: var(--green); }
+.cin-appr {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.cin-appr-banner {
+  background: var(--green);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+.cin-appr-img { height: 120px; background: linear-gradient(135deg, #2a2d33, #4a5560 55%, #7a8590); position: relative; }
+.cin-appr-img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.18), transparent 60%);
+}
+.cin-appr-body { padding: 16px 18px; }
+.cin-appr-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cin-avatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ts);
+}
+.cin-avatar .pic {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #c4a982);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+.cin-cost {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+  background: rgba(155, 126, 92, 0.12);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.cin-appr-title { font-size: 16px; font-weight: 800; margin: 12px 0 0; }
+.cin-appr-detail { overflow: hidden; height: 0; opacity: 0; }
+.cin-appr-desc { font-size: 13.5px; color: var(--ts); font-weight: 500; line-height: 1.5; margin: 10px 0 0; min-height: 2.6em; }
+.cin-appr-actions { display: flex; gap: 10px; margin-top: 16px; opacity: 0; will-change: transform, opacity; }
+.cin-btn {
+  flex: 1;
+  border: none;
+  border-radius: 10px;
+  padding: 11px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.cin-btn.approve { background: #EBE6DE; color: var(--tp); border: 2px solid transparent; }
+.cin-btn.approve.glow { border-color: var(--green); box-shadow: 0 0 0 4px rgba(34, 160, 91, 0.18); }
+.cin-btn.approve.done { background: var(--green); color: #fff; }
+.cin-btn.reject { background: transparent; color: var(--ts); border: 1px solid var(--line); }
+.cin-btn .chk { width: 15px; height: 15px; opacity: 0; }
+.cin-timestamp { font-size: 12px; color: var(--green); font-weight: 700; margin-top: 12px; opacity: 0; }
+.cin-cursor {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+  will-change: transform, opacity;
+}
+
+/* ============================================================
+   SCENE 4 — Procurement
+   ============================================================ */
+.cin-suppliers { display: flex; flex-direction: column; gap: 14px; }
+.cin-supp {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: var(--bg-card);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  opacity: 0;
+  will-change: transform, opacity;
+  position: relative;
+}
+.cin-supp-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cin-supp .nm { font-size: 14.5px; font-weight: 800; }
+.cin-supp .price { font-size: 16px; font-weight: 800; }
+.cin-stars { display: inline-flex; gap: 2px; margin-top: 6px; font-size: 13px; color: #D9D2C6; }
+.cin-stars .on { color: #E8B53A; }
+.cin-risk { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
+.cin-risk-track { flex: 1; height: 7px; border-radius: 5px; background: #EFEAE2; overflow: hidden; }
+.cin-risk-fill { height: 100%; width: 0%; border-radius: 5px; }
+.cin-risk-label { font-size: 11px; font-weight: 800; white-space: nowrap; opacity: 0; }
+.cin-rec-badge {
+  position: absolute;
+  top: -10px;
+  right: 16px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.cin-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--green);
+  background: rgba(34, 160, 91, 0.12);
+  padding: 5px 11px;
+  border-radius: 999px;
+  opacity: 0;
+  transform: scale(0);
+  will-change: transform, opacity;
+}
+.cin-po {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.cin-po-btn {
+  flex: 1;
+  background: var(--tp);
+  color: #fff;
+  border: none;
+  border-radius: 11px;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.cin-po .eta { font-size: 12px; font-weight: 700; color: var(--ts); white-space: nowrap; }
+
+/* ============================================================
+   SCENE 5 — Timeline (gantt)
+   ============================================================ */
+.cin-gantt { display: flex; flex-direction: column; height: 100%; }
+.cin-weeks {
+  display: grid;
+  grid-template-columns: 96px repeat(4, 1fr);
+  margin-bottom: 10px;
+}
+.cin-weeks span { font-size: 11px; font-weight: 800; color: var(--ts); text-align: center; }
+.cin-weeks span:first-child { text-align: left; }
+.cin-grow {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+}
+.cin-gname { font-size: 12.5px; font-weight: 700; }
+.cin-gtrack {
+  position: relative;
+  height: 22px;
+  background: linear-gradient(90deg, transparent 0, transparent calc(25% - 1px), var(--line) calc(25% - 1px), var(--line) 25%) repeat-x;
+  background-size: 25% 100%;
+  border-radius: 6px;
+}
+.cin-gbar {
+  position: absolute;
+  top: 0;
+  height: 22px;
+  border-radius: 6px;
+  width: 0%;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  overflow: hidden;
+  will-change: width, transform, left;
+}
+.cin-gbar .pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  white-space: nowrap;
+}
+.cin-gbar.green { background: var(--green); }
+.cin-gbar.orange { background: var(--orange); }
+.cin-gbar.gray { background: #9A938A; }
+.cin-gbar.red { background: var(--red); }
+.cin-conflict {
+  position: absolute;
+  top: -3px;
+  height: calc(100% + 6px);
+  background: rgba(217, 79, 61, 0.16);
+  border: 1.5px dashed var(--red);
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+@keyframes cinShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.cin-gbar.shake { animation: cinShake 0.4s ease-in-out; }
+.cin-galert {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(217, 79, 61, 0.1);
+  border: 1px solid rgba(217, 79, 61, 0.3);
+  border-radius: 12px;
+  padding: 13px 15px;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.cin-galert.resolved { background: rgba(34, 160, 91, 0.1); border-color: rgba(34, 160, 91, 0.3); }
+.cin-galert .ic {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--red);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 800;
+}
+.cin-galert.resolved .ic { background: var(--green); }
+.cin-galert .msg { font-size: 12.5px; font-weight: 700; color: var(--tp); line-height: 1.35; }
+
+/* ============================================================
+   PARALLAX STATEMENT BREAKS
+   ============================================================ */
+.cin-parallax {
+  position: relative;
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+}
+.cin-px-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.cin-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  animation: cinFloat linear infinite;
+}
+@keyframes cinFloat {
+  from { transform: translateY(20px); opacity: 0; }
+  20% { opacity: 0.8; }
+  80% { opacity: 0.8; }
+  to { transform: translateY(-60px); opacity: 0; }
+}
+.cin-px-text {
+  position: relative;
+  z-index: 2;
+  padding: 0 24px;
+  will-change: transform, opacity;
+}
+.cin-px-text h2 {
+  color: #fff;
+  font-size: clamp(34px, 6vw, 76px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.05;
+}
+
+/* ============================================================
+   SCENE 6 — Workflow + Roles (IntersectionObserver reveals)
+   ============================================================ */
+.cin-section { padding: 120px 40px; }
+.cin-section-inner { max-width: 1240px; margin: 0 auto; }
+.cin-section-head { text-align: center; margin-bottom: 56px; }
+.cin-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tp);
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 6px 16px;
+  border-radius: 999px;
+}
+.cin-section-head h2 {
+  font-size: clamp(30px, 4vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 22px 0 14px;
+}
+.cin-section-head p { color: var(--ts); font-size: 18px; margin: 0; }
+.cin-cardgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.cin-stage-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 26px 22px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.cin-stage-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-card); }
+.cin-stage-card.hl { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.cin-stage-card .num {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  font-size: 52px;
+  font-weight: 900;
+  color: var(--tp);
+  opacity: 0.05;
+}
+.cin-stage-card .ic {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(155, 126, 92, 0.12);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+}
+.cin-stage-card h3 { font-size: 18px; font-weight: 800; margin: 0 0 8px; }
+.cin-stage-card p { font-size: 13.5px; color: var(--ts); line-height: 1.5; margin: 0; }
+.cin-rolegrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 28px; }
+.cin-role-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 28px 22px;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.cin-role-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-card); }
+.cin-role-card .ic {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 16px;
+  color: var(--tp);
+}
+.cin-role-card .tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tp);
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 4px 9px;
+  border-radius: 7px;
+  margin-bottom: 12px;
+}
+.cin-role-card h3 { font-size: 17px; font-weight: 800; margin: 0 0 6px; }
+.cin-role-card p { font-size: 13px; color: var(--ts); line-height: 1.5; margin: 0; }
+
+/* reveal-on-enter */
+.cin-rev-el { opacity: 0; transform: translateY(28px); }
+.cin-rev-el.in {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================
+   CTA
+   ============================================================ */
+.cin-ctasec {
+  background: #fff;
+  text-align: center;
+  padding: 120px 40px;
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+}
+.cin-ctasec .glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 760px;
+  height: 760px;
+  transform: translate(-50%, -50%);
+  background: var(--bg);
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.cin-ctasec-inner { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; }
+.cin-ctasec h2 {
+  font-size: clamp(34px, 5vw, 60px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+}
+.cin-ctasec p { color: var(--ts); font-size: 18px; max-width: 36ch; margin: 0 auto 36px; line-height: 1.5; }
+.cin-ctabtns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.cin-btn-primary {
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  padding: 15px 34px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  box-shadow: 0 10px 28px rgba(155, 126, 92, 0.3);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.cin-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(155, 126, 92, 0.4); }
+.cin-btn-outline {
+  background: transparent;
+  color: var(--tp);
+  text-decoration: none;
+  padding: 15px 34px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 800;
+  border: 1px solid var(--line);
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.cin-btn-outline:hover { background: var(--bg); transform: translateY(-2px); }
+
+/* ============================================================
+   Responsive — collapse sticky engine on small screens
+   ============================================================ */
+@media (max-width: 960px) {
+  .cin-grid { grid-template-columns: 1fr; gap: 36px; }
+  .cin-grid.cin-rev .cin-left,
+  .cin-grid.cin-rev .cin-stage { order: 0; }
+  .cin-cardgrid { grid-template-columns: repeat(2, 1fr); }
+  .cin-rolegrid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 767px) {
+  .cin-wrap { height: auto !important; }
+  .cin-scene {
+    position: relative !important;
+    top: auto !important;
+    height: auto !important;
+    min-height: auto;
+    overflow: visible !important;
+    padding: 70px 0;
+  }
+  .cin-stage { min-height: 420px; }
+  .cin-parallax { min-height: 60vh; }
+  .cin-cardgrid { grid-template-columns: 1fr; }
+  .cin-rolegrid { grid-template-columns: 1fr; }
+  .cin-section { padding: 80px 24px; }
+  .cin-ctasec { padding: 80px 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cin-statusdot.pulse,
+  .cin-particle,
+  .cin-gbar.shake { animation: none !important; }
+}
