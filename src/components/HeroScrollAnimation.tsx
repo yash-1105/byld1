@@ -1,73 +1,34 @@
 import { useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
-const FRAME_COUNT = 240;
-
 export default function HeroScrollAnimation() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imagesRef = useRef<(HTMLImageElement | null)[]>(new Array(FRAME_COUNT).fill(null));
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const ready = useRef(false);
+  const dur = useRef(8);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
-    offset: ['start start', 'end end']
+    offset: ['start start', 'end end'],
   });
 
+  // grab duration once metadata is available
   useEffect(() => {
-    // Aggressive memory prefetch using HTMLImageElement
-    // Loads them into JS memory so they can be painted instantly to canvas (60fps)
-    const loadImages = async () => {
-      // Load first 10 frames sequentially and instantly
-      for (let i = 0; i < 10; i++) {
-        if (i >= FRAME_COUNT) break;
-        const img = new Image();
-        const strIndex = (i + 1).toString().padStart(3, '0');
-        img.src = `/hero-sequence/ezgif-frame-${strIndex}.jpg`;
-        await new Promise(r => img.onload = r);
-        imagesRef.current[i] = img;
-        
-        // Draw the very first frame to the canvas immediately
-        if (i === 0 && canvasRef.current) {
-          const ctx = canvasRef.current.getContext('2d');
-          if (ctx) {
-            canvasRef.current.width = img.width;
-            canvasRef.current.height = img.height;
-            ctx.drawImage(img, 0, 0);
-          }
-        }
-      }
-      
-      // Load the rest in the background
-      for (let i = 10; i < FRAME_COUNT; i++) {
-        const img = new Image();
-        const strIndex = (i + 1).toString().padStart(3, '0');
-        img.src = `/hero-sequence/ezgif-frame-${strIndex}.jpg`;
-        img.onload = () => {
-          imagesRef.current[i] = img;
-        };
-      }
-    };
-    loadImages();
+    const v = videoRef.current;
+    if (!v) return;
+    const onMeta = () => { ready.current = true; dur.current = v.duration || 8; };
+    if (v.readyState >= 1) onMeta();
+    else v.addEventListener('loadedmetadata', onMeta);
+    return () => v.removeEventListener('loadedmetadata', onMeta);
   }, []);
 
+  // scrub the video to the scroll position
   useEffect(() => {
     const unsubscribe = scrollYProgress.onChange((progress) => {
-      let nextFrame = Math.floor(progress * (FRAME_COUNT - 1));
-      nextFrame = Math.max(0, Math.min(nextFrame, FRAME_COUNT - 1));
-      
-      if (canvasRef.current) {
-        const img = imagesRef.current[nextFrame];
-        const ctx = canvasRef.current.getContext('2d');
-        if (img && ctx && img.complete) {
-          if (canvasRef.current.width !== img.width) {
-            canvasRef.current.width = img.width;
-            canvasRef.current.height = img.height;
-          }
-          requestAnimationFrame(() => {
-            ctx.drawImage(img, 0, 0);
-          });
-        }
-      }
+      const v = videoRef.current;
+      if (!v || !ready.current) return;
+      const target = Math.max(0, Math.min(1, progress)) * (dur.current - 0.04);
+      if (Math.abs(v.currentTime - target) > 0.001) v.currentTime = target;
     });
     return () => unsubscribe();
   }, [scrollYProgress]);
@@ -78,7 +39,7 @@ export default function HeroScrollAnimation() {
 
   const y2 = useTransform(scrollYProgress, [0.3, 0.6], [50, -50]);
   const opacity2 = useTransform(scrollYProgress, [0.3, 0.4, 0.6], [0, 1, 0]);
-  
+
   const y3 = useTransform(scrollYProgress, [0.6, 0.9], [50, -50]);
   const opacity3 = useTransform(scrollYProgress, [0.6, 0.7, 0.9], [0, 1, 0]);
 
@@ -87,16 +48,24 @@ export default function HeroScrollAnimation() {
 
   return (
     <div ref={containerRef} className="h-[400vh] bg-transparent relative">
-      <motion.div 
+      <motion.div
         style={{ opacity: sectionOpacity }}
         className="sticky top-0 h-screen w-full overflow-hidden bg-[#1a1814]"
       >
-        {/* Hardware accelerated canvas rendering */}
-        <canvas
-          ref={canvasRef}
+        {/* Single scroll-scrubbed video (replaces the 240-frame sequence) */}
+        <video
+          ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover"
-        />
-        
+          muted
+          playsInline
+          preload="auto"
+          tabIndex={-1}
+          poster="/hero-poster.jpg"
+          aria-label="Luxury villa visualization"
+        >
+          <source src="/hero.mp4" type="video/mp4" />
+        </video>
+
         {/* Dark overlay to make text readable */}
         <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
