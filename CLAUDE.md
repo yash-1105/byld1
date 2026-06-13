@@ -133,6 +133,24 @@ Requires `VITE_GEMINI_API_KEY` in `.env`.
 
 Separate from the main DataContext. `src/services/chatService.ts` handles conversations, messages, file uploads, and Postgres real-time subscriptions. Chat messages are stored in `conversations`, `conversation_members`, and `messages` tables.
 
+### Marketing landing page — cinematic scroll showcase
+
+The public landing page (`src/pages/LandingPage.tsx`, route `/`) is: fixed nav → `HeroScrollAnimation` → `CinematicShowcase` → `Footer`. It is a marketing surface, not product UI — treat it separately from the dashboard app.
+
+**Hero** (`src/components/HeroScrollAnimation.tsx`): a 400vh sticky section that scroll-scrubs a single video (`public/hero.mp4`) via Framer Motion's `useScroll` (NOT a frame sequence — the old 240-JPG `public/hero-sequence/` was removed). `scrollYProgress.onChange` sets `video.currentTime = progress * duration`. Three headline reveals + a fade-to-white at the end use `useTransform`. Poster `public/hero-poster.jpg` paints instantly.
+
+**CinematicShowcase** (`src/components/cinematic/CinematicShowcase.tsx` + `cinematic.css`): five full-bleed feature scenes, each a 400vh sticky wrapper whose scroll progress (0→1) scrubs a per-scene video and drives overlaid copy/status UI. Key conventions:
+- **One vanilla `requestAnimationFrame` engine** in a single `useEffect` drives all scenes (no animation library here). It computes per-scene progress from `getBoundingClientRect` and writes directly to `element.style` — it never touches React state and never uses a `scroll` listener. Helpers: `lerp`, `clamp`, `seg(p,a,b)`, `easeOut`, `easeInOut`, `setOT(el,opacity,y,x,scale)`.
+- **Video scrubbing per scene:** `videoNReady`/`videoNDur` flags set on `loadedmetadata`; each frame sets `currentTime = clamp(p) * (dur - 0.04)` only when ready + visible.
+- **Lazy loading (perf):** videos are `preload="none"`; a dedicated IntersectionObserver (`rootMargin: 200%`) calls `video.load()` only when a scene nears the viewport, then unobserves. Nothing downloads on initial page load.
+- **Scenes:** 1 Segment Map (`segment-map.mp4`, room status cards + stats), 2 Design Board (`design-board.mp4`, material cards), 3 Approvals (`approvals-board.mp4`, name card + Tinder-style `.cin-verdict` tick/X badge at right-middle), 4 Procurement (`procurement-board.mp4`, flipped layout, copy fades out mid-scroll), 5 Timeline (`timeline-board.mp4`, flipped). Scenes 4–5 use `cin-hero--flip` (copy on the right) because their videos are full-frame UI demos. Scene 6 (Workflow + Roles) and the CTA are normal sections revealed via IntersectionObserver (`.cin-rev-el.in`).
+- **Per-scene timing** is tuned to each clip in `sNWindows` arrays / fade ranges — re-check against the footage if a video is swapped.
+- **Mobile / `prefers-reduced-motion`:** the sticky scrub is disabled (CSS collapses the wrappers) and each scene renders a clean static frame with copy visible.
+
+**Showcase video assets** (`public/*.mp4`): re-encode any replacement clip for smooth scroll-seeking with a short keyframe interval + faststart, e.g. `ffmpeg -i in.mp4 -an -vf scale=1280:-2 -c:v libx264 -g 10 -keyint_min 10 -sc_threshold 0 -crf 24 -movflags +faststart out.mp4`, and extract a `*-poster.jpg`. (GOP-10 keeps files small while seeking stays responsive; avoid all-intra `-g 1` — it bloats size ~2–3×.) Keep clips at 1280px.
+
+The older static showcase (`src/components/showcase/`, `featureData.ts`) is no longer used by the landing page but may still back the `/features` tour; do not assume it is dead.
+
 ### UI Conventions
 
 - **Tailwind utility classes** `soft-card`, `glass-card`, `gradient-primary`, `text-primary`, `text-success`, `text-warning`, `text-destructive` are defined in `src/index.css` and used throughout — prefer these over inline color definitions.
