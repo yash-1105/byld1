@@ -25,7 +25,9 @@ serve(async (req) => {
     }
 
     const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email');
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${userId}`;
+    // include_granted_scopes keeps any previously-granted scopes (e.g. Calendar) so the
+    // shared OAuth client's grants don't clobber each other.
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&include_granted_scopes=true&state=${userId}`;
 
     return new Response(JSON.stringify({ url: authUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

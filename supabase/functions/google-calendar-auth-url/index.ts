@@ -31,7 +31,9 @@ serve(async (req) => {
     // Carry the originating site in state so the callback can return the user
     // to where they started (localhost during dev, prod otherwise).
     const state = origin ? `${userId}|${encodeURIComponent(origin)}` : `${userId}`;
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
+    // include_granted_scopes keeps the existing Drive grant so connecting Calendar
+    // (same OAuth client) doesn't drop drive.readonly.
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&include_granted_scopes=true&state=${encodeURIComponent(state)}`;
 
     return new Response(JSON.stringify({ url: authUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
