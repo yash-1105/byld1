@@ -4,6 +4,7 @@ import ContractorDashboard from '@/components/dashboards/ContractorDashboard';
 import ClientDashboard from '@/components/dashboards/ClientDashboard';
 import ConsultantDashboard from '@/components/dashboards/ConsultantDashboard';
 import SharedApprovalsWidget from '@/components/dashboards/SharedApprovalsWidget';
+import GoogleCalendarWidget from '@/components/dashboards/GoogleCalendarWidget';
 import AIInsightsPanel from '@/components/ai/AIInsightsPanel';
 import AISummaryPanel from '@/components/ai/AISummaryPanel';
 
@@ -25,6 +26,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <AIInsightsPanel />
       <AISummaryPanel compact />
+      <GoogleCalendarWidget />
       {showSharedApprovals && <SharedApprovalsWidget />}
       {roleDashboard}
     </div>

@@ -8,6 +8,7 @@ import { User, Bell, Shield, Globe, Camera, Loader2, Pencil, LogOut } from 'luci
 import { toast } from 'sonner';
 import UserAvatar from '@/components/UserAvatar';
 import DriveIntegration from '@/components/drive/DriveIntegration';
+import CalendarIntegration from '@/components/calendar/CalendarIntegration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -281,6 +282,7 @@ export default function SettingsPage() {
       <motion.div {...card(0.4)}>
         <h3 className="text-xl font-bold text-foreground mt-10 mb-4">Integrations</h3>
         <DriveIntegration />
+        <CalendarIntegration />
       </motion.div>
 
       {/* Edit profile dialog */}
