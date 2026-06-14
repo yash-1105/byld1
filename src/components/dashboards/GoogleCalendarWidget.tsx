@@ -48,7 +48,7 @@ function WidgetShell({ children, right }: { children: React.ReactNode; right?: R
 
 export default function GoogleCalendarWidget() {
   const {
-    isConnected, connectionLoading, events, eventsLoading, eventsError,
+    isConnected, connectionLoading, events, eventsLoading, eventsError, eventsErrorMessage,
     connect, disconnect, refetch,
   } = useCalendarEvents();
   const [connecting, setConnecting] = useState(false);
@@ -140,6 +140,11 @@ export default function GoogleCalendarWidget() {
           </div>
           <p className="text-sm font-semibold text-foreground">Couldn't load your calendar</p>
           <p className="text-xs text-muted-foreground mt-1">Your access may have expired. Reconnect to continue.</p>
+          {eventsErrorMessage && (
+            <p className="text-[11px] text-muted-foreground/80 mt-2 max-w-sm mx-auto break-words">
+              {eventsErrorMessage}
+            </p>
+          )}
           <button
             onClick={async () => { await disconnect(); handleConnect(); }}
             className="mt-4 inline-flex items-center gap-2 text-sm font-medium px-5 py-2 bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-all shadow-sm"

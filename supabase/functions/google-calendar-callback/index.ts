@@ -2,14 +2,28 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 serve(async (req) => {
-  // This is a GET request from Google's redirect
-  // APP_URL keeps the post-OAuth redirect environment-aware (works in production).
-  // Strip any trailing slash so we never produce a double slash like host//dashboard.
-  const appUrl = (Deno.env.get('APP_URL') ?? 'http://localhost:5173').replace(/\/+$/, '');
+  // This is a GET request from Google's redirect.
+  // state carries "userId" or "userId|<origin>"; return the user to that origin
+  // (allowlisted) so connecting from localhost stays on localhost. Falls back to APP_URL.
+  const defaultUrl = (Deno.env.get('APP_URL') ?? 'http://localhost:5173').replace(/\/+$/, '');
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:8080',
+    'https://byld1.vercel.app',
+  ];
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
-    const userId = url.searchParams.get('state');
+    const rawState = url.searchParams.get('state') ?? '';
+    const [userId, encOrigin] = rawState.split('|');
+
+    let appUrl = defaultUrl;
+    if (encOrigin) {
+      try {
+        const o = decodeURIComponent(encOrigin).replace(/\/+$/, '');
+        if (allowedOrigins.includes(o)) appUrl = o;
+      } catch { /* keep default */ }
+    }
 
     if (!code || !userId) {
       return Response.redirect(`${appUrl}/dashboard?error=missing_oauth_params`, 302);
@@ -73,6 +87,6 @@ serve(async (req) => {
     return Response.redirect(`${appUrl}/dashboard?success=calendar_connected`, 302);
   } catch (error: any) {
     console.error('Callback error:', error);
-    return Response.redirect(`${appUrl}/dashboard?error=unknown_error`, 302);
+    return Response.redirect(`${defaultUrl}/dashboard?error=unknown_error`, 302);
   }
 });

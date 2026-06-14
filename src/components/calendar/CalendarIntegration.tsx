@@ -38,7 +38,7 @@ export default function CalendarIntegration() {
     try {
       if (!user) return;
       const { data, error } = await supabase.functions.invoke('google-calendar-auth-url', {
-        body: { userId: user.id },
+        body: { userId: user.id, origin: window.location.origin },
       });
       if (error) throw error;
       if (data?.url) {

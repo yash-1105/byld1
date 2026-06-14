@@ -39,19 +39,33 @@ export function useCalendarEvents() {
       const { data, error } = await supabase.functions.invoke('google-calendar-events', {
         body: { userId: user!.id, timeMin, timeMax },
       });
-      if (error) throw error;
+      if (error) {
+        // Surface the real message from the function body (e.g. a Google 403 scope error),
+        // not the generic "non-2xx status code" that supabase-js throws.
+        let detail = error.message;
+        try {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) detail = body.error;
+          }
+        } catch { /* keep generic message */ }
+        console.error('[calendar] events fetch failed:', detail);
+        throw new Error(detail);
+      }
       if (data?.error) throw new Error(data.error);
       return (data?.events ?? []) as CalendarEvent[];
     },
     enabled: !!user && isConnected,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 1,
   });
 
   const connect = async () => {
     if (!user) return;
     const { data, error } = await supabase.functions.invoke('google-calendar-auth-url', {
-      body: { userId: user.id },
+      body: { userId: user.id, origin: window.location.origin },
     });
     if (error) throw error;
     if (data?.url) window.location.href = data.url;
@@ -75,6 +89,7 @@ export function useCalendarEvents() {
     events: eventsQuery.data ?? [],
     eventsLoading: eventsQuery.isLoading,
     eventsError: eventsQuery.isError,
+    eventsErrorMessage: (eventsQuery.error as Error | null)?.message ?? null,
     windowDays: WINDOW_DAYS,
     connect,
     disconnect,
