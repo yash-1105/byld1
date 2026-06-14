@@ -4,7 +4,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 serve(async (req) => {
   // This is a GET request from Google's redirect
   // APP_URL keeps the post-OAuth redirect environment-aware (works in production).
-  const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:5173';
+  // Strip any trailing slash so we never produce a double slash like host//dashboard.
+  const appUrl = (Deno.env.get('APP_URL') ?? 'http://localhost:5173').replace(/\/+$/, '');
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
