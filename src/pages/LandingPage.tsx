@@ -9,7 +9,8 @@ import CinematicShowcase from '@/components/cinematic/CinematicShowcase';
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > window.innerHeight * 3);
+    // Flip nav to dark text near the end of the hero (650vh tall) as it fades to white.
+    const handleScroll = () => setIsScrolled(window.scrollY > window.innerHeight * 5.3);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);

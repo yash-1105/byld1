@@ -47,7 +47,7 @@ export default function HeroScrollAnimation() {
   const sectionOpacity = useTransform(scrollYProgress, [0.85, 1], [1, 0]);
 
   return (
-    <div ref={containerRef} className="h-[400vh] bg-transparent relative">
+    <div ref={containerRef} className="h-[650vh] bg-transparent relative">
       <motion.div
         style={{ opacity: sectionOpacity }}
         className="sticky top-0 h-screen w-full overflow-hidden bg-[#1a1814]"
