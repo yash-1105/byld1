@@ -129,6 +129,20 @@ Gemini 2.5 Flash via `@google/generative-ai`. Key files:
 
 Requires `VITE_GEMINI_API_KEY` in `.env`.
 
+### Google Calendar Integration
+
+Mirrors the Drive integration pattern exactly. Per-user OAuth tokens stored in `calendar_connections` (same shape as `drive_connections`). Uses the **same Google OAuth client** as Drive — `GOOGLE_DRIVE_CLIENT_ID` / `GOOGLE_DRIVE_CLIENT_SECRET` are reused. Both auth-url functions include `include_granted_scopes=true` to prevent one from dropping the other's grant when re-authorising.
+
+Key files:
+- `supabase/functions/google-calendar-auth-url/index.ts` — generates OAuth URL with `calendar.readonly` scope; carries `userId|encodeURIComponent(origin)` in `state` so the callback returns the user to wherever they started (localhost or prod)
+- `supabase/functions/google-calendar-callback/index.ts` — **`verify_jwt = false`** (set in `supabase/config.toml`) because Google's browser redirect can't send a Supabase auth header; upserts into `calendar_connections`, redirects to `${APP_URL}/dashboard?success=calendar_connected`
+- `supabase/functions/google-calendar-events/index.ts` — fetches next N days from Google Calendar API; full 401 → `refreshAccessToken()` → update DB → retry pattern (identical to `google-drive-folders`)
+- `src/hooks/useCalendarEvents.ts` — two `useQuery` hooks: connection state + events (enabled only when connected); `staleTime: 5min`
+- `src/components/dashboards/GoogleCalendarWidget.tsx` — rendered for **all four roles** on the dashboard; states: loading / not-connected CTA / error+reconnect / empty / events grouped by day
+- `src/components/calendar/CalendarIntegration.tsx` — connect/disconnect card in Settings → Integrations
+
+Supabase secrets required: `GOOGLE_CALENDAR_REDIRECT_URI`, `APP_URL` (production origin, no trailing slash). `APP_URL` trailing slash causes a double-slash redirect bug — always strip with `.replace(/\/+$/, '')`.
+
 ### Real-Time Chat
 
 Separate from the main DataContext. `src/services/chatService.ts` handles conversations, messages, file uploads, and Postgres real-time subscriptions. Chat messages are stored in `conversations`, `conversation_members`, and `messages` tables.
@@ -137,13 +151,28 @@ Separate from the main DataContext. `src/services/chatService.ts` handles conver
 
 The public landing page (`src/pages/LandingPage.tsx`, route `/`) is: fixed nav → `HeroScrollAnimation` → `CinematicShowcase` → `Footer`. It is a marketing surface, not product UI — treat it separately from the dashboard app.
 
-**Hero** (`src/components/HeroScrollAnimation.tsx`): a 400vh sticky section that scroll-scrubs a single video (`public/hero.mp4`) via Framer Motion's `useScroll` (NOT a frame sequence — the old 240-JPG `public/hero-sequence/` was removed). `scrollYProgress.onChange` sets `video.currentTime = progress * duration`. Three headline reveals + a fade-to-white at the end use `useTransform`. Poster `public/hero-poster.jpg` paints instantly.
+**Hero** (`src/components/HeroScrollAnimation.tsx`): a 650vh sticky section that scroll-scrubs a single video (`public/hero.mp4`) via Framer Motion's `useScroll` (NOT a frame sequence — the old 240-JPG `public/hero-sequence/` was removed). `scrollYProgress.onChange` sets `video.currentTime = progress * duration`. Three headline reveals + a fade-to-white at the end use `useTransform`. Poster `public/hero-poster.jpg` paints instantly.
+
+Hero copy (the three scroll-revealed text panels):
+1. **"Build smarter. / Deliver faster."** — subtext: "Uncomplicate project management. Control timelines, enhance client transparency, collect faster and hire the right people — all in one place."
+2. **"Real-time site updates."** — subtext: transparency/documentation messaging for contractors & site engineers
+3. **"Transparent costs and seamless viewing."** — subtext: centralized document hub, segment-wise cost tracking for clients
 
 **CinematicShowcase** (`src/components/cinematic/CinematicShowcase.tsx` + `cinematic.css`): five full-bleed feature scenes, each a 400vh sticky wrapper whose scroll progress (0→1) scrubs a per-scene video and drives overlaid copy/status UI. Key conventions:
 - **One vanilla `requestAnimationFrame` engine** in a single `useEffect` drives all scenes (no animation library here). It computes per-scene progress from `getBoundingClientRect` and writes directly to `element.style` — it never touches React state and never uses a `scroll` listener. Helpers: `lerp`, `clamp`, `seg(p,a,b)`, `easeOut`, `easeInOut`, `setOT(el,opacity,y,x,scale)`.
 - **Video scrubbing per scene:** `videoNReady`/`videoNDur` flags set on `loadedmetadata`; each frame sets `currentTime = clamp(p) * (dur - 0.04)` only when ready + visible.
 - **Lazy loading (perf):** videos are `preload="none"`; a dedicated IntersectionObserver (`rootMargin: 200%`) calls `video.load()` only when a scene nears the viewport, then unobserves. Nothing downloads on initial page load.
 - **Scenes:** 1 Segment Map (`segment-map.mp4`, room status cards + stats), 2 Design Board (`design-board.mp4`, material cards), 3 Approvals (`approvals-board.mp4`, name card + Tinder-style `.cin-verdict` tick/X badge at right-middle), 4 Procurement (`procurement-board.mp4`, flipped layout, copy fades out mid-scroll), 5 Timeline (`timeline-board.mp4`, flipped). Scenes 4–5 use `cin-hero--flip` (copy on the right) because their videos are full-frame UI demos. Scene 6 (Workflow + Roles) and the CTA are normal sections revealed via IntersectionObserver (`.cin-rev-el.in`).
+- **`.cin-hero-copy` bottom padding:** set to `clamp(100px, 16vh, 140px)` so the CTA button ("Explore X") is never hidden behind the `.cin-stats` bar on shorter/laptop screens. If adjusting copy height, re-check this value.
+- **Multi-line bullet support:** `.cin-check li` uses `align-items: flex-start` (tick pinned to top). Long bullets wrap into a `.cin-check-text` flex-column span; a `.cin-check-sub` span renders a smaller italic sub-line (used on Scene 3 Approvals first bullet).
+
+**Scene copy reference** (update this if copy changes):
+- Scene 1 (Segment Map): 2 bullets — "Per-room status, budget & tasks" / "Convenient viewing and visualisation of the final design at a single portal"
+- Scene 2 (Design Board): 3 bullets — design lifecycle tracking / discarded designs for client revision reviews / scope creep + variation billing
+- Scene 3 (Approvals): first bullet has sub-line "Forget the blame game." (italic, `.cin-check-sub`); other two are "One-tap approve or reject" / "Timestamped audit trail"
+- Scene 4 (Procurement): copy fades out at ~45% scroll; bullets unchanged
+- Scene 5 (Timeline): "Dependency-aware scheduling" / "Warn clients of the opportunity cost of every change requested, minimise variations" / "Deadlines for approvals — clients know the cost of their delayed decisions"
+- Workflow cards (Scene 6): Construction = "Site monitoring, task execution, and intelligent timelines."; Finishing = "Final inspections and transparent project close-outs."
 - **Per-scene timing** is tuned to each clip in `sNWindows` arrays / fade ranges — re-check against the footage if a video is swapped.
 - **Mobile / `prefers-reduced-motion`:** the sticky scrub is disabled (CSS collapses the wrappers) and each scene renders a clean static frame with copy visible.
 
@@ -178,6 +207,7 @@ Reimbursements & approvals additions (all applied to remote):
 - `20260611000002_add_document_approval_status.sql` — `documents.approval_status` column
 - `20260612000000_add_approval_visible_roles.sql` — `approvals.visible_roles TEXT[]` (defaults to `{architect,client}`)
 - `20260612000001_add_approval_cost.sql` — `approvals.cost_type` (`fixed`/`variable`) + `cost_amount` (USD base)
+- `20260614000000_add_google_calendar_integration.sql` — `calendar_connections` table (mirrors `drive_connections`; owner-scoped RLS; `updated_at` trigger)
 
 **Caveats:**
 - The `purchase_orders` table was created directly in the Supabase SQL editor, so its migration file exists in the repo but is **not** recorded in the remote migration history. A future `supabase db push` may error trying to re-create it — resolve with `npx supabase migration repair --status applied 20260609000000`.
