@@ -371,8 +371,7 @@ export default function CinematicShowcase() {
                 <div className="cin-reveal">
                   <ul className="cin-check">
                     <li><span className="tick"><Check strokeWidth={3} /></span>Per-room status, budget &amp; tasks</li>
-                    <li><span className="tick"><Check strokeWidth={3} /></span>Spot delays the moment they appear</li>
-                    <li><span className="tick"><Check strokeWidth={3} /></span>One source of truth for the site</li>
+                    <li><span className="tick"><Check strokeWidth={3} /></span>Convenient viewing and visualisation of the final design at a single portal</li>
                   </ul>
                   <Link className="cin-cta" to="/features#segment-map">Explore Segment Map {arrow}</Link>
                 </div>
@@ -436,9 +435,9 @@ export default function CinematicShowcase() {
                 <h2 className="cin-h">From inspiration<br />to execution.</h2>
                 <div className="cin-reveal">
                   <ul className="cin-check">
-                    <li><span className="tick"><Check strokeWidth={3} /></span>Pin concepts, gather feedback</li>
-                    <li><span className="tick"><Check strokeWidth={3} /></span>Confirm specs in one tap</li>
-                    <li><span className="tick"><Check strokeWidth={3} /></span>The team builds from a single source</li>
+                    <li><span className="tick"><Check strokeWidth={3} /></span>Track the life cycle of your design from start to end, forget files with a million versions</li>
+                    <li><span className="tick"><Check strokeWidth={3} /></span>Allow clients to view discarded designs as per need when revisions are requested</li>
+                    <li><span className="tick"><Check strokeWidth={3} /></span>Manage scope creep efficiently and notify clients for variation billing</li>
                   </ul>
                   <Link className="cin-cta" to="/features#design-board">Explore Design Board {arrow}</Link>
                 </div>
@@ -497,7 +496,13 @@ export default function CinematicShowcase() {
                 <h2 className="cin-h">Every decision<br />documented.</h2>
                 <div className="cin-reveal">
                   <ul className="cin-check">
-                    <li><span className="tick"><Check strokeWidth={3} /></span>Full context &amp; cost impact</li>
+                    <li>
+                      <span className="tick"><Check strokeWidth={3} /></span>
+                      <span className="cin-check-text">
+                        Full context, opportunity costs of delay, and maximum accountability.
+                        <span className="cin-check-sub">Forget the blame game.</span>
+                      </span>
+                    </li>
                     <li><span className="tick"><Check strokeWidth={3} /></span>One-tap approve or reject</li>
                     <li><span className="tick"><Check strokeWidth={3} /></span>Timestamped audit trail</li>
                   </ul>
@@ -610,8 +615,8 @@ export default function CinematicShowcase() {
                 <div className="cin-reveal">
                   <ul className="cin-check">
                     <li><span className="tick"><Check strokeWidth={3} /></span>Dependency-aware scheduling</li>
-                    <li><span className="tick"><Check strokeWidth={3} /></span>Automatic conflict detection</li>
-                    <li><span className="tick"><Check strokeWidth={3} /></span>Recover before it costs you</li>
+                    <li><span className="tick"><Check strokeWidth={3} /></span>Warn clients of the opportunity cost of every change requested, minimise variations</li>
+                    <li><span className="tick"><Check strokeWidth={3} /></span>Deadlines for approvals — clients know the cost of their delayed decisions</li>
                   </ul>
                   <Link className="cin-cta" to="/features#timeline">Explore Timeline {arrow}</Link>
                 </div>
@@ -633,8 +638,8 @@ export default function CinematicShowcase() {
             {[
               { stage: 'Design', desc: 'Architectural plans, MEP coordination, and interior concepts.' },
               { stage: 'Approval', desc: 'Stakeholder sign-offs and compliance checks.' },
-              { stage: 'Construction', desc: 'Site monitoring, task execution, and quality inspections.' },
-              { stage: 'Finishing', desc: 'Final inspections, punch lists, and project closeout.' },
+              { stage: 'Construction', desc: 'Site monitoring, task execution, and intelligent timelines.' },
+              { stage: 'Finishing', desc: 'Final inspections and transparent project close-outs.' },
             ].map((s, i) => (
               <div key={s.stage} className="cin-stage-card cin-rev-el" style={{ transitionDelay: `${i * 0.1}s` }}>
                 <span className="num">0{i + 1}</span>

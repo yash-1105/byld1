@@ -88,12 +88,15 @@
 }
 .cin-check li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   font-size: 15px;
   font-weight: 600;
   color: var(--tp);
 }
+.cin-check .tick { margin-top: 4px; }
+.cin-check-text { display: flex; flex-direction: column; gap: 3px; }
+.cin-check-sub { font-size: 13px; font-weight: 500; font-style: italic; opacity: 0.65; }
 .cin-check .tick {
   flex: 0 0 22px;
   width: 22px;
@@ -185,7 +188,7 @@
   z-index: 3;
   display: flex;
   align-items: center;
-  padding: 0 clamp(28px, 5vw, 76px);
+  padding: 0 clamp(28px, 5vw, 76px) clamp(100px, 16vh, 140px);
   pointer-events: none;
 }
 .cin-hero-copy .cin-left {

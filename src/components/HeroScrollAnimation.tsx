@@ -80,7 +80,7 @@ export default function HeroScrollAnimation() {
               <span className="text-[#b5aa9d]">Deliver faster.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg text-white/80">
-              Manage construction projects, track progress, control budgets, and collaborate with your entire team in one place.
+              Uncomplicate project management. Control timelines, enhance client transparency, collect faster and hire the right people — all in one place.
             </p>
           </motion.div>
 
@@ -92,7 +92,7 @@ export default function HeroScrollAnimation() {
               Real-time site updates.
             </h2>
             <p className="mt-6 max-w-lg text-lg text-white/80 mx-auto">
-              Know exactly what's happening on site, every day, without stepping foot outside your office.
+              Let clients see their vision taking shape — build transparency and client confidence. BYLD space allows contractors and site engineers to document real-time progress, eliminating repeated updates across various channels.
             </p>
           </motion.div>
 
@@ -101,10 +101,10 @@ export default function HeroScrollAnimation() {
             className="absolute inset-x-0 flex flex-col items-center justify-center"
           >
             <h2 className="text-4xl sm:text-5xl lg:text-[4rem] font-bold text-white tracking-tight leading-[1.05]">
-              Total financial control.
+              Transparent costs and seamless viewing.
             </h2>
             <p className="mt-6 max-w-lg text-lg text-white/80 mx-auto">
-              Track budgets by segment, manage change orders, and keep every dollar accounted for.
+              Centralized document hub for clients. Design concepts to final invoices — in a single interface. While project managers track resource allocation and project margins, clients can track segment-wise costs, procurements and revisions.
             </p>
           </motion.div>
         </div>
