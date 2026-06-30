@@ -8,35 +8,35 @@
 
 .byld-features {
   /* Surfaces */
-  --bf-cream:   #FAF8F4;
-  --bf-cream-2: #F5F1EB;
+  --bf-cream:   #f8faf7;
+  --bf-cream-2: #f3f6f2;
   --bf-white:   #FFFFFF;
-  --bf-panel:   #FBFAF7;
+  --bf-panel:   #f9fbf8;
 
   /* Ink / text */
-  --bf-ink:      #36312B;
-  --bf-ink-soft: #5B544B;
-  --bf-muted:    #9C938A;
-  --bf-muted-2:  #B6ADA2;
+  --bf-ink:      #2b2e2a;
+  --bf-ink-soft: #53574e;
+  --bf-muted:    #979d92;
+  --bf-muted-2:  #aab0a6;
 
   /* Lines & chips */
-  --bf-line:   #ECE7DF;
-  --bf-line-2: #E2DBD0;
-  --bf-beige:  #EEE9E1;
-  --bf-beige-2:#E6DFD4;
+  --bf-line:   #ebf0eb;
+  --bf-line-2: #e1e7e2;
+  --bf-beige:  #edf2ed;
+  --bf-beige-2:#e5ebe6;
 
   /* Brand accents */
-  --bf-mocha:   #A1896F;
-  --bf-mocha-d: #8C745B;
-  --bf-tan:     #C6AC8A;
-  --bf-tan-soft:#D9C7AC;
-  --bf-sand:    #EFE7DA;
+  --bf-mocha:   #6e8a72;
+  --bf-mocha-d: #5e7e64;
+  --bf-tan:     #a8c3aa;
+  --bf-tan-soft:#cdddd0;
+  --bf-sand:    #ecf1ec;
 
   /* Earthy status */
   --bf-green:    #6E8E6A;
   --bf-green-bg: #E9EFE6;
-  --bf-amber:    #C29A4E;
-  --bf-amber-bg: #F4ECDA;
+  --bf-amber:    #7e9780;
+  --bf-amber-bg: #f0f4ec;
   --bf-red:      #C16B57;
   --bf-red-bg:   #F4E3DD;
   --bf-blue:     #6E84A3;
@@ -51,10 +51,10 @@
   --bf-r-pill: 999px;
 
   /* Shadows */
-  --bf-sh-sm: 0 1px 2px rgba(54,49,43,.04), 0 1px 3px rgba(54,49,43,.05);
-  --bf-sh-md: 0 2px 6px rgba(54,49,43,.05), 0 8px 24px rgba(54,49,43,.06);
-  --bf-sh-lg: 0 8px 30px rgba(54,49,43,.08), 0 24px 60px rgba(54,49,43,.08);
-  --bf-sh-pop: 0 12px 40px rgba(54,49,43,.14), 0 4px 12px rgba(54,49,43,.10);
+  --bf-sh-sm: 0 1px 2px rgba(43,46,42,.04), 0 1px 3px rgba(43,46,42,.05);
+  --bf-sh-md: 0 2px 6px rgba(43,46,42,.05), 0 8px 24px rgba(43,46,42,.06);
+  --bf-sh-lg: 0 8px 30px rgba(43,46,42,.08), 0 24px 60px rgba(43,46,42,.08);
+  --bf-sh-pop: 0 12px 40px rgba(43,46,42,.14), 0 4px 12px rgba(43,46,42,.10);
 
   --bf-ease: cubic-bezier(.22,.61,.36,1);
   --bf-ease-spring: cubic-bezier(.34,1.56,.64,1);
@@ -113,7 +113,7 @@
   padding: 5px 11px; border-radius: var(--bf-r-pill); letter-spacing: .01em; }
 .bf-pill svg { width: 13px; height: 13px; }
 .bf-pill--green { background: var(--bf-green-bg); color: var(--bf-green); }
-.bf-pill--amber { background: var(--bf-amber-bg); color: #9C7A2E; }
+.bf-pill--amber { background: var(--bf-amber-bg); color: #6b876f; }
 .bf-pill--red   { background: var(--bf-red-bg); color: var(--bf-red); }
 .bf-pill--blue  { background: var(--bf-blue-bg); color: var(--bf-blue); }
 .bf-pill--mocha { background: var(--bf-sand); color: var(--bf-mocha-d); }
@@ -147,7 +147,7 @@
 
 /* Striped image placeholder */
 .bf-ph { background-color: var(--bf-sand);
-  background-image: repeating-linear-gradient(45deg, transparent, transparent 9px, rgba(161,137,111,.10) 9px, rgba(161,137,111,.10) 18px);
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 9px, rgba(110,138,114,.10) 9px, rgba(110,138,114,.10) 18px);
   display: grid; place-items: center; color: var(--bf-mocha-d); font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-size: 11px; letter-spacing: .04em; border-radius: var(--bf-r-sm); text-align: center; padding: 8px; }
 

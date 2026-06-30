@@ -528,7 +528,7 @@ export default function BudgetPage() {
                       <Pie data={allCategories} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={3} dataKey="valueUSD">
                         {allCategories.map((e, i) => <Cell key={i} fill={e.color} />)}
                       </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} formatter={(v: number) => formatCurrencyCompact(v)} />
+                      <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(130 11% 89%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} formatter={(v: number) => formatCurrencyCompact(v)} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex flex-wrap justify-center gap-3 mt-2">
@@ -560,10 +560,10 @@ export default function BudgetPage() {
                       <stop offset="95%" stopColor="hsl(28, 60%, 48%)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(33 18% 88%)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(130 11% 89%)" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={52} tickFormatter={(v: number) => formatCurrencyCompact(v)} />
-                  <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)' }} formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(130 11% 89%)' }} formatter={(v: number) => formatCurrency(v)} />
                   <Area type="monotone" dataKey="amount" stroke="hsl(28, 60%, 48%)" fill="url(#spendGrad)" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>

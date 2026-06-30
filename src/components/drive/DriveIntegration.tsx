@@ -73,7 +73,7 @@ export default function DriveIntegration() {
 
       <div className="relative z-10 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[#f8f9fa] border border-[#dadce0] flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[#f6f8f6] border border-[#dadce0] flex items-center justify-center shrink-0">
             <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Google Drive" className="w-7 h-7" />
           </div>
           

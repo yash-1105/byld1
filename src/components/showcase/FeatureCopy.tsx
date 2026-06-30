@@ -32,17 +32,17 @@ export default function FeatureCopy({ meta, index, progress }: Props) {
     >
       {/* index row */}
       <motion.div variants={item} className="flex items-center gap-2.5 mb-[26px]">
-        <span className="text-[13px] font-bold tracking-[0.04em] text-[#b6b1a8] tabular-nums">{num}</span>
-        <span className="flex-1 max-w-[120px] h-0.5 rounded-sm overflow-hidden bg-[#e7e3db]">
-          <motion.span className="block h-full bg-[#9a7d5e]" style={{ width: barWidth }} />
+        <span className="text-[13px] font-bold tracking-[0.04em] text-[#b0b5ad] tabular-nums">{num}</span>
+        <span className="flex-1 max-w-[120px] h-0.5 rounded-sm overflow-hidden bg-[#e1e7e2]">
+          <motion.span className="block h-full bg-[#6e8a72]" style={{ width: barWidth }} />
         </span>
-        <span className="text-[13px] font-bold tracking-[0.04em] text-[#9a7d5e]">{meta.label}</span>
+        <span className="text-[13px] font-bold tracking-[0.04em] text-[#6e8a72]">{meta.label}</span>
       </motion.div>
 
       {/* heading */}
       <motion.h2
         variants={item}
-        className="mb-6 font-bold tracking-[-0.04em] leading-[0.96] text-[#161513] text-[clamp(38px,5.2vw,76px)]"
+        className="mb-6 font-bold tracking-[-0.04em] leading-[0.96] text-[#141714] text-[clamp(38px,5.2vw,76px)]"
       >
         {meta.title[0]}
         <br />
@@ -52,7 +52,7 @@ export default function FeatureCopy({ meta, index, progress }: Props) {
       {/* lead */}
       <motion.p
         variants={item}
-        className="mb-[30px] leading-[1.5] text-[#3a3833] text-[clamp(17px,1.35vw,21px)]"
+        className="mb-[30px] leading-[1.5] text-[#353a36] text-[clamp(17px,1.35vw,21px)]"
       >
         {meta.lead}
       </motion.p>
@@ -62,9 +62,9 @@ export default function FeatureCopy({ meta, index, progress }: Props) {
         {meta.list.map((t) => (
           <li
             key={t}
-            className="flex items-center gap-[13px] py-[11px] text-[16px] font-medium text-[#3a3833] border-t border-[#efece5] last:border-b"
+            className="flex items-center gap-[13px] py-[11px] text-[16px] font-medium text-[#353a36] border-t border-[#edf2ee] last:border-b"
           >
-            <span className="w-[22px] h-[22px] flex-none rounded-full grid place-items-center bg-[#efe7dc] text-[#836845]">
+            <span className="w-[22px] h-[22px] flex-none rounded-full grid place-items-center bg-[#eaf0ea] text-[#4e6b57]">
               <Check className="w-3 h-3" strokeWidth={3} />
             </span>
             {t}
@@ -76,7 +76,7 @@ export default function FeatureCopy({ meta, index, progress }: Props) {
       <MotionLink
         variants={item}
         to={meta.href}
-        className="group inline-flex items-center gap-2 pb-[3px] text-[15px] font-bold text-[#161513] border-b-2 border-[#161513] transition-[gap,color,border-color] duration-300 hover:gap-[13px] hover:text-[#9a7d5e] hover:border-[#9a7d5e]"
+        className="group inline-flex items-center gap-2 pb-[3px] text-[15px] font-bold text-[#141714] border-b-2 border-[#141714] transition-[gap,color,border-color] duration-300 hover:gap-[13px] hover:text-[#6e8a72] hover:border-[#6e8a72]"
       >
         Explore {meta.label}
         <ArrowUpRight className="w-[15px] h-[15px]" strokeWidth={2.4} />

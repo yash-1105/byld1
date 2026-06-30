@@ -1,26 +1,27 @@
 interface BrandLogoProps {
+  /** true → dark sage logo for light backgrounds (default); false → white logo for dark backgrounds */
   dark?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
-const SIZES = {
-  sm: { main: 'text-base',  slash: 'text-sm',  sub: 'text-[9px]'  },
-  md: { main: 'text-xl',    slash: 'text-base', sub: 'text-[11px]' },
-  lg: { main: 'text-2xl',   slash: 'text-xl',   sub: 'text-xs'     },
-  xl: { main: 'text-3xl',   slash: 'text-2xl',  sub: 'text-sm'     },
+// byld/space lockup — aspect ratio ≈ 637:200
+const HEIGHTS = {
+  sm: 'h-5',
+  md: 'h-7',
+  lg: 'h-9',
+  xl: 'h-11',
 };
 
 export default function BrandLogo({ dark = true, size = 'md', className = '' }: BrandLogoProps) {
-  const s = SIZES[size];
-  const mainColor  = dark ? 'text-foreground'       : 'text-white';
-  const mutedColor = dark ? 'text-muted-foreground' : 'text-white/60';
-
   return (
-    <div className={`flex items-baseline gap-0.5 select-none ${className}`}>
-      <span className={`${s.main} font-bold tracking-tight ${mainColor}`}>BYLD</span>
-      <span className={`${s.slash} font-light ${mutedColor} mx-0.5`}>/</span>
-      <span className={`${s.sub} font-semibold tracking-[0.18em] uppercase ${mutedColor}`}>SPACE</span>
-    </div>
+    <img
+      src="/images/byld-lockup.png"
+      alt="BYLD / SPACE"
+      className={`${HEIGHTS[size]} w-auto select-none object-contain ${
+        dark ? '' : '[filter:brightness(0)_invert(1)]'
+      } ${className}`}
+      draggable={false}
+    />
   );
 }

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@200;300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,62 +6,64 @@
 
 @layer base {
   :root {
-    /* Soft white / faint beige palette */
-    --background: 36 30% 98%;
-    --foreground: 30 10% 18%;
+    /* Sage-green palette — matched to byldspace.com */
+    /* Page background #f1f4f1, lightest panel #f8faf8 */
+    --background: 120 13% 95%;
+    --foreground: 40 14% 15%;       /* #29261f dark olive-black */
 
-    --card: 0 0% 100%;
-    --card-foreground: 30 10% 18%;
+    --card: 120 16% 99%;            /* ~#f8faf8 */
+    --card-foreground: 40 14% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 30 10% 18%;
+    --popover-foreground: 40 14% 15%;
 
-    /* Soft warm taupe accent — much lighter than before */
-    --primary: 30 25% 62%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary = deep sage (byld dark buttons #29261f → #2d3b32 hover) */
+    --primary: 141 16% 20%;
+    --primary-foreground: 120 16% 97%;
 
-    --secondary: 36 25% 96%;
-    --secondary-foreground: 30 10% 25%;
+    --secondary: 130 13% 93%;       /* light sage */
+    --secondary-foreground: 40 12% 22%;
 
-    --muted: 36 22% 95%;
-    --muted-foreground: 30 8% 48%;
+    --muted: 120 12% 94%;           /* ~#ebefeb */
+    --muted-foreground: 90 4% 46%;  /* #7c7f77 */
 
-    --accent: 30 25% 62%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent = sage green #4e6b57 */
+    --accent: 139 16% 36%;
+    --accent-foreground: 120 16% 97%;
 
-    --destructive: 4 60% 60%;
+    --destructive: 6 42% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 150 35% 50%;
+    --success: 139 24% 40%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 70% 60%;
+    --warning: 38 52% 52%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 36 18% 92%;
-    --input: 36 18% 92%;
-    --ring: 30 25% 62%;
+    --border: 130 11% 89%;          /* #e1e7e2 */
+    --input: 130 11% 89%;
+    --ring: 139 16% 36%;
 
     --radius: 0.875rem;
 
-    --sidebar-background: 36 30% 99%;
-    --sidebar-foreground: 30 8% 42%;
-    --sidebar-primary: 30 25% 62%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 36 22% 96%;
-    --sidebar-accent-foreground: 30 10% 25%;
-    --sidebar-border: 36 18% 94%;
-    --sidebar-ring: 30 25% 62%;
+    --sidebar-background: 120 14% 97%;
+    --sidebar-foreground: 90 5% 40%;
+    --sidebar-primary: 141 16% 20%;
+    --sidebar-primary-foreground: 120 16% 97%;
+    --sidebar-accent: 120 13% 93%;
+    --sidebar-accent-foreground: 40 12% 22%;
+    --sidebar-border: 130 11% 91%;
+    --sidebar-ring: 139 16% 36%;
 
-    --chart-1: 30 25% 62%;
-    --chart-2: 150 35% 55%;
-    --chart-3: 38 70% 65%;
-    --chart-4: 220 20% 65%;
-    --chart-5: 4 60% 65%;
+    --chart-1: 139 16% 36%;         /* sage */
+    --chart-2: 124 16% 55%;         /* lighter sage */
+    --chart-3: 100 14% 62%;         /* sage-olive */
+    --chart-4: 150 14% 30%;         /* deep sage */
+    --chart-5: 38 40% 58%;          /* muted gold */
 
-    --warm-50: 36 30% 98%;
-    --warm-100: 36 25% 95%;
-    --warm-200: 36 20% 90%;
+    --warm-50: 120 13% 95%;
+    --warm-100: 120 12% 94%;
+    --warm-200: 130 11% 89%;
   }
 }
 
@@ -88,23 +90,23 @@
   }
 
   .soft-card {
-    @apply bg-card rounded-2xl border shadow-[0_2px_16px_-4px_rgba(0,0,0,0.06)] transition-all duration-500;
+    @apply bg-card rounded-2xl border shadow-[0_2px_16px_-4px_rgba(41,38,31,0.07)] transition-all duration-500;
   }
 
   .soft-card-hover {
-    @apply bg-card rounded-2xl border shadow-[0_2px_16px_-4px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_16px_48px_-12px_rgba(0,0,0,0.12)] hover:-translate-y-1.5;
+    @apply bg-card rounded-2xl border shadow-[0_2px_16px_-4px_rgba(41,38,31,0.07)] transition-all duration-500 hover:shadow-[0_28px_56px_-28px_rgba(41,38,31,0.30)] hover:-translate-y-1.5;
   }
 
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(30 25% 62%), hsl(28 22% 56%));
+    background: linear-gradient(135deg, hsl(141 16% 22%), hsl(139 18% 30%));
   }
 
   .gradient-warm {
-    background: linear-gradient(135deg, hsl(36 30% 98%), hsl(36 22% 95%));
+    background: linear-gradient(135deg, hsl(120 16% 99%), hsl(120 13% 95%));
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, hsl(30 30% 50%), hsl(28 25% 42%));
+    background: linear-gradient(135deg, hsl(139 18% 32%), hsl(141 20% 22%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -115,7 +117,7 @@
   }
 
   .segment-glow {
-    box-shadow: 0 0 30px -4px hsl(30 25% 62% / 0.2);
+    box-shadow: 0 0 30px -4px hsl(139 16% 36% / 0.2);
   }
 
   .magnetic-hover {
@@ -138,7 +140,7 @@
   }
 
   .text-glow {
-    text-shadow: 0 0 40px hsl(30 25% 62% / 0.25);
+    text-shadow: 0 0 40px hsl(139 16% 36% / 0.25);
   }
 
   .card-3d {
@@ -205,10 +207,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 82%);
-  border-radius: 3px;
+  background: hsl(134 18% 81%);
+  border-radius: 20px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(0 0% 70%);
+  background: hsl(132 17% 73%);
 }

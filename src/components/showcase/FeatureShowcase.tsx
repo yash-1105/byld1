@@ -15,7 +15,7 @@ const item = {
 export default function FeatureShowcase() {
   const reduce = useReducedMotion();
   return (
-    <section id="showcase" className="bg-[#f7f6f3] text-[#161513] [overflow-x:clip]">
+    <section id="showcase" className="bg-[#f5f8f5] text-[#141714] [overflow-x:clip]">
       {/* intro */}
       <div className="mx-auto w-full max-w-[1240px] px-6 min-[940px]:px-10">
         <motion.div
@@ -27,7 +27,7 @@ export default function FeatureShowcase() {
         >
           <motion.span
             variants={item}
-            className="block text-[12px] font-bold tracking-[0.16em] uppercase text-[#908b82]"
+            className="block text-[12px] font-bold tracking-[0.16em] uppercase text-[#8a8f86]"
           >
             The platform
           </motion.span>
@@ -41,7 +41,7 @@ export default function FeatureShowcase() {
           </motion.h2>
           <motion.p
             variants={item}
-            className="mx-auto mt-5 max-w-[560px] leading-[1.5] text-[#3a3833] text-[clamp(17px,1.35vw,21px)]"
+            className="mx-auto mt-5 max-w-[560px] leading-[1.5] text-[#353a36] text-[clamp(17px,1.35vw,21px)]"
           >
             Scroll through the five pillars that take a project from first sketch to final
             walkthrough.

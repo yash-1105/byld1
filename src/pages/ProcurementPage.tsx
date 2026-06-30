@@ -608,7 +608,7 @@ export default function ProcurementPage() {
                     <Pie data={spendByCategory} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={3} dataKey="value">
                       {spendByCategory.map((e, i) => <Cell key={i} fill={e.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} formatter={(v: number) => formatCurrency(v)} />
+                    <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(130 11% 89%)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} formatter={(v: number) => formatCurrency(v)} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex flex-wrap justify-center gap-3 mt-2">
@@ -629,10 +629,10 @@ export default function ProcurementPage() {
             {spendBySupplier.length > 0 ? (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={spendBySupplier} layout="vertical" margin={{ left: 10, right: 16 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(33 18% 88%)" horizontal={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(130 11% 89%)" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCurrencyCompact(v)} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={90} />
-                  <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(36 20% 90%)' }} formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip contentStyle={{ borderRadius: 16, border: '1px solid hsl(130 11% 89%)' }} formatter={(v: number) => formatCurrency(v)} />
                   <Bar dataKey="spend" fill="hsl(28, 60%, 48%)" radius={[0, 6, 6, 0]} barSize={18} />
                 </BarChart>
               </ResponsiveContainer>

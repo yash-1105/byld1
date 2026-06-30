@@ -228,7 +228,7 @@ export default function ConsultantDashboard() {
                     <Pie data={statusData} cx="50%" cy="50%" innerRadius={38} outerRadius={55} paddingAngle={3} dataKey="value">
                       {statusData.map((_, i) => <Cell key={i} fill={statusColors[i]} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid hsl(36 20% 90%)' }} />
+                    <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid hsl(130 11% 89%)' }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-1.5 mt-1">

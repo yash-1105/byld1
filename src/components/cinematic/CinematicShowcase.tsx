@@ -458,7 +458,7 @@ export default function CinematicShowcase() {
               <div className="sub">Hardware · Under review</div>
             </div>
             <div className="cin-roomcard">
-              <h4><span className="cin-statusdot" style={{ background: '#b5aa9d' }} />Smoked Glass</h4>
+              <h4><span className="cin-statusdot" style={{ background: '#aab0a6' }} />Smoked Glass</h4>
               <div className="sub">Partition · Concept</div>
             </div>
 

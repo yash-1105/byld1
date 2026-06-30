@@ -50,7 +50,7 @@ export default function HeroScrollAnimation() {
     <div ref={containerRef} className="h-[650vh] bg-transparent relative">
       <motion.div
         style={{ opacity: sectionOpacity }}
-        className="sticky top-0 h-screen w-full overflow-hidden bg-[#1a1814]"
+        className="sticky top-0 h-screen w-full overflow-hidden bg-[#181b18]"
       >
         {/* Single scroll-scrubbed video (replaces the 240-frame sequence) */}
         <video
@@ -77,7 +77,7 @@ export default function HeroScrollAnimation() {
           >
             <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-bold text-white tracking-tight leading-[1.05]">
               Build smarter.<br />
-              <span className="text-[#b5aa9d]">Deliver faster.</span>
+              <span className="text-[#aab0a6]">Deliver faster.</span>
             </h1>
             <p className="mt-6 max-w-lg text-lg text-white/80">
               Uncomplicate project management. Control timelines, enhance client transparency, collect faster and hire the right people — all in one place.

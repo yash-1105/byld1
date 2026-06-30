@@ -15,9 +15,9 @@ const SEG_ROOMS = [
 
 const SEG_FILL: Record<SegmentStatus, { fill: string; stroke: string; text: string }> = {
   complete:      { fill: '#E9EFE6', stroke: '#9FBE9A', text: '#4F6B4B' },
-  'in-progress': { fill: '#F3EADF', stroke: '#C6AC8A', text: '#8C745B' },
+  'in-progress': { fill: '#eef3ec', stroke: '#a8c3aa', text: '#5e7e64' },
   over:          { fill: '#F6E4DF', stroke: '#D69A8C', text: '#B05744' },
-  pending:       { fill: '#F1ECE4', stroke: '#DCD3C6', text: '#9C938A' },
+  pending:       { fill: '#eff3ef', stroke: '#dbe3dc', text: '#939990' },
 };
 
 const SEG_TASKS: Record<string, [string, string][]> = {

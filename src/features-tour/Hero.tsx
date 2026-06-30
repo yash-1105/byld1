@@ -15,7 +15,7 @@ function Wordmark() {
     <span style={{ fontWeight: 800, letterSpacing: '-.03em', fontSize: 22, color: 'var(--bf-ink)', display: 'inline-flex', alignItems: 'baseline', gap: 7 }}>
       BYLD
       <span style={{ color: 'var(--bf-muted-2)', fontWeight: 500 }}>/</span>
-      <span style={{ color: '#8C8279', fontWeight: 600, letterSpacing: '.22em', fontSize: 13, textTransform: 'uppercase' }}>Space</span>
+      <span style={{ color: '#82887f', fontWeight: 600, letterSpacing: '.22em', fontSize: 13, textTransform: 'uppercase' }}>Space</span>
     </span>
   );
 }
@@ -31,7 +31,7 @@ export function SiteNav() {
   return (
     <header style={{
       position: 'sticky', top: 0, zIndex: 200,
-      background: scrolled ? 'rgba(250,248,244,.82)' : 'transparent',
+      background: scrolled ? 'rgba(246,248,246,.82)' : 'transparent',
       backdropFilter: scrolled ? 'saturate(140%) blur(14px)' : 'none',
       borderBottom: `1px solid ${scrolled ? 'var(--bf-line)' : 'transparent'}`,
       transition: 'all .35s var(--bf-ease)',
@@ -125,7 +125,7 @@ export function Hero() {
   const chips = ['Segment Map', 'Design Board', 'Approvals', 'Budget', 'Procurement', 'Timeline', 'Site Diary', 'AI Copilot'];
   return (
     <section className="bf-section" style={{ paddingTop: 64, paddingBottom: 72, position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(900px 420px at 50% -8%, rgba(198,172,138,.20), transparent 70%)' }} />
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(900px 420px at 50% -8%, rgba(168,195,170,.20), transparent 70%)' }} />
       <div className="bf-wrap" style={{ position: 'relative' }}>
         <Reveal style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto' }}>
           <Pill color="mocha" style={{ marginBottom: 22 }}><Sparkles /> Interactive product tour — no sign-up</Pill>

@@ -400,12 +400,12 @@ export default function ArchitectDashboard() {
             <>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={budgetByProject} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(33 18% 88%)" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(130 11% 89%)" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatCurrencyCompact(v)} width={52} />
                   <Tooltip
-                    contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
-                    cursor={{ fill: 'hsl(33 18% 96%)' }}
+                    contentStyle={{ borderRadius: 12, border: '1px solid hsl(130 11% 89%)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
+                    cursor={{ fill: 'hsl(120 12% 95%)' }}
                     formatter={(v: number) => [formatCurrencyCompact(v)]}
                   />
                   <Legend iconType="circle" iconSize={8} />
@@ -444,7 +444,7 @@ export default function ArchitectDashboard() {
               <Pie data={tasksByStatus} cx="50%" cy="50%" innerRadius={50} outerRadius={72} paddingAngle={3} dataKey="value">
                 {tasksByStatus.map((_, i) => <Cell key={i} fill={STATUS_COLORS[i]} />)}
               </Pie>
-              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)' }} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(130 11% 89%)' }} />
             </PieChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-2 gap-x-3 gap-y-2 mt-2">

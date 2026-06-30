@@ -180,7 +180,7 @@ export default function ClientDashboard() {
               </Pie>
               <Tooltip
                 formatter={(v: number) => [formatCurrencyCompact(v)]}
-                contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)' }}
+                contentStyle={{ borderRadius: 12, border: '1px solid hsl(130 11% 89%)' }}
               />
             </PieChart>
           </ResponsiveContainer>

@@ -248,12 +248,12 @@ export default function ContractorDashboard() {
           {projectProgress.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={projectProgress} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(33 18% 88%)" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(130 11% 89%)" />
                 <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
                 <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid hsl(36 20% 90%)' }}
-                  cursor={{ fill: 'hsl(33 18% 96%)' }}
+                  contentStyle={{ borderRadius: 12, border: '1px solid hsl(130 11% 89%)' }}
+                  cursor={{ fill: 'hsl(120 12% 95%)' }}
                 />
                 <Bar dataKey="Done"    fill="hsl(150,35%,55%)" radius={[0,4,4,0]} maxBarSize={20} stackId="a" />
                 <Bar dataKey="Pending" fill="hsl(30,25%,62%)"  radius={[0,4,4,0]} maxBarSize={20} stackId="a" />
