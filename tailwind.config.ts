@@ -16,6 +16,8 @@ export default {
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        display: ['Space Grotesk', 'Inter', 'sans-serif'],
+        body: ['Instrument Sans', 'Inter', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

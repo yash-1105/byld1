@@ -1,39 +1,31 @@
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { motion } from 'framer-motion';
-import { CheckSquare, Clock, AlertTriangle, Camera, ArrowUpRight, Zap, BarChart3, TrendingUp, CheckCircle, Circle, Truck } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  ArrowUpRight, ArrowRight, Flag, CircleAlert, Clock, ChevronRight,
+  AlertTriangle, Truck, GanttChart, Camera, ListChecks, Sparkles,
+  Activity, Users, MessageSquare,
+} from 'lucide-react';
+import {
+  C, Tile, Eyebrow, TileTitle, Donut, SegmentBar, WeekStrip, Striped, WeekDay,
+  BentoHeader, BentoGrid, useAnalyzeDialog, monoDate,
+} from './bento/BentoKit';
 
-const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
-
-const PRIORITY_CONFIG = {
-  urgent: { label: 'Urgent',  color: 'text-destructive', bg: 'bg-destructive/10', dot: 'bg-destructive' },
-  high:   { label: 'High',    color: 'text-warning',     bg: 'bg-warning/10',     dot: 'bg-warning' },
-  medium: { label: 'Medium',  color: 'text-primary',     bg: 'bg-primary/10',     dot: 'bg-primary' },
-  low:    { label: 'Low',     color: 'text-muted-foreground', bg: 'bg-muted',     dot: 'bg-muted-foreground' },
-};
-
-const STATUS_STYLE = {
-  todo:        'bg-muted text-muted-foreground',
-  in_progress: 'bg-primary/10 text-primary',
-  review:      'bg-warning/10 text-warning',
-  done:        'bg-success/10 text-success',
-};
+const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
 export default function ContractorDashboard() {
   const { tasks, siteUpdates, projects, purchaseOrders } = useData();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { setOpen, dialog } = useAnalyzeDialog();
 
   const today = new Date();
-  const hour = today.getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   const myTasks = tasks.filter(t => t.assignee === user?.id);
   const pending   = myTasks.filter(t => t.status !== 'done');
   const urgent    = myTasks.filter(t => t.priority === 'urgent' && t.status !== 'done');
   const done      = myTasks.filter(t => t.status === 'done');
-  const inReview  = myTasks.filter(t => t.status === 'review');
   const completionRate = myTasks.length > 0 ? Math.round((done.length / myTasks.length) * 100) : 0;
 
   const weekAhead = new Date(today.getTime() + 7 * 86400000);
@@ -47,270 +39,297 @@ export default function ContractorDashboard() {
   const overdueDeliveries = pendingDeliveries.filter(po =>
     po.expectedDelivery && new Date(po.expectedDelivery) < today);
 
-  const stats = [
-    {
-      label: 'Pending Tasks', value: pending.length,
-      icon: Clock,
-      color: pending.length > 0 ? 'text-warning' : 'text-success',
-      bg:    pending.length > 0 ? 'bg-warning/10'  : 'bg-success/10',
-      sub: `${dueThisWeek.length} due this week`,
-    },
-    {
-      label: 'Urgent', value: urgent.length,
-      icon: AlertTriangle,
-      color: urgent.length > 0 ? 'text-destructive' : 'text-success',
-      bg:    urgent.length > 0 ? 'bg-destructive/10' : 'bg-success/10',
-      sub: urgent.length > 0 ? 'Requires immediate action' : 'None flagged',
-    },
-    {
-      label: 'Completed', value: done.length,
-      icon: CheckSquare, color: 'text-success', bg: 'bg-success/10',
-      sub: `${completionRate}% completion rate`,
-    },
-    {
-      label: 'Site Updates', value: siteUpdates.length,
-      icon: Camera, color: 'text-primary', bg: 'bg-primary/10',
-      sub: `${siteUpdates.filter(u => {
-        const d = new Date(u.createdAt);
-        return d >= new Date(today.getTime() - 7 * 86400000);
-      }).length} this week`,
-    },
-    {
-      label: 'Pending Deliveries', value: pendingDeliveries.length,
-      icon: Truck,
-      color: overdueDeliveries.length > 0 ? 'text-destructive' : pendingDeliveries.length > 0 ? 'text-warning' : 'text-success',
-      bg:    overdueDeliveries.length > 0 ? 'bg-destructive/10' : pendingDeliveries.length > 0 ? 'bg-warning/10' : 'bg-success/10',
-      sub: overdueDeliveries.length > 0 ? `${overdueDeliveries.length} overdue` : 'On track',
-    },
-  ];
+  // hero = project of soonest pending task (fallback: first project the contractor has tasks in)
+  const soonestPending = pending
+    .filter(t => t.deadline)
+    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0];
+  const heroProjectId = soonestPending?.projectId || myTasks[0]?.projectId;
+  const hero = projects.find(p => p.id === heroProjectId) || null;
+  const heroNextTask = hero
+    ? myTasks.filter(t => t.projectId === hero.id && t.status !== 'done' && t.deadline && new Date(t.deadline) >= today)
+        .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0]
+    : null;
 
-  // Group tasks by priority for display
-  const tasksByPriority = (['urgent', 'high', 'medium', 'low'] as const).map(p => ({
-    priority: p,
-    tasks: pending.filter(t => t.priority === p),
-  })).filter(g => g.tasks.length > 0);
+  // needs-you list: overdue tasks first, then urgent
+  const needs = [
+    ...overdue.map(t => {
+      const days = Math.abs(Math.ceil((new Date(t.deadline).getTime() - today.getTime()) / 86400000));
+      return { id: t.id, title: t.title, caption: `OVERDUE · ${days} DAY${days !== 1 ? 'S' : ''}`, attention: true };
+    }),
+    ...urgent.filter(t => !overdue.find(o => o.id === t.id))
+      .map(t => ({ id: t.id, title: t.title, caption: 'URGENT', attention: true })),
+  ].slice(0, 4);
 
-  // Task progress bar data by project
-  const myProjectIds = [...new Set(myTasks.map(t => t.projectId))];
-  const projectProgress = myProjectIds.map(pid => {
-    const proj = projects.find(p => p.id === pid);
-    const pTasks = myTasks.filter(t => t.projectId === pid);
-    const pDone  = pTasks.filter(t => t.status === 'done').length;
+  // AI insight (derived from real signals)
+  const aiRisk = overdueDeliveries.length > 0
+    ? `${overdueDeliveries.length} delivery${overdueDeliveries.length !== 1 ? ' orders are' : ' order is'} past its expected date — chase the vendor to keep work moving.`
+    : overdue.length > 0
+    ? `${overdue.length} of your task${overdue.length !== 1 ? 's are' : ' is'} overdue — prioritise these to avoid timeline slip.`
+    : urgent.length > 0
+    ? `${urgent.length} urgent task${urgent.length !== 1 ? 's need' : ' needs'} attention this week.`
+    : 'No critical risks detected. Run a full analysis for opportunities and forecasts.';
+  const riskCount = (overdueDeliveries.length > 0 ? 1 : 0) + (overdue.length > 0 ? 1 : 0) + (urgent.length > 0 ? 1 : 0);
+
+  // this week on site
+  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const week: WeekDay[] = WEEKDAYS.map((wd, i) => {
+    const day = new Date(monday.getTime() + i * 86400000);
+    const dayTasks = myTasks.filter(t => t.deadline && sameDay(new Date(t.deadline), day));
+    const dayUpdates = siteUpdates.filter(u => sameDay(new Date(u.createdAt), day));
+    const milestone = dayUpdates.find(u => u.type === 'milestone') || dayTasks.find(t => t.priority === 'urgent');
+    const label = (dayTasks[0]?.title || dayUpdates[0]?.title || (milestone as any)?.title || '');
+    const short = label ? label.split(' ').slice(0, 2).join(' ') : '';
+    const isToday = sameDay(day, today);
     return {
-      name: proj?.name?.split(' ').slice(0, 2).join(' ') || 'Unknown',
-      Done:    pDone,
-      Pending: pTasks.length - pDone,
+      wd,
+      kind: isToday ? 'today' : milestone && day > today ? 'milestone' : short ? 'event' : 'empty',
+      label: short,
+      dim: i === 6 && !short && !isToday,
     };
   });
 
+  const latestUpdate = siteUpdates.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  const updatePhotos = (latestUpdate?.images || []).slice(0, 2);
+  const timeAgoH = latestUpdate
+    ? Math.max(1, Math.round((today.getTime() - new Date(latestUpdate.createdAt).getTime()) / 3600000)) : null;
+
+  // recent activity feed (real: site updates + my tasks)
+  const ago = (ts: number) => {
+    const h = Math.round((today.getTime() - ts) / 3600000);
+    if (h < 1) return 'just now';
+    if (h < 24) return `${h}h ago`;
+    return `${Math.round(h / 24)}d ago`;
+  };
+  const activity = [
+    ...siteUpdates.map(u => ({ id: u.id, label: u.title, sub: 'Site update', ts: new Date(u.createdAt).getTime(), tone: C.sage })),
+    ...myTasks.slice(0, 8).map(t => ({ id: `t-${t.id}`, label: t.title, sub: 'Task', ts: new Date(t.createdAt).getTime(), tone: t.priority === 'urgent' ? C.sage : C.mono })),
+  ].sort((a, b) => b.ts - a.ts).slice(0, 5);
+
+  // team members across the contractor's projects
+  const initials = (n: string) => n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const teamMembers = [...new Set(projects.filter(p => myTasks.some(t => t.projectId === p.id)).flatMap(p => p.team || []))].filter(Boolean);
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">
-          {today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
-        <h1 className="text-2xl font-bold text-foreground mt-0.5">
-          {greeting}, {user?.name?.split(' ')[0] || 'Contractor'}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {pending.length > 0
-            ? `${pending.length} task${pending.length !== 1 ? 's' : ''} pending${overdue.length > 0 ? ` · ${overdue.length} overdue` : ''}`
-            : 'No pending tasks — great work!'}
-        </p>
-      </div>
+    <>
+      {dialog}
+      <BentoHeader
+        name={user?.name?.split(' ')[0] || 'Contractor'}
+        summary={
+          pending.length > 0
+            ? <>{pending.length} task{pending.length !== 1 ? 's' : ''} pending{overdue.length > 0 ? ` · ${overdue.length} overdue` : ''}{pendingDeliveries.length > 0 ? ` · ${pendingDeliveries.length} pending deliver${pendingDeliveries.length !== 1 ? 'ies' : 'y'}` : ''}</>
+            : 'No pending tasks — great work!'
+        }
+        onNewTask={() => navigate('/tasks')}
+        onAnalyze={() => setOpen(true)}
+      />
 
-      {/* KPI Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {stats.map((s, i) => (
-          <motion.div key={s.label} {...fadeIn} transition={{ delay: i * 0.05 }} className="glass-card p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{s.label}</p>
-                <p className="text-2xl font-bold text-foreground mt-1.5">{s.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
-              </div>
-              <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center shrink-0`}>
-                <s.icon className={`w-5 h-5 ${s.color}`} />
-              </div>
+      <BentoGrid>
+        {/* Hero project */}
+        <Tile className="lg:col-span-5 lg:row-span-2 !p-0 overflow-hidden flex flex-col"
+          onClick={hero ? () => navigate(`/projects/${hero.id}`) : undefined}>
+          <Striped className="h-[188px]"
+            label={hero ? `RENDER · ${hero.name.toUpperCase()}` : undefined}>
+            <span className="absolute top-3 left-3 font-mono text-[10px] px-2 py-1 rounded-md"
+              style={{ background: 'rgba(30,36,25,0.85)', color: C.onDarkText }}>
+              PHASE · {(hero?.status || 'planning').toUpperCase()}
+            </span>
+          </Striped>
+          <div className="p-[16px_17px_18px] flex-1">
+            <div className="flex items-center justify-between">
+              <div className="font-display font-semibold text-[19px] tracking-[-0.01em]">{hero?.name || 'No project'}</div>
+              <ArrowUpRight size={18} style={{ color: C.mono }} />
             </div>
-          </motion.div>
-        ))}
-      </div>
+            <div className="font-body text-[12px] mt-0.5" style={{ color: C.muted2 }}>
+              {hero?.address || hero?.description?.slice(0, 48) || '—'}
+            </div>
+            <div className="flex items-center justify-between mt-[18px] mb-[7px]">
+              <Eyebrow>PROGRESS</Eyebrow>
+              <span className="font-display font-semibold text-[13px]">{hero?.progress ?? 0}%</span>
+            </div>
+            <div className="h-[7px] rounded-[4px] overflow-hidden" style={{ background: C.tint }}>
+              <div className="h-full rounded-[4px]" style={{ width: `${hero?.progress ?? 0}%`, background: C.sage }} />
+            </div>
+            <div className="flex items-center gap-2 mt-4 pt-3.5" style={{ borderTop: `1px solid ${C.tint}` }}>
+              <Flag size={14} style={{ color: C.sage }} />
+              <span className="font-body text-[12.5px]" style={{ color: C.textStrong }}>
+                {heroNextTask ? `Next: ${heroNextTask.title}` : 'No upcoming task'}
+              </span>
+              {heroNextTask && <span className="font-mono text-[11px] ml-auto" style={{ color: C.mono }}>{monoDate(new Date(heroNextTask.deadline))}</span>}
+            </div>
+          </div>
+        </Tile>
 
-      {/* Overdue alert */}
-      {overdue.length > 0 && (
-        <motion.div {...fadeIn} transition={{ delay: 0.1 }} className="glass-card p-4 border border-destructive/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="w-4 h-4 text-destructive" />
-            <span className="text-sm font-semibold text-foreground">
-              {overdue.length} overdue task{overdue.length !== 1 ? 's' : ''} — action needed
+        {/* Needs you */}
+        <Tile className="lg:col-span-4">
+          <div className="flex items-center gap-2 mb-3.5">
+            <CircleAlert size={16} style={{ color: C.sage }} />
+            <TileTitle>Needs you</TileTitle>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] ml-auto" style={{ background: C.tintSage, color: C.sage }}>
+              {needs.length}
             </span>
           </div>
-          <div className="space-y-2">
-            {overdue.slice(0, 3).map(t => {
-              const project = projects.find(p => p.id === t.projectId);
-              const daysLate = Math.abs(Math.ceil((new Date(t.deadline).getTime() - today.getTime()) / 86400000));
-              return (
-                <div key={t.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
-                  <div className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">{t.title}</div>
-                    <div className="text-xs text-muted-foreground">{project?.name}</div>
-                  </div>
-                  <span className="text-xs text-destructive font-medium shrink-0">{daysLate}d late</span>
+          <div className="flex flex-col gap-2.5">
+            {needs.length === 0 && <div className="font-body text-[12.5px] py-4 text-center" style={{ color: C.mono }}>All caught up.</div>}
+            {needs.map(n => (
+              <div key={n.id} className="flex items-center gap-[11px] p-2.5 rounded-[10px]" style={{ border: `1px solid ${C.tint}` }}>
+                <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: C.tintSage, color: C.sage }}>
+                  <Clock size={15} />
                 </div>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
-
-      {/* My Task Queue + Progress chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Task Queue by priority */}
-        <motion.div {...fadeIn} transition={{ delay: 0.15 }} className="glass-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-foreground flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-primary" /> My Task Queue
-            </h3>
-            <Link to="/tasks" className="text-xs text-primary hover:underline flex items-center gap-1">
-              All tasks <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-          {tasksByPriority.length > 0 ? (
-            <div className="space-y-4">
-              {tasksByPriority.map(({ priority, tasks: ptasks }) => {
-                const cfg = PRIORITY_CONFIG[priority];
-                return (
-                  <div key={priority}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-                      <span className={`text-xs font-semibold uppercase tracking-wide ${cfg.color}`}>{cfg.label}</span>
-                      <span className="text-xs text-muted-foreground ml-auto">{ptasks.length} task{ptasks.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {ptasks.slice(0, 3).map(t => (
-                        <div key={t.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 border border-border/40 hover:bg-muted/50 transition-colors">
-                          <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-medium text-foreground truncate">{t.title}</div>
-                            {t.deadline && (
-                              <div className="text-xs text-muted-foreground">
-                                Due {new Date(t.deadline).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium shrink-0 capitalize ${STATUS_STYLE[t.status]}`}>
-                            {t.status.replace('_', ' ')}
-                          </span>
-                        </div>
-                      ))}
-                      {ptasks.length > 3 && (
-                        <p className="text-xs text-muted-foreground pl-4">+{ptasks.length - 3} more</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="h-32 flex flex-col items-center justify-center text-center bg-muted/20 rounded-xl border border-dashed border-border">
-              <CheckCircle className="w-8 h-8 text-muted-foreground/30 mb-2" />
-              <p className="text-sm text-muted-foreground">No tasks in your queue.</p>
-            </div>
-          )}
-
-          {/* Completion rate */}
-          {myTasks.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border/40">
-              <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                <span>Overall completion</span>
-                <span className="font-semibold text-foreground">{completionRate}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-muted overflow-hidden">
-                <div className="h-full gradient-primary rounded-full" style={{ width: `${completionRate}%` }} />
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
-                <span>{done.length} done</span>
-                <span>{inReview.length} in review</span>
-                <span>{pending.length} pending</span>
-              </div>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Tasks per Project */}
-        <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="glass-card p-5">
-          <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-primary" /> My Work by Project
-          </h3>
-          {projectProgress.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={projectProgress} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(130 11% 89%)" />
-                <XAxis type="number" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: '1px solid hsl(130 11% 89%)' }}
-                  cursor={{ fill: 'hsl(120 12% 95%)' }}
-                />
-                <Bar dataKey="Done"    fill="hsl(150,35%,55%)" radius={[0,4,4,0]} maxBarSize={20} stackId="a" />
-                <Bar dataKey="Pending" fill="hsl(30,25%,62%)"  radius={[0,4,4,0]} maxBarSize={20} stackId="a" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">
-              No projects assigned yet.
-            </div>
-          )}
-          {projectProgress.length > 0 && (
-            <div className="flex items-center justify-center gap-6 mt-2">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className="w-2.5 h-2.5 rounded-full bg-[hsl(150,35%,55%)]" /> Done
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className="w-2.5 h-2.5 rounded-full bg-[hsl(30,25%,62%)]" /> Pending
-              </div>
-            </div>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Recent Site Updates */}
-      <motion.div {...fadeIn} transition={{ delay: 0.3 }} className="glass-card p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-foreground">Recent Site Updates</h3>
-          <Link to="/site-updates" className="text-xs text-primary hover:underline flex items-center gap-1">
-            View all <ArrowUpRight className="w-3 h-3" />
-          </Link>
-        </div>
-        {siteUpdates.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {siteUpdates.slice(0, 4).map(u => (
-              <div key={u.id} className="p-3.5 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    u.type === 'milestone' ? 'bg-success' : u.type === 'issue' ? 'bg-destructive' : 'bg-primary'
-                  }`} />
-                  <span className={`text-xs capitalize px-1.5 py-0.5 rounded font-medium ${
-                    u.type === 'milestone' ? 'bg-success/10 text-success' :
-                    u.type === 'issue' ? 'bg-destructive/10 text-destructive' :
-                    'bg-primary/10 text-primary'
-                  }`}>{u.type}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">{new Date(u.createdAt).toLocaleDateString()}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-body font-medium text-[12.5px] truncate">{n.title}</div>
+                  <div className="font-mono text-[10px]" style={{ color: C.sage }}>{n.caption}</div>
                 </div>
-                <div className="text-sm font-medium text-foreground">{u.title}</div>
-                <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{u.description}</div>
+                <ChevronRight size={15} style={{ color: C.faint3 }} className="shrink-0 cursor-pointer" onClick={() => navigate('/tasks')} />
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-sm text-muted-foreground text-center py-6 border border-dashed border-border rounded-xl">
-            No site updates yet.
+        </Tile>
+
+        {/* AI insights */}
+        <Tile dark className="lg:col-span-3 flex flex-col" onClick={() => setOpen(true)}>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={16} style={{ color: C.sageLight }} />
+            <span className="font-display font-semibold text-[12.5px]">AI Insights</span>
           </div>
-        )}
-      </motion.div>
-    </div>
+          <Eyebrow color={C.sageLight} className="mb-1.5">{riskCount} RISK{riskCount !== 1 ? 'S' : ''} FLAGGED</Eyebrow>
+          <div className="font-body text-[12.5px] leading-[1.45] flex-1" style={{ color: C.onDark }}>{aiRisk}</div>
+          <div className="flex items-center justify-between mt-3.5 pt-3" style={{ borderTop: `1px solid ${C.onDarkBorder}` }}>
+            <span className="font-body text-[11.5px]" style={{ color: C.onDarkText }}>View analysis</span>
+            <ArrowRight size={15} style={{ color: C.sageLight }} />
+          </div>
+        </Tile>
+
+        {/* Completion ring */}
+        <Tile className="lg:col-span-4">
+          <Donut percent={completionRate} center={`${completionRate}%`} label="COMPLETION RATE"
+            sub={`${done.length} of ${myTasks.length} task${myTasks.length !== 1 ? 's' : ''}`} />
+        </Tile>
+
+        {/* Tasks complete */}
+        <Tile className="lg:col-span-3">
+          <div className="flex items-center justify-between mb-3.5">
+            <Eyebrow>TASKS COMPLETE</Eyebrow>
+            <ListChecks size={15} style={{ color: C.faint3 }} />
+          </div>
+          <div className="font-display font-semibold text-[30px] leading-none">
+            {done.length}<span className="text-[20px]" style={{ color: C.faint3 }}>/{myTasks.length}</span>
+          </div>
+          <SegmentBar total={myTasks.length} done={done.length} />
+          <div className="font-body text-[11.5px] mt-2.5" style={{ color: C.muted2 }}>{dueThisWeek.length} due this week</div>
+        </Tile>
+
+        {/* Overdue + Deliveries pair */}
+        <div className="lg:col-span-3 flex flex-col gap-[13px]">
+          <Tile className="flex-1 !p-[14px_16px] flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-[10px] flex items-center justify-center" style={{ background: C.tintSage, color: C.sage }}><AlertTriangle size={18} /></div>
+            <div>
+              <div className="font-display font-semibold text-[22px] leading-none">{overdue.length}</div>
+              <Eyebrow className="mt-[3px] block tracking-[0.05em]">OVERDUE</Eyebrow>
+            </div>
+          </Tile>
+          <Tile className="flex-1 !p-[14px_16px] flex items-center gap-3.5" onClick={() => navigate('/procurement')}>
+            <div className="w-10 h-10 rounded-[10px] flex items-center justify-center" style={{ background: C.tint, color: C.muted }}><Truck size={18} /></div>
+            <div>
+              <div className="font-display font-semibold text-[22px] leading-none">{pendingDeliveries.length}</div>
+              <Eyebrow className="mt-[3px] block tracking-[0.05em]">DELIVERIES</Eyebrow>
+            </div>
+          </Tile>
+        </div>
+
+        {/* This week on site */}
+        <Tile className="lg:col-span-9 !p-[16px_18px]">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <GanttChart size={16} style={{ color: C.muted }} />
+              <TileTitle>This week on site</TileTitle>
+            </div>
+            <span className="font-mono text-[11px]" style={{ color: C.mono }}>
+              {monoDate(monday)} — {monoDate(new Date(monday.getTime() + 6 * 86400000))}
+            </span>
+          </div>
+          <WeekStrip days={week} />
+        </Tile>
+
+        {/* Site updates */}
+        <Tile className="lg:col-span-4" onClick={() => navigate('/site-updates')}>
+          <div className="flex items-center gap-2 mb-3.5">
+            <Camera size={16} style={{ color: C.muted }} />
+            <TileTitle>Site updates</TileTitle>
+            {timeAgoH && <span className="font-mono text-[11px] ml-auto" style={{ color: C.mono }}>{timeAgoH}h ago</span>}
+          </div>
+          {latestUpdate ? (
+            <>
+              <div className="flex gap-2.5">
+                {updatePhotos.length > 0
+                  ? updatePhotos.map((src, i) => (
+                      <div key={i} className="flex-1 h-[74px] rounded-[9px] bg-cover bg-center" style={{ backgroundImage: `url(${src})` }} />
+                    ))
+                  : [0, 1].map(i => <Striped key={i} className="flex-1 h-[74px] rounded-[9px]" label={i === 0 ? 'PHOTO · SITE' : 'PHOTO · WORK'} />)}
+              </div>
+              <div className="font-body text-[12px] leading-[1.4] mt-2.5" style={{ color: C.textStrong }}>
+                {latestUpdate.title}{latestUpdate.description ? ` — ${latestUpdate.description}` : ''}
+              </div>
+            </>
+          ) : (
+            <div className="font-body text-[12.5px] py-6 text-center" style={{ color: C.mono }}>No site updates yet.</div>
+          )}
+        </Tile>
+
+        {/* Recent activity */}
+        <Tile className="lg:col-span-4">
+          <div className="flex items-center gap-2 mb-3.5">
+            <Activity size={16} style={{ color: C.muted }} />
+            <TileTitle>Recent activity</TileTitle>
+            <span className="font-mono text-[11px] ml-auto cursor-pointer" style={{ color: C.mono }} onClick={() => navigate('/timeline')}>View all</span>
+          </div>
+          {activity.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {activity.map(a => (
+                <div key={a.id} className="flex items-start gap-2.5">
+                  <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: a.tone }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-body text-[12.5px] truncate" style={{ color: C.textStrong }}>{a.label}</div>
+                    <div className="font-mono text-[10px] mt-px" style={{ color: C.mono }}>{a.sub.toUpperCase()} · {ago(a.ts)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="font-body text-[12.5px] py-6 text-center" style={{ color: C.mono }}>No recent activity.</div>
+          )}
+        </Tile>
+
+        {/* Team & messaging */}
+        <Tile className="lg:col-span-4 flex flex-col">
+          <div className="flex items-center gap-2 mb-3.5">
+            <Users size={16} style={{ color: C.muted }} />
+            <TileTitle>Team</TileTitle>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] ml-auto" style={{ background: C.tint, color: C.muted }}>
+              {teamMembers.length}
+            </span>
+          </div>
+          {teamMembers.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {teamMembers.slice(0, 8).map((m, i) => (
+                <div key={i} className="flex items-center gap-2 pr-2.5 rounded-full" style={{ background: C.canvas }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center font-display font-semibold text-[11px]" style={{ background: C.tintSage, color: C.sage }}>
+                    {initials(m)}
+                  </div>
+                  <span className="font-body text-[12px]" style={{ color: C.textStrong }}>{m.split(' ')[0]}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="font-body text-[12.5px] py-3" style={{ color: C.mono }}>No team members yet.</div>
+          )}
+          <button onClick={() => navigate('/chat')}
+            className="mt-auto flex items-center justify-center gap-2 w-full py-2.5 rounded-[10px] font-body font-medium text-[12.5px]"
+            style={{ background: C.ink, color: C.onDarkText }}>
+            <MessageSquare size={14} /> Message the team
+          </button>
+        </Tile>
+      </BentoGrid>
+    </>
   );
 }

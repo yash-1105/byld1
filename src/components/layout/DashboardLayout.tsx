@@ -1,27 +1,46 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import AppSidebar from './AppSidebar';
-import TopNavbar from './TopNavbar';
+import { ActiveProjectProvider } from '@/contexts/ActiveProjectContext';
+import { C } from '@/components/dashboards/bento/BentoKit';
+import BentoTopBar from './bento/BentoTopBar';
+import BentoModuleRail from './bento/BentoModuleRail';
+import CommandPalette from './bento/CommandPalette';
 
 export default function DashboardLayout() {
   const location = useLocation();
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCmdOpen(o => !o);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <AppSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopNavbar />
-        <main className="flex-1 p-6 lg:p-8 overflow-auto">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <Outlet />
-          </motion.div>
+    <ActiveProjectProvider>
+      <div className="min-h-screen w-full" style={{ background: C.canvas }}>
+        <BentoTopBar onOpenSearch={() => setCmdOpen(true)} />
+        <BentoModuleRail />
+        <main className="px-4 sm:px-[22px] py-5 sm:py-6">
+          <div className="max-w-[1320px] mx-auto">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <Outlet />
+            </motion.div>
+          </div>
         </main>
+        <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
       </div>
-    </div>
+    </ActiveProjectProvider>
   );
 }

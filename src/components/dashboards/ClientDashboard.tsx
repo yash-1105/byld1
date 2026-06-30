@@ -1,37 +1,35 @@
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
-import { motion } from 'framer-motion';
-import { TrendingUp, DollarSign, Camera, ClipboardCheck, Calendar, MapPin, CheckCircle, AlertCircle, Clock, ArrowUpRight } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import {
+  ArrowUpRight, ArrowRight, Flag, CircleAlert, Stamp, ChevronRight,
+  AlertTriangle, Calendar, GanttChart, Camera, Sparkles, Check, X,
+  Activity, Users, MessageSquare,
+} from 'lucide-react';
+import {
+  C, Tile, Eyebrow, TileTitle, Donut, WeekStrip, Striped, WeekDay,
+  BentoHeader, BentoGrid, useAnalyzeDialog, monoDate,
+} from './bento/BentoKit';
 
-const fadeIn = { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  planning:     { label: 'Planning',     color: 'text-blue-600',         bg: 'bg-blue-50' },
-  design:       { label: 'Design',       color: 'text-primary',          bg: 'bg-primary/10' },
-  approval:     { label: 'Approval',     color: 'text-warning',          bg: 'bg-warning/10' },
-  construction: { label: 'Construction', color: 'text-orange-600',       bg: 'bg-orange-50' },
-  finishing:    { label: 'Finishing',    color: 'text-success',          bg: 'bg-success/10' },
-  completed:    { label: 'Completed',    color: 'text-muted-foreground', bg: 'bg-muted' },
-};
+const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
 export default function ClientDashboard() {
-  const { projects, siteUpdates, tasks, approvals } = useData();
+  const { projects, siteUpdates, tasks, approvals, updateApproval } = useData();
   const { formatCurrencyCompact } = usePreferences();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { setOpen, dialog } = useAnalyzeDialog();
 
   const today = new Date();
-  const hour = today.getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   const clientProjects = projects.filter(p => p.team.includes(user?.name || ''));
   const myProjects = clientProjects.length > 0 ? clientProjects : projects.slice(0, 1);
   const projectIds = new Set(myProjects.map(p => p.id));
   const myUpdates = siteUpdates.filter(u => projectIds.has(u.projectId));
-  const myTasks = tasks.filter(t => projectIds.has(t.projectId));
-
+  const ft = tasks.filter(t => projectIds.has(t.projectId));
 
   const totalBudget = myProjects.reduce((s, p) => s + p.budget, 0);
   const totalSpent  = myProjects.reduce((s, p) => s + p.spent, 0);
@@ -42,257 +40,300 @@ export default function ClientDashboard() {
     ? Math.ceil((new Date(mainProject.deadline).getTime() - today.getTime()) / 86400000)
     : null;
 
-  const pendingApprovals = approvals.filter(a => a.status === 'pending' && projectIds.has(a.projectId)).length;
+  const pendingApprovals = approvals.filter(a => a.status === 'pending' && projectIds.has(a.projectId));
   const milestones = myUpdates.filter(u => u.type === 'milestone');
   const issues = myUpdates.filter(u => u.type === 'issue');
 
-  const stats = [
-    {
-      label: 'Project Progress', value: `${mainProject?.progress ?? 0}%`,
-      icon: TrendingUp, color: 'text-primary', bg: 'bg-primary/10',
-      sub: mainProject ? STATUS_CONFIG[mainProject.status]?.label : 'No project',
-    },
-    {
-      label: 'Budget Spent', value: formatCurrencyCompact(totalSpent),
-      icon: DollarSign,
-      color: budgetPct > 85 ? 'text-destructive' : 'text-warning',
-      bg:    budgetPct > 85 ? 'bg-destructive/10' : 'bg-warning/10',
-      sub: `${budgetPct}% of ${formatCurrencyCompact(totalBudget)}`,
-    },
-    {
-      label: 'Site Updates', value: myUpdates.length,
-      icon: Camera, color: 'text-success', bg: 'bg-success/10',
-      sub: `${milestones.length} milestone${milestones.length !== 1 ? 's' : ''} reached`,
-    },
-    {
-      label: 'Pending Approvals', value: pendingApprovals,
-      icon: ClipboardCheck,
-      color: pendingApprovals > 0 ? 'text-destructive' : 'text-success',
-      bg:    pendingApprovals > 0 ? 'bg-destructive/10' : 'bg-success/10',
-      sub: pendingApprovals > 0 ? 'Your review needed' : 'Nothing pending',
-    },
-  ];
+  // hero = main project; next milestone = soonest upcoming task in that project
+  const hero = mainProject;
+  const heroNextTask = hero
+    ? tasks.filter(t => t.projectId === hero.id && t.status !== 'done' && t.deadline && new Date(t.deadline) >= today)
+        .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0]
+    : null;
 
-  const budgetData = [
-    { name: 'Spent',     value: totalSpent },
-    { name: 'Remaining', value: Math.max(totalBudget - totalSpent, 0) },
-  ];
-  const budgetColors = ['hsl(30,25%,62%)', 'hsl(36,22%,92%)'];
+  // needs-you list: pending approvals the client can decide
+  const needs = pendingApprovals.slice(0, 4).map(a => ({
+    id: a.id, title: a.title, caption: 'PENDING APPROVAL',
+  }));
+
+  // AI insight (derived from real signals)
+  const aiRisk = budgetPct > 85
+    ? `Budget utilisation is at ${budgetPct}% — spend is tracking high against your allocation.`
+    : issues.length > 0
+    ? `${issues.length} open issue${issues.length !== 1 ? 's are' : ' is'} flagged across your site updates — worth a closer look.`
+    : pendingApprovals.length > 0
+    ? `${pendingApprovals.length} approval${pendingApprovals.length !== 1 ? 's are' : ' is'} waiting on your decision.`
+    : 'No critical risks detected. Run a full analysis for opportunities and forecasts.';
+  const riskCount = (budgetPct > 85 ? 1 : 0) + (issues.length > 0 ? 1 : 0) + (pendingApprovals.length > 0 ? 1 : 0);
+
+  // this week on site
+  const monday = new Date(today); monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const week: WeekDay[] = WEEKDAYS.map((wd, i) => {
+    const day = new Date(monday.getTime() + i * 86400000);
+    const dayTasks = ft.filter(t => t.deadline && sameDay(new Date(t.deadline), day));
+    const dayUpdates = myUpdates.filter(u => sameDay(new Date(u.createdAt), day));
+    const milestone = dayUpdates.find(u => u.type === 'milestone') || dayTasks.find(t => t.priority === 'urgent');
+    const label = (dayTasks[0]?.title || dayUpdates[0]?.title || (milestone as any)?.title || '');
+    const short = label ? label.split(' ').slice(0, 2).join(' ') : '';
+    const isToday = sameDay(day, today);
+    return {
+      wd,
+      kind: isToday ? 'today' : milestone && day > today ? 'milestone' : short ? 'event' : 'empty',
+      label: short,
+      dim: i === 6 && !short && !isToday,
+    };
+  });
+
+  const latestUpdate = myUpdates.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  const updatePhotos = (latestUpdate?.images || []).slice(0, 2);
+  const timeAgoH = latestUpdate
+    ? Math.max(1, Math.round((today.getTime() - new Date(latestUpdate.createdAt).getTime()) / 3600000)) : null;
+
+  const decide = (id: string, action: 'approved' | 'rejected') => {
+    updateApproval(id, { status: action, decidedBy: user?.id, decidedAt: new Date().toISOString() });
+    toast.success(`Approval ${action}`);
+  };
+
+  // recent activity feed (real: site updates + tasks + approvals)
+  const ago = (ts: number) => {
+    const h = Math.round((today.getTime() - ts) / 3600000);
+    if (h < 1) return 'just now';
+    if (h < 24) return `${h}h ago`;
+    return `${Math.round(h / 24)}d ago`;
+  };
+  const activity = [
+    ...myUpdates.map(u => ({ id: u.id, label: u.title, sub: 'Site update', ts: new Date(u.createdAt).getTime(), tone: C.sage })),
+    ...ft.slice(0, 8).map(t => ({ id: `t-${t.id}`, label: t.title, sub: 'Task', ts: new Date(t.createdAt).getTime(), tone: t.priority === 'urgent' ? C.sage : C.mono })),
+    ...approvals.filter(a => projectIds.has(a.projectId))
+      .map(a => ({ id: `a-${a.id}`, label: a.title, sub: 'Approval', ts: new Date(a.createdAt).getTime(), tone: C.muted })),
+  ].sort((a, b) => b.ts - a.ts).slice(0, 5);
+
+  // team members across the client's projects
+  const initials = (n: string) => n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const teamMembers = [...new Set(myProjects.flatMap(p => p.team || []))].filter(Boolean);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">
-          {today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
-        <h1 className="text-2xl font-bold text-foreground mt-0.5">
-          {greeting}, {user?.name?.split(' ')[0] || 'there'}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {mainProject
-            ? `${mainProject.name} is ${mainProject.progress}% complete${daysLeft !== null ? ` · ${daysLeft > 0 ? `${daysLeft} days remaining` : 'deadline passed'}` : ''}`
-            : 'No active project'}
-        </p>
-      </div>
+    <>
+      {dialog}
+      <BentoHeader
+        name={user?.name?.split(' ')[0] || 'there'}
+        summary={
+          mainProject
+            ? <>{mainProject.name} is {mainProject.progress}% complete{daysLeft !== null ? ` · ${daysLeft > 0 ? `${daysLeft} days remaining` : 'deadline passed'}` : ''}{pendingApprovals.length > 0 ? ` · ${pendingApprovals.length} pending approval${pendingApprovals.length !== 1 ? 's' : ''}` : ''}</>
+            : 'No active project'
+        }
+        onAnalyze={() => setOpen(true)}
+      />
 
-      {/* KPI Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s, i) => (
-          <motion.div key={s.label} {...fadeIn} transition={{ delay: i * 0.05 }} className="glass-card p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">{s.label}</p>
-                <p className="text-2xl font-bold text-foreground mt-1.5">{s.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
-              </div>
-              <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center shrink-0`}>
-                <s.icon className={`w-5 h-5 ${s.color}`} />
-              </div>
+      <BentoGrid>
+        {/* Hero project */}
+        <Tile className="lg:col-span-5 lg:row-span-2 !p-0 overflow-hidden flex flex-col"
+          onClick={hero ? () => navigate(`/projects/${hero.id}`) : undefined}>
+          <Striped className="h-[188px]"
+            label={hero ? `RENDER · ${hero.name.toUpperCase()}` : undefined}>
+            <span className="absolute top-3 left-3 font-mono text-[10px] px-2 py-1 rounded-md"
+              style={{ background: 'rgba(30,36,25,0.85)', color: C.onDarkText }}>
+              PHASE · {(hero?.status || 'planning').toUpperCase()}
+            </span>
+          </Striped>
+          <div className="p-[16px_17px_18px] flex-1">
+            <div className="flex items-center justify-between">
+              <div className="font-display font-semibold text-[19px] tracking-[-0.01em]">{hero?.name || 'No project'}</div>
+              <ArrowUpRight size={18} style={{ color: C.mono }} />
             </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Project Overview + Budget */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Project Progress */}
-        <motion.div {...fadeIn} transition={{ delay: 0.15 }} className="glass-card p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-foreground">Your Project</h3>
-            <Link to="/projects" className="text-xs text-primary hover:underline flex items-center gap-1">
-              Details <ArrowUpRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="space-y-5">
-            {myProjects.map(p => {
-              const cfg = STATUS_CONFIG[p.status] || STATUS_CONFIG.planning;
-              const days = p.deadline
-                ? Math.ceil((new Date(p.deadline).getTime() - today.getTime()) / 86400000)
-                : null;
-              return (
-                <div key={p.id}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">{p.name}</div>
-                      {p.address && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                          <MapPin className="w-3 h-3" /> {p.address}
-                        </div>
-                      )}
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ml-2 ${cfg.bg} ${cfg.color}`}>
-                      {cfg.label}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                    <span>Overall progress</span>
-                    <span className="font-medium text-foreground">{p.progress}%</span>
-                  </div>
-                  <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${p.progress}%` }}
-                      transition={{ duration: 1, delay: 0.3 }}
-                      className="h-full rounded-full gradient-primary"
-                    />
-                  </div>
-                  {days !== null && (
-                    <div className={`flex items-center gap-1.5 text-xs mt-2 ${days < 14 && days > 0 ? 'text-warning' : days <= 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                      <Calendar className="w-3 h-3" />
-                      {days > 0 ? `${days} days until deadline` : days === 0 ? 'Deadline is today' : `${Math.abs(days)} days past deadline`}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
-
-        {/* Budget Breakdown */}
-        <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="glass-card p-5">
-          <h3 className="font-semibold text-foreground mb-1">Budget Breakdown</h3>
-          <p className="text-xs text-muted-foreground mb-4">Total allocation: {formatCurrencyCompact(totalBudget)}</p>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie data={budgetData} cx="50%" cy="50%" innerRadius={48} outerRadius={70} paddingAngle={4} dataKey="value">
-                {budgetData.map((_, i) => <Cell key={i} fill={budgetColors[i]} />)}
-              </Pie>
-              <Tooltip
-                formatter={(v: number) => [formatCurrencyCompact(v)]}
-                contentStyle={{ borderRadius: 12, border: '1px solid hsl(130 11% 89%)' }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="flex items-center justify-center gap-6 mt-2 text-sm">
-            {budgetData.map((d, i) => (
-              <div key={d.name} className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budgetColors[i] }} />
-                <div>
-                  <div className="font-semibold text-foreground">{formatCurrencyCompact(d.value)}</div>
-                  <div className="text-xs text-muted-foreground">{d.name}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 h-2 rounded-full bg-muted overflow-hidden">
-            <div className="h-full gradient-primary rounded-full" style={{ width: `${budgetPct}%` }} />
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>0%</span>
-            <span className={budgetPct > 85 ? 'text-destructive font-semibold' : 'text-foreground'}>{budgetPct}% used</span>
-            <span>100%</span>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Issues + Milestones highlights */}
-      {(issues.length > 0 || milestones.length > 0) && (
-        <motion.div {...fadeIn} transition={{ delay: 0.25 }} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {issues.length > 0 && (
-            <div className="glass-card p-4 border border-destructive/10">
-              <h3 className="font-semibold text-foreground flex items-center gap-2 mb-3 text-sm">
-                <AlertCircle className="w-4 h-4 text-destructive" /> Open Issues ({issues.length})
-              </h3>
-              <div className="space-y-2">
-                {issues.slice(0, 3).map(u => (
-                  <div key={u.id} className="flex items-start gap-2 text-xs">
-                    <div className="w-1.5 h-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />
-                    <div>
-                      <div className="font-medium text-foreground">{u.title}</div>
-                      <div className="text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="font-body text-[12px] mt-0.5" style={{ color: C.muted2 }}>
+              {hero?.address || hero?.description?.slice(0, 48) || '—'}
             </div>
-          )}
-          {milestones.length > 0 && (
-            <div className="glass-card p-4 border border-success/10">
-              <h3 className="font-semibold text-foreground flex items-center gap-2 mb-3 text-sm">
-                <CheckCircle className="w-4 h-4 text-success" /> Milestones Reached ({milestones.length})
-              </h3>
-              <div className="space-y-2">
-                {milestones.slice(0, 3).map(u => (
-                  <div key={u.id} className="flex items-start gap-2 text-xs">
-                    <div className="w-1.5 h-1.5 rounded-full bg-success mt-1.5 shrink-0" />
-                    <div>
-                      <div className="font-medium text-foreground">{u.title}</div>
-                      <div className="text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center justify-between mt-[18px] mb-[7px]">
+              <Eyebrow>PROGRESS</Eyebrow>
+              <span className="font-display font-semibold text-[13px]">{hero?.progress ?? 0}%</span>
             </div>
-          )}
-        </motion.div>
-      )}
+            <div className="h-[7px] rounded-[4px] overflow-hidden" style={{ background: C.tint }}>
+              <div className="h-full rounded-[4px]" style={{ width: `${hero?.progress ?? 0}%`, background: C.sage }} />
+            </div>
+            <div className="flex items-center gap-2 mt-4 pt-3.5" style={{ borderTop: `1px solid ${C.tint}` }}>
+              <Flag size={14} style={{ color: C.sage }} />
+              <span className="font-body text-[12.5px]" style={{ color: C.textStrong }}>
+                {heroNextTask ? `Next: ${heroNextTask.title}` : 'No upcoming milestone'}
+              </span>
+              {heroNextTask && <span className="font-mono text-[11px] ml-auto" style={{ color: C.mono }}>{monoDate(new Date(heroNextTask.deadline))}</span>}
+            </div>
+          </div>
+        </Tile>
 
-      {/* Latest Site Updates */}
-      <motion.div {...fadeIn} transition={{ delay: 0.3 }} className="glass-card p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-foreground">Latest Site Updates</h3>
-          <Link to="/site-updates" className="text-xs text-primary hover:underline flex items-center gap-1">
-            View all <ArrowUpRight className="w-3 h-3" />
-          </Link>
-        </div>
-        {myUpdates.length > 0 ? (
-          <div className="space-y-3">
-            {myUpdates.slice(0, 5).map(u => (
-              <div key={u.id} className="flex items-start gap-3 p-3.5 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                  u.type === 'milestone' ? 'bg-success/10' : u.type === 'issue' ? 'bg-destructive/10' : 'bg-primary/10'
-                }`}>
-                  {u.type === 'milestone'
-                    ? <CheckCircle className="w-4 h-4 text-success" />
-                    : u.type === 'issue'
-                    ? <AlertCircle className="w-4 h-4 text-destructive" />
-                    : <Camera className="w-4 h-4 text-primary" />
-                  }
+        {/* Needs you */}
+        <Tile className="lg:col-span-4">
+          <div className="flex items-center gap-2 mb-3.5">
+            <CircleAlert size={16} style={{ color: C.sage }} />
+            <TileTitle>Needs you</TileTitle>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] ml-auto" style={{ background: C.tintSage, color: C.sage }}>
+              {needs.length}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {needs.length === 0 && <div className="font-body text-[12.5px] py-4 text-center" style={{ color: C.mono }}>All caught up.</div>}
+            {needs.map(n => (
+              <div key={n.id} className="flex items-center gap-[11px] p-2.5 rounded-[10px]" style={{ border: `1px solid ${C.tint}` }}>
+                <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: C.tintSage, color: C.sage }}>
+                  <Stamp size={15} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground">{u.title}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{u.description}</div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {new Date(u.createdAt).toLocaleDateString()}
-                    </span>
-                    <span className={`text-xs capitalize px-1.5 py-0.5 rounded font-medium ${
-                      u.type === 'milestone' ? 'bg-success/10 text-success' :
-                      u.type === 'issue' ? 'bg-destructive/10 text-destructive' :
-                      'bg-primary/10 text-primary'
-                    }`}>{u.type}</span>
-                  </div>
+                  <div className="font-body font-medium text-[12.5px] truncate">{n.title}</div>
+                  <div className="font-mono text-[10px]" style={{ color: C.sage }}>{n.caption}</div>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button onClick={() => decide(n.id, 'approved')} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: C.tintSage, color: C.sage }}><Check size={14} /></button>
+                  <button onClick={() => decide(n.id, 'rejected')} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: C.tint, color: C.muted }}><X size={14} /></button>
                 </div>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="text-sm text-muted-foreground text-center py-8 border border-dashed border-border rounded-xl">
-            No site updates yet.
+        </Tile>
+
+        {/* AI insights */}
+        <Tile dark className="lg:col-span-3 flex flex-col" onClick={() => setOpen(true)}>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={16} style={{ color: C.sageLight }} />
+            <span className="font-display font-semibold text-[12.5px]">AI Insights</span>
           </div>
-        )}
-      </motion.div>
-    </div>
+          <Eyebrow color={C.sageLight} className="mb-1.5">{riskCount} RISK{riskCount !== 1 ? 'S' : ''} FLAGGED</Eyebrow>
+          <div className="font-body text-[12.5px] leading-[1.45] flex-1" style={{ color: C.onDark }}>{aiRisk}</div>
+          <div className="flex items-center justify-between mt-3.5 pt-3" style={{ borderTop: `1px solid ${C.onDarkBorder}` }}>
+            <span className="font-body text-[11.5px]" style={{ color: C.onDarkText }}>View analysis</span>
+            <ArrowRight size={15} style={{ color: C.sageLight }} />
+          </div>
+        </Tile>
+
+        {/* Budget ring */}
+        <Tile className="lg:col-span-4">
+          <Donut percent={budgetPct} center={`${budgetPct}%`} label="BUDGET SPENT"
+            sub={`${formatCurrencyCompact(totalSpent)} of ${formatCurrencyCompact(totalBudget)}`} />
+        </Tile>
+
+        {/* Site updates count */}
+        <Tile className="lg:col-span-3">
+          <div className="flex items-center justify-between mb-3.5">
+            <Eyebrow>SITE UPDATES</Eyebrow>
+            <Camera size={15} style={{ color: C.faint3 }} />
+          </div>
+          <div className="font-display font-semibold text-[30px] leading-none">{myUpdates.length}</div>
+          <div className="font-body text-[11.5px] mt-2.5" style={{ color: C.muted2 }}>
+            {milestones.length} milestone{milestones.length !== 1 ? 's' : ''}
+          </div>
+        </Tile>
+
+        {/* Issues + deadline pair */}
+        <div className="lg:col-span-3 flex flex-col gap-[13px]">
+          <Tile className="flex-1 !p-[14px_16px] flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-[10px] flex items-center justify-center" style={{ background: C.tintSage, color: C.sage }}><AlertTriangle size={18} /></div>
+            <div>
+              <div className="font-display font-semibold text-[22px] leading-none">{issues.length}</div>
+              <Eyebrow className="mt-[3px] block tracking-[0.05em]">OPEN ISSUES</Eyebrow>
+            </div>
+          </Tile>
+          <Tile className="flex-1 !p-[14px_16px] flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-[10px] flex items-center justify-center" style={{ background: C.tint, color: C.muted }}><Calendar size={18} /></div>
+            <div>
+              <div className="font-display font-semibold text-[22px] leading-none">{daysLeft !== null ? Math.abs(daysLeft) : '—'}</div>
+              <Eyebrow className="mt-[3px] block tracking-[0.05em]">{daysLeft !== null && daysLeft < 0 ? 'DAYS PAST DUE' : 'DAYS TO DEADLINE'}</Eyebrow>
+            </div>
+          </Tile>
+        </div>
+
+        {/* This week on site */}
+        <Tile className="lg:col-span-9 !p-[16px_18px]">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <GanttChart size={16} style={{ color: C.muted }} />
+              <TileTitle>This week on site</TileTitle>
+            </div>
+            <span className="font-mono text-[11px]" style={{ color: C.mono }}>
+              {monoDate(monday)} — {monoDate(new Date(monday.getTime() + 6 * 86400000))}
+            </span>
+          </div>
+          <WeekStrip days={week} />
+        </Tile>
+
+        {/* Site updates */}
+        <Tile className="lg:col-span-4" onClick={() => navigate('/site-updates')}>
+          <div className="flex items-center gap-2 mb-3.5">
+            <Camera size={16} style={{ color: C.muted }} />
+            <TileTitle>Site updates</TileTitle>
+            {timeAgoH && <span className="font-mono text-[11px] ml-auto" style={{ color: C.mono }}>{timeAgoH}h ago</span>}
+          </div>
+          {latestUpdate ? (
+            <>
+              <div className="flex gap-2.5">
+                {updatePhotos.length > 0
+                  ? updatePhotos.map((src, i) => (
+                      <div key={i} className="flex-1 h-[74px] rounded-[9px] bg-cover bg-center" style={{ backgroundImage: `url(${src})` }} />
+                    ))
+                  : [0, 1].map(i => <Striped key={i} className="flex-1 h-[74px] rounded-[9px]" label={i === 0 ? 'PHOTO · SITE' : 'PHOTO · WORK'} />)}
+              </div>
+              <div className="font-body text-[12px] leading-[1.4] mt-2.5" style={{ color: C.textStrong }}>
+                {latestUpdate.title}{latestUpdate.description ? ` — ${latestUpdate.description}` : ''}
+              </div>
+            </>
+          ) : (
+            <div className="font-body text-[12.5px] py-6 text-center" style={{ color: C.mono }}>No site updates yet.</div>
+          )}
+        </Tile>
+
+        {/* Recent activity */}
+        <Tile className="lg:col-span-4">
+          <div className="flex items-center gap-2 mb-3.5">
+            <Activity size={16} style={{ color: C.muted }} />
+            <TileTitle>Recent activity</TileTitle>
+            <span className="font-mono text-[11px] ml-auto cursor-pointer" style={{ color: C.mono }} onClick={() => navigate('/timeline')}>View all</span>
+          </div>
+          {activity.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {activity.map(a => (
+                <div key={a.id} className="flex items-start gap-2.5">
+                  <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: a.tone }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-body text-[12.5px] truncate" style={{ color: C.textStrong }}>{a.label}</div>
+                    <div className="font-mono text-[10px] mt-px" style={{ color: C.mono }}>{a.sub.toUpperCase()} · {ago(a.ts)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="font-body text-[12.5px] py-6 text-center" style={{ color: C.mono }}>No recent activity.</div>
+          )}
+        </Tile>
+
+        {/* Team & messaging */}
+        <Tile className="lg:col-span-4 flex flex-col">
+          <div className="flex items-center gap-2 mb-3.5">
+            <Users size={16} style={{ color: C.muted }} />
+            <TileTitle>Team</TileTitle>
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-[5px] ml-auto" style={{ background: C.tint, color: C.muted }}>
+              {teamMembers.length}
+            </span>
+          </div>
+          {teamMembers.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {teamMembers.slice(0, 8).map((m, i) => (
+                <div key={i} className="flex items-center gap-2 pr-2.5 rounded-full" style={{ background: C.canvas }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center font-display font-semibold text-[11px]" style={{ background: C.tintSage, color: C.sage }}>
+                    {initials(m)}
+                  </div>
+                  <span className="font-body text-[12px]" style={{ color: C.textStrong }}>{m.split(' ')[0]}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="font-body text-[12.5px] py-3" style={{ color: C.mono }}>No team members yet.</div>
+          )}
+          <button onClick={() => navigate('/chat')}
+            className="mt-auto flex items-center justify-center gap-2 w-full py-2.5 rounded-[10px] font-body font-medium text-[12.5px]"
+            style={{ background: C.ink, color: C.onDarkText }}>
+            <MessageSquare size={14} /> Message the team
+          </button>
+        </Tile>
+      </BentoGrid>
+    </>
   );
 }

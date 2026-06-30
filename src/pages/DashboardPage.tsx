@@ -5,8 +5,6 @@ import ClientDashboard from '@/components/dashboards/ClientDashboard';
 import ConsultantDashboard from '@/components/dashboards/ConsultantDashboard';
 import SharedApprovalsWidget from '@/components/dashboards/SharedApprovalsWidget';
 import GoogleCalendarWidget from '@/components/dashboards/GoogleCalendarWidget';
-import AIInsightsPanel from '@/components/ai/AIInsightsPanel';
-import AISummaryPanel from '@/components/ai/AISummaryPanel';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -23,12 +21,14 @@ export default function DashboardPage() {
   const showSharedApprovals = user.role === 'contractor' || user.role === 'consultant';
 
   return (
-    <div className="space-y-6">
-      <AIInsightsPanel />
-      <AISummaryPanel compact />
-      <GoogleCalendarWidget />
-      {showSharedApprovals && <SharedApprovalsWidget />}
+    <div className="space-y-[13px]">
       {roleDashboard}
+
+      {/* Integrations & shared widgets — functionality preserved below the bento */}
+      <div className={`grid grid-cols-1 gap-[13px] ${showSharedApprovals ? 'lg:grid-cols-2' : ''}`}>
+        <GoogleCalendarWidget />
+        {showSharedApprovals && <SharedApprovalsWidget />}
+      </div>
     </div>
   );
 }
