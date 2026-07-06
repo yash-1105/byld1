@@ -140,7 +140,7 @@ export function WeekStrip({ days }: { days: WeekDay[] }) {
             >
               {isToday && <span className="font-mono text-[9px]" style={{ color: C.sageLight }}>TODAY</span>}
               {(hasEvent || isMile || isToday) && d.label && (
-                <span className="font-mono text-[9px] leading-[1.25] text-left"
+                <span className="font-mono text-[9px] leading-[1.25] text-left overflow-hidden text-ellipsis"
                   style={{ color: isToday ? C.onDark : isMile ? C.sage : C.muted }}>
                   {d.label}
                 </span>

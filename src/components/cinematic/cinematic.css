@@ -873,7 +873,7 @@
 .cin-btn-outline:hover { background: var(--bg); transform: translateY(-2px); }
 
 /* ============================================================
-   Responsive — collapse sticky engine on small screens
+   Responsive
    ============================================================ */
 @media (max-width: 960px) {
   .cin-grid { grid-template-columns: 1fr; gap: 36px; }
@@ -882,16 +882,77 @@
   .cin-cardgrid { grid-template-columns: repeat(2, 1fr); }
   .cin-rolegrid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ------------------------------------------------------------
+   Mobile (9:16) — the scroll-scrub engine stays ON. The 16:9
+   video is letterboxed (object-fit: contain) in the upper part
+   of the stage, copy is pinned to the bottom, and the overlay
+   cards/stats/verdicts are scaled down to fit the narrow frame.
+   ------------------------------------------------------------ */
 @media (max-width: 767px) {
-  .cin-wrap { height: auto !important; }
-  .cin-scene {
-    position: relative !important;
-    top: auto !important;
-    height: auto !important;
-    min-height: auto;
-    overflow: visible !important;
-    padding: 70px 0;
+  .cin-wrap { height: 320vh; }
+  .cin-scene--hero { padding: 0 10px; }
+  .cin-hero-stage {
+    height: 84vh;
+    height: 84svh;
+    border-radius: 18px;
   }
+  /* show the whole 16:9 frame, parked in the upper third */
+  .cin-video { object-fit: contain; object-position: center 24%; }
+  /* bottom-up scrim for the bottom-anchored copy (both layouts) */
+  .cin-hero-scrim,
+  .cin-hero--flip .cin-hero-scrim {
+    background: linear-gradient(
+      to top,
+      rgba(8, 9, 11, 0.88) 0%,
+      rgba(8, 9, 11, 0.62) 30%,
+      rgba(8, 9, 11, 0.16) 54%,
+      rgba(8, 9, 11, 0) 66%
+    );
+  }
+  .cin-hero-copy,
+  .cin-hero--flip .cin-hero-copy {
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 0 18px 96px;
+  }
+  .cin-hero-copy .cin-left { max-width: 100%; }
+  .cin-eyebrow { font-size: 10.5px; margin-bottom: 12px; }
+  .cin-h { font-size: clamp(25px, 7.2vw, 32px); margin-bottom: 14px; }
+  .cin-check { gap: 8px; margin-bottom: 18px; }
+  .cin-check li { font-size: 13px; gap: 9px; }
+  .cin-check .tick { flex-basis: 18px; width: 18px; height: 18px; margin-top: 2px; }
+  .cin-check .tick svg { width: 11px; height: 11px; }
+  .cin-check-sub { font-size: 11.5px; }
+  .cin-cta { font-size: 13.5px; }
+  .cin-roomcard {
+    top: 12px;
+    right: 12px;
+    width: 186px;
+    padding: 11px 13px;
+    border-radius: 13px;
+  }
+  .cin-roomcard h4 { font-size: 13px; }
+  .cin-roomcard .sub { font-size: 11px; }
+  .cin-bgt { margin-top: 8px; }
+  .cin-tasklist { margin-top: 7px; gap: 4px; }
+  .cin-tasklist span { font-size: 11px; }
+  .cin-alertmini { margin-top: 7px; font-size: 11px; padding: 6px 8px; }
+  .cin-stats {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    gap: 6px;
+    padding: 10px 10px;
+    border-radius: 12px;
+  }
+  .cin-stats .k { font-size: 9.5px; }
+  .cin-stats .v { font-size: 14px; }
+  /* verdict badge rides the letterboxed video band, not mid-stage */
+  .cin-verdict { right: 14px; top: 34%; margin-top: -22px; }
+  .cin-verdict-icon { width: 44px; height: 44px; }
+  .cin-verdict-icon svg { width: 20px; height: 20px; }
+
   .cin-stage { min-height: 420px; }
   .cin-parallax { min-height: 60vh; }
   .cin-cardgrid { grid-template-columns: 1fr; }
@@ -904,4 +965,15 @@
   .cin-statusdot.pulse,
   .cin-particle,
   .cin-gbar.shake { animation: none !important; }
+}
+/* reduced-motion on mobile: no scrub, so drop the tall scroll runways */
+@media (prefers-reduced-motion: reduce) and (max-width: 767px) {
+  .cin-wrap { height: auto; }
+  .cin-scene {
+    position: relative;
+    top: auto;
+    height: auto;
+    overflow: visible;
+    padding: 46px 0;
+  }
 }

@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, LayoutPanelLeft } from 'lucide-react';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
-import { C } from '@/components/dashboards/bento/BentoKit';
+import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
+import { C, ProjectSwitcher } from '@/components/dashboards/bento/BentoKit';
 import { navForRole } from './navConfig';
 
 const isActive = (pathname: string, path: string) =>
@@ -12,8 +16,11 @@ const isActive = (pathname: string, path: string) =>
 
 export default function BentoModuleRail() {
   const { user } = useAuth();
+  const { projects } = useData();
+  const { activeProjectId, setActiveProjectId } = useActiveProject();
   const location = useLocation();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   if (!user) return null;
 
   const nav = navForRole(user.role);
@@ -26,6 +33,46 @@ export default function BentoModuleRail() {
       className="flex items-center gap-[3px] px-3 sm:px-[18px] py-[7px] sticky top-[62px] z-20 overflow-x-auto no-scrollbar"
       style={{ background: C.white, borderBottom: `1px solid ${C.hairSoft}` }}
     >
+      {/* mobile: all-modules bottom sheet (the pill rail scrolls, but this makes
+          every module + the project switcher reachable without hunting) */}
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetTrigger asChild>
+          <button
+            aria-label="All modules"
+            className="md:hidden flex items-center justify-center w-[34px] h-[31px] rounded-lg shrink-0 sticky left-0 z-10"
+            style={{ background: C.surface, border: `1px solid ${C.hairStrong}`, color: C.muted }}
+          >
+            <LayoutPanelLeft size={15} />
+          </button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto pb-[calc(20px+env(safe-area-inset-bottom))]">
+          <SheetHeader className="text-left">
+            <SheetTitle className="font-display text-[15px]">Modules</SheetTitle>
+          </SheetHeader>
+          <div className="mt-3 mb-4">
+            <ProjectSwitcher value={activeProjectId} onChange={setActiveProjectId} projects={projects} />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {nav.filter(n => !n.corner).map(item => {
+              const active = isActive(location.pathname, item.path);
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => { setMenuOpen(false); navigate(item.path); }}
+                  className="flex flex-col items-center gap-1.5 rounded-xl py-3.5 px-2"
+                  style={active
+                    ? { background: C.ink, color: C.onDarkText }
+                    : { background: C.surface, border: `1px solid ${C.hairSoft}`, color: C.muted }}
+                >
+                  <item.icon size={18} />
+                  <span className="font-body font-medium text-[11.5px] leading-tight text-center">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {primary.map(item => {
         const active = isActive(location.pathname, item.path);
         return (

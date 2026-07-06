@@ -56,18 +56,29 @@ export default function CalendarPage() {
             const dayTasks = day ? getTasksForDay(day) : [];
             const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
             return (
-              <div key={i} className={`min-h-[80px] p-1.5 border border-border/50 rounded-lg ${!day ? 'bg-transparent border-transparent' : 'hover:bg-muted/50 transition-colors'}`}>
+              <div key={i} className={`min-h-[52px] sm:min-h-[80px] p-1 sm:p-1.5 border border-border/50 rounded-lg ${!day ? 'bg-transparent border-transparent' : 'hover:bg-muted/50 transition-colors'}`}>
                 {day && (
                   <>
-                    <div className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'gradient-primary text-primary-foreground' : 'text-foreground'}`}>
+                    <div className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full mx-auto sm:mx-0 ${isToday ? 'gradient-primary text-primary-foreground' : 'text-foreground'}`}>
                       {day}
                     </div>
-                    {dayTasks.slice(0, 2).map(t => (
-                      <div key={t.id} className={`text-[10px] px-1.5 py-0.5 rounded mb-0.5 truncate ${
-                        t.priority === 'urgent' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
-                      }`}>{t.title.slice(0, 20)}</div>
-                    ))}
-                    {dayTasks.length > 2 && <div className="text-[10px] text-muted-foreground">+{dayTasks.length - 2} more</div>}
+                    {/* mobile: columns are ~47px wide, so show dots instead of clipped titles */}
+                    <div className="flex sm:hidden items-center justify-center gap-0.5 flex-wrap">
+                      {dayTasks.slice(0, 4).map(t => (
+                        <span key={t.id} className={`w-1.5 h-1.5 rounded-full ${
+                          t.priority === 'urgent' ? 'bg-destructive' : 'bg-primary'
+                        }`} />
+                      ))}
+                      {dayTasks.length > 4 && <span className="text-[9px] text-muted-foreground leading-none">+</span>}
+                    </div>
+                    <div className="hidden sm:block">
+                      {dayTasks.slice(0, 2).map(t => (
+                        <div key={t.id} className={`text-[10px] px-1.5 py-0.5 rounded mb-0.5 truncate ${
+                          t.priority === 'urgent' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+                        }`}>{t.title.slice(0, 20)}</div>
+                      ))}
+                      {dayTasks.length > 2 && <div className="text-[10px] text-muted-foreground">+{dayTasks.length - 2} more</div>}
+                    </div>
                   </>
                 )}
               </div>

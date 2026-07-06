@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import BrandLogo from '@/components/BrandLogo';
 import HeroScrollAnimation from '@/components/HeroScrollAnimation';
 import CinematicShowcase from '@/components/cinematic/CinematicShowcase';
+import InstallAppPrompt from '@/components/InstallAppPrompt';
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -48,6 +49,7 @@ export default function LandingPage() {
       <HeroScrollAnimation />
       <CinematicShowcase />
 
+      <InstallAppPrompt />
       <Footer />
     </div>
   );

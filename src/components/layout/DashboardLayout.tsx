@@ -6,6 +6,7 @@ import { C } from '@/components/dashboards/bento/BentoKit';
 import BentoTopBar from './bento/BentoTopBar';
 import BentoModuleRail from './bento/BentoModuleRail';
 import CommandPalette from './bento/CommandPalette';
+import InstallAppPrompt from '@/components/InstallAppPrompt';
 
 export default function DashboardLayout() {
   const location = useLocation();
@@ -40,6 +41,7 @@ export default function DashboardLayout() {
           </div>
         </main>
         <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+        <InstallAppPrompt />
       </div>
     </ActiveProjectProvider>
   );

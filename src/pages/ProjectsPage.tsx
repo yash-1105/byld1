@@ -54,7 +54,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{isClient ? 'My Project' : 'Projects'}</h1>
           <p className="text-muted-foreground text-sm mt-1">{visible.length} {visible.length === 1 ? 'project' : 'projects'} total</p>

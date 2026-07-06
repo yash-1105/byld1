@@ -19,7 +19,19 @@ export default function HeroScrollAnimation() {
     const onMeta = () => { ready.current = true; dur.current = v.duration || 8; };
     if (v.readyState >= 1) onMeta();
     else v.addEventListener('loadedmetadata', onMeta);
-    return () => v.removeEventListener('loadedmetadata', onMeta);
+    // iOS Safari defers loading (even with preload="auto") until load() is called,
+    // and won't paint seeked frames until the video has been primed with a
+    // muted play/pause. Without this the hero renders as a black screen on iPhone.
+    v.load();
+    const prime = () => {
+      v.play().then(() => { v.pause(); v.currentTime = 0; }).catch(() => { /* ignore */ });
+      v.removeEventListener('loadeddata', prime);
+    };
+    v.addEventListener('loadeddata', prime);
+    return () => {
+      v.removeEventListener('loadedmetadata', onMeta);
+      v.removeEventListener('loadeddata', prime);
+    };
   }, []);
 
   // scrub the video to the scroll position
@@ -52,10 +64,12 @@ export default function HeroScrollAnimation() {
         style={{ opacity: sectionOpacity }}
         className="sticky top-0 h-screen w-full overflow-hidden bg-[#181b18]"
       >
-        {/* Single scroll-scrubbed video (replaces the 240-frame sequence) */}
+        {/* Single scroll-scrubbed video (replaces the 240-frame sequence).
+            Mobile (9:16): letterbox the full 16:9 frame in the upper third so the
+            whole shot is visible; desktop keeps the full-bleed cover crop. */}
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-contain object-[center_22%] md:object-cover md:object-center"
           muted
           playsInline
           preload="auto"
@@ -69,41 +83,43 @@ export default function HeroScrollAnimation() {
         {/* Dark overlay to make text readable */}
         <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
-        {/* Text Content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 lg:p-12 text-center pointer-events-none">
+        {/* Text Content — bottom-anchored on mobile (below the letterboxed video band),
+            centered on desktop. Absolute children take their static position from the
+            flex alignment, so justify-* moves all three panels together. */}
+        <div className="absolute inset-0 flex flex-col items-center justify-end pb-36 md:justify-center md:pb-0 p-6 lg:p-12 text-center pointer-events-none">
           <motion.div
             style={{ y: y1, opacity: opacity1 }}
-            className="absolute inset-x-0 flex flex-col items-center justify-center"
+            className="absolute inset-x-0 flex flex-col items-center justify-center px-5"
           >
-            <h1 className="text-5xl sm:text-6xl lg:text-[5rem] font-bold text-white tracking-tight leading-[1.05]">
+            <h1 className="text-4xl sm:text-6xl lg:text-[5rem] font-bold text-white tracking-tight leading-[1.05]">
               Build smarter.<br />
               <span className="text-[#aab0a6]">Deliver faster.</span>
             </h1>
-            <p className="mt-6 max-w-lg text-lg text-white/80">
+            <p className="mt-5 md:mt-6 max-w-lg text-base md:text-lg text-white/80">
               Uncomplicate project management. Control timelines, enhance client transparency, collect faster and hire the right people — all in one place.
             </p>
           </motion.div>
 
           <motion.div
             style={{ y: y2, opacity: opacity2 }}
-            className="absolute inset-x-0 flex flex-col items-center justify-center"
+            className="absolute inset-x-0 flex flex-col items-center justify-center px-5"
           >
-            <h2 className="text-4xl sm:text-5xl lg:text-[4rem] font-bold text-white tracking-tight leading-[1.05]">
+            <h2 className="text-3xl sm:text-5xl lg:text-[4rem] font-bold text-white tracking-tight leading-[1.05]">
               Real-time site updates.
             </h2>
-            <p className="mt-6 max-w-lg text-lg text-white/80 mx-auto">
+            <p className="mt-5 md:mt-6 max-w-lg text-base md:text-lg text-white/80 mx-auto">
               Let clients see their vision taking shape — build transparency and client confidence. BYLD space allows contractors and site engineers to document real-time progress, eliminating repeated updates across various channels.
             </p>
           </motion.div>
 
           <motion.div
             style={{ y: y3, opacity: opacity3 }}
-            className="absolute inset-x-0 flex flex-col items-center justify-center"
+            className="absolute inset-x-0 flex flex-col items-center justify-center px-5"
           >
-            <h2 className="text-4xl sm:text-5xl lg:text-[4rem] font-bold text-white tracking-tight leading-[1.05]">
+            <h2 className="text-3xl sm:text-5xl lg:text-[4rem] font-bold text-white tracking-tight leading-[1.05]">
               Transparent costs and seamless viewing.
             </h2>
-            <p className="mt-6 max-w-lg text-lg text-white/80 mx-auto">
+            <p className="mt-5 md:mt-6 max-w-lg text-base md:text-lg text-white/80 mx-auto">
               Centralized document hub for clients. Design concepts to final invoices — in a single interface. While project managers track resource allocation and project margins, clients can track segment-wise costs, procurements and revisions.
             </p>
           </motion.div>

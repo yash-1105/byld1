@@ -290,6 +290,34 @@ export default function ApprovalsPage() {
           ))}
         </div>
 
+        {/* Mobile filters — the project/category sidebar is hidden below lg */}
+        <div className="grid grid-cols-2 gap-2 lg:hidden">
+          <select
+            value={projectFilter}
+            onChange={e => setProjectFilter(e.target.value)}
+            className="w-full bg-card border border-border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+            aria-label="Filter by project"
+          >
+            <option value="all">All Projects</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <select
+            value={activeCategory}
+            onChange={e => setActiveCategory(e.target.value)}
+            className="w-full bg-card border border-border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+            aria-label="Filter by category"
+          >
+            {CATEGORIES.map(cat => {
+              const pending = categoryCounts(cat.key);
+              return (
+                <option key={cat.key} value={cat.key}>
+                  {cat.label}{pending > 0 ? ` (${pending})` : ''}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
         {/* Status filter tabs */}
         <div className="flex gap-2 flex-wrap">
           {STATUS_FILTERS.map(f => (

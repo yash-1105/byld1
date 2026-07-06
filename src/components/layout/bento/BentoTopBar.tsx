@@ -38,12 +38,13 @@ export default function BentoTopBar({ onOpenSearch }: { onOpenSearch: () => void
       <div className="flex items-center gap-2.5">
         <button
           onClick={onOpenSearch}
-          className="hidden sm:flex items-center gap-2 rounded-[9px] px-[11px] py-2"
+          aria-label="Search"
+          className="flex items-center justify-center gap-2 rounded-[9px] w-9 h-9 sm:w-auto sm:h-auto sm:px-[11px] sm:py-2"
           style={{ background: C.surface, border: `1px solid ${C.hairStrong}`, color: C.mono }}
         >
           <Search size={15} />
-          <span className="font-body text-[12px]" style={{ color: C.faint2 }}>Search</span>
-          <span className="font-mono text-[10px] px-[5px] py-px rounded-[4px]" style={{ background: C.tint, color: C.mono }}>⌘K</span>
+          <span className="hidden sm:inline font-body text-[12px]" style={{ color: C.faint2 }}>Search</span>
+          <span className="hidden sm:inline font-mono text-[10px] px-[5px] py-px rounded-[4px]" style={{ background: C.tint, color: C.mono }}>⌘K</span>
         </button>
 
         <button

@@ -56,6 +56,8 @@ export default function CinematicShowcase() {
     };
 
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Mobile keeps the full scroll-scrub experience (videos letterboxed via CSS);
+    // only prefers-reduced-motion falls back to static frames.
     const isMobile = () => window.innerWidth < 768;
 
     /* ================= SCENE 1 — Segment map ================= */
@@ -74,8 +76,8 @@ export default function CinematicShowcase() {
     const onMeta = () => {
       videoReady = true;
       videoDur = s1video.duration || 8;
-      // mobile / reduced-motion: show the final (office) frame statically
-      if (reduce || isMobile()) s1video.currentTime = videoDur - 0.04;
+      // reduced-motion: show the final (office) frame statically
+      if (reduce) s1video.currentTime = videoDur - 0.04;
     };
     if (s1video.readyState >= 1) onMeta();
     else s1video.addEventListener('loadedmetadata', onMeta);
@@ -134,7 +136,7 @@ export default function CinematicShowcase() {
     const onMeta2 = () => {
       video2Ready = true;
       video2Dur = s2video.duration || 8;
-      if (reduce || isMobile()) s2video.currentTime = video2Dur - 0.04;
+      if (reduce) s2video.currentTime = video2Dur - 0.04;
     };
     if (s2video.readyState >= 1) onMeta2();
     else s2video.addEventListener('loadedmetadata', onMeta2);
@@ -177,7 +179,7 @@ export default function CinematicShowcase() {
     const onMeta3 = () => {
       video3Ready = true;
       video3Dur = s3video.duration || 8;
-      if (reduce || isMobile()) s3video.currentTime = video3Dur - 0.04;
+      if (reduce) s3video.currentTime = video3Dur - 0.04;
     };
     if (s3video.readyState >= 1) onMeta3();
     else s3video.addEventListener('loadedmetadata', onMeta3);
@@ -222,19 +224,19 @@ export default function CinematicShowcase() {
     const onMeta4 = () => {
       video4Ready = true;
       video4Dur = s4video.duration || 10;
-      // mobile / reduced-motion: rest on an early frame (cards visible, right clear for copy)
-      if (reduce || isMobile()) s4video.currentTime = video4Dur * 0.16;
+      // reduced-motion: rest on an early frame (cards visible, right clear for copy)
+      if (reduce) s4video.currentTime = video4Dur * 0.16;
     };
     if (s4video.readyState >= 1) onMeta4();
     else s4video.addEventListener('loadedmetadata', onMeta4);
     const renderS4 = (p: number, visible = true) => {
-      const staticView = reduce || isMobile();
-      // copy greets over the empty early frames, then hands off to the demo (desktop only)
+      // copy greets over the empty early frames, then hands off to the demo.
+      // On mobile the letterboxed video leaves room, so copy stays put.
       const inn = easeOut(seg(p, 0, 0.08));
-      const out = staticView ? 0 : easeOut(seg(p, 0.42, 0.52));
+      const out = (reduce || isMobile()) ? 0 : easeOut(seg(p, 0.42, 0.52));
       setOT(s4L, inn * (1 - out), lerp(20, 0, inn));
       if (video4Ready && visible) {
-        const target = (staticView ? 0.16 : clamp(p)) * (video4Dur - 0.04);
+        const target = (reduce ? 0.16 : clamp(p)) * (video4Dur - 0.04);
         if (Math.abs(s4video.currentTime - target) > 0.001) s4video.currentTime = target;
       }
     };
@@ -249,19 +251,19 @@ export default function CinematicShowcase() {
     const onMeta5 = () => {
       video5Ready = true;
       video5Dur = s5video.duration || 10;
-      // mobile / reduced-motion: rest on an early frame (gantt readable, right clear for copy)
-      if (reduce || isMobile()) s5video.currentTime = video5Dur * 0.16;
+      // reduced-motion: rest on an early frame (gantt readable, right clear for copy)
+      if (reduce) s5video.currentTime = video5Dur * 0.16;
     };
     if (s5video.readyState >= 1) onMeta5();
     else s5video.addEventListener('loadedmetadata', onMeta5);
     const renderS5 = (p: number, visible = true) => {
-      const staticView = reduce || isMobile();
-      // copy greets over the early frames, then hands off to the demo (desktop only)
+      // copy greets over the early frames, then hands off to the demo.
+      // On mobile the letterboxed video leaves room, so copy stays put.
       const inn = easeOut(seg(p, 0, 0.08));
-      const out = staticView ? 0 : easeOut(seg(p, 0.42, 0.52));
+      const out = (reduce || isMobile()) ? 0 : easeOut(seg(p, 0.42, 0.52));
       setOT(s5L, inn * (1 - out), lerp(20, 0, inn));
       if (video5Ready && visible) {
-        const target = (staticView ? 0.16 : clamp(p)) * (video5Dur - 0.04);
+        const target = (reduce ? 0.16 : clamp(p)) * (video5Dur - 0.04);
         if (Math.abs(s5video.currentTime - target) > 0.001) s5video.currentTime = target;
       }
     };
@@ -293,7 +295,7 @@ export default function CinematicShowcase() {
       for (const sc of scenes) sc.render(1, true);
     };
 
-    if (reduce || isMobile()) {
+    if (reduce) {
       renderStatic();
     } else {
       raf = requestAnimationFrame(frame);
@@ -313,24 +315,21 @@ export default function CinematicShowcase() {
         const v = e.target as HTMLVideoElement;
         v.preload = 'auto';
         v.load();
+        // iOS Safari won't paint seeked frames until the (muted, playsinline)
+        // video has been primed with a play/pause once data is available.
+        const prime = () => {
+          v.play().then(() => { v.pause(); }).catch(() => { /* ignore */ });
+          v.removeEventListener('loadeddata', prime);
+        };
+        v.addEventListener('loadeddata', prime, { once: true });
         videoIO.unobserve(v);
       }),
       { rootMargin: '200% 0px 200% 0px' },
     );
     qa<HTMLVideoElement>('.cin-video').forEach((v) => videoIO.observe(v));
 
-    /* ---------- re-evaluate engine on resize ---------- */
-    const onResize = () => {
-      cancelAnimationFrame(raf);
-      raf = 0;
-      if (reduce || isMobile()) renderStatic();
-      else raf = requestAnimationFrame(frame);
-    };
-    window.addEventListener('resize', onResize);
-
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener('resize', onResize);
       io.disconnect();
       videoIO.disconnect();
       s1video.removeEventListener('loadedmetadata', onMeta);
