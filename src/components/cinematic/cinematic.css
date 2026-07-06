@@ -906,8 +906,22 @@
     height: 84svh;
     border-radius: 18px;
   }
-  /* show the whole 16:9 frame, parked in the upper third */
-  .cin-video { object-fit: contain; object-position: center 24%; }
+  /* Show the whole 16:9 frame, parked in the upper third. The element is
+     sized to its exact content box (not object-fit: contain filling the
+     stage): with contain, the letterbox bars are part of the video element's
+     paint area and iOS repaints the whole element black on every seek —
+     which made the dark borders flicker while scrubbing. Here the borders
+     are the .cin-video-wrap background, which never repaints. */
+  .cin-video {
+    position: absolute;
+    left: 0;
+    top: 17%;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: center;
+  }
   /* bottom-up scrim for the bottom-anchored copy (both layouts) */
   .cin-hero-scrim,
   .cin-hero--flip .cin-hero-scrim {

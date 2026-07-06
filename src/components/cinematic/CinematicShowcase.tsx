@@ -310,10 +310,13 @@ export default function CinematicShowcase() {
     qa('.cin-rev-el').forEach((n) => io.observe(n));
 
     /* ---------- lazy-load each scene video as it nears the viewport ---------- */
+    const wantMobileSrc = window.matchMedia('(max-width: 767px)').matches;
     const videoIO = new IntersectionObserver(
       (entries) => entries.forEach((e) => {
         if (!e.isIntersecting) return;
         const v = e.target as HTMLVideoElement;
+        // phones download the 720px encodes (~1/2 the bytes of the 1280px ones)
+        if (wantMobileSrc && v.dataset.mobileSrc && !v.src) v.src = v.dataset.mobileSrc;
         v.preload = 'auto';
         v.load();
         // Prime the first frame with a tiny seek so iOS paints it. (A
@@ -323,7 +326,7 @@ export default function CinematicShowcase() {
         v.addEventListener('loadeddata', prime, { once: true });
         videoIO.unobserve(v);
       }),
-      { rootMargin: '350% 0px 350% 0px' },
+      { rootMargin: '500% 0px 500% 0px' },
     );
     const videos = qa<HTMLVideoElement>('.cin-video');
     videos.forEach((v) => videoIO.observe(v));
@@ -360,6 +363,7 @@ export default function CinematicShowcase() {
                 preload="none"
                 tabIndex={-1}
                 poster="/segment-map-poster.jpg"
+                data-mobile-src="/segment-map-720.mp4"
                 aria-label="Fly-through of the project, room by room"
               >
                 <source src="/segment-map.mp4" type="video/mp4" />
@@ -425,6 +429,7 @@ export default function CinematicShowcase() {
                 preload="none"
                 tabIndex={-1}
                 poster="/design-board-poster.jpg"
+                data-mobile-src="/design-board-720.mp4"
                 aria-label="Material studies: oak, marble, brass and glass"
               >
                 <source src="/design-board.mp4" type="video/mp4" />
@@ -486,6 +491,7 @@ export default function CinematicShowcase() {
                 preload="none"
                 tabIndex={-1}
                 poster="/approvals-board-poster.jpg"
+                data-mobile-src="/approvals-board-720.mp4"
                 aria-label="Approval decisions: accepted items move right, rejected move left"
               >
                 <source src="/approvals-board.mp4" type="video/mp4" />
@@ -567,6 +573,7 @@ export default function CinematicShowcase() {
                 preload="none"
                 tabIndex={-1}
                 poster="/procurement-board-poster.jpg"
+                data-mobile-src="/procurement-board-720.mp4"
                 aria-label="Supplier comparison: bids, risk scores, recommendation and PO"
               >
                 <source src="/procurement-board.mp4" type="video/mp4" />
@@ -604,6 +611,7 @@ export default function CinematicShowcase() {
                 preload="none"
                 tabIndex={-1}
                 poster="/timeline-board-poster.jpg"
+                data-mobile-src="/timeline-board-720.mp4"
                 aria-label="Project timeline: tasks mapped, a conflict detected and resolved"
               >
                 <source src="/timeline-board.mp4" type="video/mp4" />

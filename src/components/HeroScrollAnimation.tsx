@@ -6,6 +6,10 @@ export default function HeroScrollAnimation() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const ready = useRef(false);
   const dur = useRef(8);
+  // Phones get the 720px encode (~1/2 the bytes); decided once at mount.
+  const heroSrc = useRef(
+    window.matchMedia('(max-width: 767px)').matches ? '/hero-720.mp4' : '/hero.mp4',
+  );
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -73,11 +77,15 @@ export default function HeroScrollAnimation() {
         className="sticky top-0 h-screen w-full overflow-hidden bg-[#181b18]"
       >
         {/* Single scroll-scrubbed video (replaces the 240-frame sequence).
-            Mobile (9:16): letterbox the full 16:9 frame in the upper third so the
-            whole shot is visible; desktop keeps the full-bleed cover crop. */}
+            Mobile (9:16): the element is sized to its exact 16:9 content box in
+            the upper third — the "letterbox" around it is the section's own
+            background. (With object-fit: contain the bars belong to the video
+            element, and iOS repaints the whole element black on seeks, which
+            made the borders flicker while scrubbing.) Desktop keeps the
+            full-bleed cover crop. */}
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-contain object-[center_22%] md:object-cover md:object-center [transform:translateZ(0)] [backface-visibility:hidden]"
+          className="absolute inset-x-0 top-[16%] w-full h-auto aspect-video object-cover md:inset-0 md:top-0 md:h-full md:aspect-auto [transform:translateZ(0)] [backface-visibility:hidden]"
           muted
           playsInline
           preload="auto"
@@ -85,7 +93,7 @@ export default function HeroScrollAnimation() {
           poster="/hero-poster.jpg"
           aria-label="Luxury villa visualization"
         >
-          <source src="/hero.mp4" type="video/mp4" />
+          <source src={heroSrc.current} type="video/mp4" />
         </video>
 
         {/* Dark overlay to make text readable */}
