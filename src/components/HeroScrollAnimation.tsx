@@ -85,7 +85,7 @@ export default function HeroScrollAnimation() {
             full-bleed cover crop. */}
         <video
           ref={videoRef}
-          className="absolute inset-x-0 top-[16%] w-full h-auto aspect-video object-cover md:inset-0 md:top-0 md:h-full md:aspect-auto [transform:translateZ(0)] [backface-visibility:hidden]"
+          className="absolute inset-x-0 top-[16%] w-full h-auto aspect-video object-cover md:inset-0 md:top-0 md:h-full md:aspect-auto"
           muted
           playsInline
           preload="auto"

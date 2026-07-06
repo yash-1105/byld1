@@ -24,7 +24,11 @@ export default function LandingPage() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6 }}
         className={`h-16 fixed top-0 inset-x-0 z-50 transition-colors duration-300 flex items-center justify-between px-6 lg:px-12 ${
-          isScrolled ? 'bg-white/80 backdrop-blur-md border-b border-black/5 text-black' : 'bg-transparent text-white'
+          // No backdrop blur on phones: a fixed backdrop-filter element forces
+          // everything beneath it into composited layers on iOS, feeding the
+          // memory pressure that makes WebKit cull layers (flickering
+          // backgrounds/text in the installed PWA). Opaque white reads the same.
+          isScrolled ? 'bg-white md:bg-white/80 md:backdrop-blur-md border-b border-black/5 text-black' : 'bg-transparent text-white'
         }`}
       >
         <Link to="/" className="flex items-center gap-3">

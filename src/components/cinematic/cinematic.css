@@ -152,11 +152,6 @@
   height: 100%;
   display: block;
   object-fit: cover;
-  /* keep the video on its own GPU layer — rapid currentTime seeks otherwise
-     trigger full repaints that flash the dark letterbox background (worst in
-     the installed PWA's standalone webview) */
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 /* Scene 1 immersive hero: large video with copy overlaid */
@@ -173,10 +168,6 @@
   overflow: hidden;
   background: #0c0d10;
   box-shadow: var(--shadow-card);
-  /* own compositing layer: rounded-corner clipping over a seeking <video>
-     otherwise flickers on iOS/PWA */
-  transform: translateZ(0);
-  isolation: isolate;
 }
 .cin-hero-scrim {
   position: absolute;
@@ -899,6 +890,30 @@
    cards/stats/verdicts are scaled down to fit the narrow frame.
    ------------------------------------------------------------ */
 @media (max-width: 767px) {
+  /* iOS compositing budget: `will-change` holds a GPU layer per element for
+     the whole page lifetime — across six sticky scenes on a 3x iPhone that
+     overflows WebKit's layer memory, and it responds by culling layers: the
+     dark stage backgrounds and copy text visibly vanish/flicker while the
+     (hardware-decoded) videos keep rendering. Drop the persistent hints on
+     phones; browsers still promote transiently while JS writes transforms. */
+  .cin-left,
+  .cin-reveal,
+  .cin-roomcard,
+  .cin-stats,
+  .cin-verdict,
+  .cin-stage,
+  .cin-col,
+  .cin-mat,
+  .cin-appr,
+  .cin-appr-actions,
+  .cin-supp,
+  .cin-rec-badge,
+  .cin-selected,
+  .cin-po,
+  .cin-gbar,
+  .cin-galert,
+  .cin-px-text { will-change: auto; }
+
   .cin-wrap { height: 320vh; }
   .cin-scene--hero { padding: 0 10px; }
   .cin-hero-stage {
@@ -973,7 +988,9 @@
   .cin-stats .v { font-size: 14px; }
   /* verdict badge rides the letterboxed video band, not mid-stage */
   .cin-verdict { right: 14px; top: 34%; margin-top: -22px; }
-  .cin-verdict-icon { width: 44px; height: 44px; }
+  /* no backdrop blur on phones — backdrop-filter forces extra composited
+     layers on iOS (the badge is 92% opaque white; blur is imperceptible) */
+  .cin-verdict-icon { width: 44px; height: 44px; backdrop-filter: none; }
   .cin-verdict-icon svg { width: 20px; height: 20px; }
 
   .cin-stage { min-height: 420px; }

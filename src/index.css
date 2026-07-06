@@ -168,6 +168,16 @@
     pointer-events: none;
     z-index: 0;
   }
+
+  /* Phones: the landing page is 200+ viewport-heights tall, so this overlay
+     is a gigantic extra paint surface that feeds iOS's compositing memory
+     pressure (WebKit responds by culling layers → backgrounds/text flicker
+     in the installed PWA). At 3% opacity it's invisible on phones anyway. */
+  @media (max-width: 767px) {
+    .noise-bg::before {
+      display: none;
+    }
+  }
 }
 
 @keyframes shimmer {
