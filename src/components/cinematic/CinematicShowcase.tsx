@@ -101,10 +101,11 @@ export default function CinematicShowcase() {
       const intro = easeOut(seg(p, 0, 0.08));
       setOT(s1L, intro, lerp(20, 0, intro));
       narrate(s1N, S1N, p);
-      // scrub the fly-through video to the scroll position
+      // scrub the fly-through video to the scroll position (seek-gated: issuing
+      // a new seek while one is in flight makes iOS flash black frames)
       if (videoReady && visible) {
         const target = clamp(p) * (videoDur - 0.04);
-        if (Math.abs(s1video.currentTime - target) > 0.001) s1video.currentTime = target;
+        if (!s1video.seeking && Math.abs(s1video.currentTime - target) > 0.034) s1video.currentTime = target;
       }
       // room detail cards
       s1cards.forEach((c, i) => {
@@ -152,7 +153,7 @@ export default function CinematicShowcase() {
       setOT(s2L, intro, lerp(20, 0, intro));
       if (video2Ready && visible) {
         const target = clamp(p) * (video2Dur - 0.04);
-        if (Math.abs(s2video.currentTime - target) > 0.001) s2video.currentTime = target;
+        if (!s2video.seeking && Math.abs(s2video.currentTime - target) > 0.034) s2video.currentTime = target;
       }
       s2cards.forEach((c, i) => {
         const [a, b] = s2Windows[i];
@@ -195,7 +196,7 @@ export default function CinematicShowcase() {
       setOT(s3L, intro, lerp(20, 0, intro));
       if (video3Ready && visible) {
         const target = clamp(p) * (video3Dur - 0.04);
-        if (Math.abs(s3video.currentTime - target) > 0.001) s3video.currentTime = target;
+        if (!s3video.seeking && Math.abs(s3video.currentTime - target) > 0.034) s3video.currentTime = target;
       }
       s3cards.forEach((c, i) => {
         const [a, b] = s3Windows[i];
@@ -237,7 +238,7 @@ export default function CinematicShowcase() {
       setOT(s4L, inn * (1 - out), lerp(20, 0, inn));
       if (video4Ready && visible) {
         const target = (reduce ? 0.16 : clamp(p)) * (video4Dur - 0.04);
-        if (Math.abs(s4video.currentTime - target) > 0.001) s4video.currentTime = target;
+        if (!s4video.seeking && Math.abs(s4video.currentTime - target) > 0.034) s4video.currentTime = target;
       }
     };
 
@@ -264,7 +265,7 @@ export default function CinematicShowcase() {
       setOT(s5L, inn * (1 - out), lerp(20, 0, inn));
       if (video5Ready && visible) {
         const target = (reduce ? 0.16 : clamp(p)) * (video5Dur - 0.04);
-        if (Math.abs(s5video.currentTime - target) > 0.001) s5video.currentTime = target;
+        if (!s5video.seeking && Math.abs(s5video.currentTime - target) > 0.034) s5video.currentTime = target;
       }
     };
 
@@ -315,23 +316,26 @@ export default function CinematicShowcase() {
         const v = e.target as HTMLVideoElement;
         v.preload = 'auto';
         v.load();
-        // iOS Safari won't paint seeked frames until the (muted, playsinline)
-        // video has been primed with a play/pause once data is available.
-        const prime = () => {
-          v.play().then(() => { v.pause(); }).catch(() => { /* ignore */ });
-          v.removeEventListener('loadeddata', prime);
-        };
+        // Prime the first frame with a tiny seek so iOS paints it. (A
+        // play()/pause() prime caused videos to visibly play on phones when
+        // the pause landed late.)
+        const prime = () => { if (v.currentTime === 0) v.currentTime = 0.001; };
         v.addEventListener('loadeddata', prime, { once: true });
         videoIO.unobserve(v);
       }),
-      { rootMargin: '200% 0px 200% 0px' },
+      { rootMargin: '350% 0px 350% 0px' },
     );
-    qa<HTMLVideoElement>('.cin-video').forEach((v) => videoIO.observe(v));
+    const videos = qa<HTMLVideoElement>('.cin-video');
+    videos.forEach((v) => videoIO.observe(v));
+    // Hard guard: scrub videos must never play.
+    const noPlay = (e: Event) => (e.target as HTMLVideoElement).pause();
+    videos.forEach((v) => v.addEventListener('play', noPlay));
 
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
       videoIO.disconnect();
+      videos.forEach((v) => v.removeEventListener('play', noPlay));
       s1video.removeEventListener('loadedmetadata', onMeta);
       s2video.removeEventListener('loadedmetadata', onMeta2);
       s3video.removeEventListener('loadedmetadata', onMeta3);

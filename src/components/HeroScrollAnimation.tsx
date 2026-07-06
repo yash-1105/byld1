@@ -19,18 +19,24 @@ export default function HeroScrollAnimation() {
     const onMeta = () => { ready.current = true; dur.current = v.duration || 8; };
     if (v.readyState >= 1) onMeta();
     else v.addEventListener('loadedmetadata', onMeta);
-    // iOS Safari defers loading (even with preload="auto") until load() is called,
-    // and won't paint seeked frames until the video has been primed with a
-    // muted play/pause. Without this the hero renders as a black screen on iPhone.
+    // iOS Safari defers loading (even with preload="auto") until load() is
+    // called — without it the hero renders as a black screen on iPhone.
     v.load();
+    // Prime the first frame with a tiny seek (paints without playing). The
+    // earlier play()/pause() prime caused the video to visibly play on phones
+    // when the pause landed late.
     const prime = () => {
-      v.play().then(() => { v.pause(); v.currentTime = 0; }).catch(() => { /* ignore */ });
+      if (v.currentTime === 0) v.currentTime = 0.001;
       v.removeEventListener('loadeddata', prime);
     };
     v.addEventListener('loadeddata', prime);
+    // Hard guard: this video must never play — it's a scroll scrubber.
+    const noPlay = () => v.pause();
+    v.addEventListener('play', noPlay);
     return () => {
       v.removeEventListener('loadedmetadata', onMeta);
       v.removeEventListener('loadeddata', prime);
+      v.removeEventListener('play', noPlay);
     };
   }, []);
 
@@ -40,7 +46,9 @@ export default function HeroScrollAnimation() {
       const v = videoRef.current;
       if (!v || !ready.current) return;
       const target = Math.max(0, Math.min(1, progress)) * (dur.current - 0.04);
-      if (Math.abs(v.currentTime - target) > 0.001) v.currentTime = target;
+      // Skip while a seek is in flight and throttle to ~1 frame of granularity —
+      // issuing a new seek every scroll event makes iOS flash black frames.
+      if (!v.seeking && Math.abs(v.currentTime - target) > 0.034) v.currentTime = target;
     });
     return () => unsubscribe();
   }, [scrollYProgress]);
@@ -69,7 +77,7 @@ export default function HeroScrollAnimation() {
             whole shot is visible; desktop keeps the full-bleed cover crop. */}
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-contain object-[center_22%] md:object-cover md:object-center"
+          className="absolute inset-0 w-full h-full object-contain object-[center_22%] md:object-cover md:object-center [transform:translateZ(0)] [backface-visibility:hidden]"
           muted
           playsInline
           preload="auto"

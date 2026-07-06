@@ -152,6 +152,11 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  /* keep the video on its own GPU layer — rapid currentTime seeks otherwise
+     trigger full repaints that flash the dark letterbox background (worst in
+     the installed PWA's standalone webview) */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Scene 1 immersive hero: large video with copy overlaid */
@@ -168,6 +173,10 @@
   overflow: hidden;
   background: #0c0d10;
   box-shadow: var(--shadow-card);
+  /* own compositing layer: rounded-corner clipping over a seeking <video>
+     otherwise flickers on iOS/PWA */
+  transform: translateZ(0);
+  isolation: isolate;
 }
 .cin-hero-scrim {
   position: absolute;
