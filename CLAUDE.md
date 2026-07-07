@@ -44,6 +44,8 @@ When adding a new entity, follow the established pattern exactly (it repeats per
 
 **AuthContext** (`src/contexts/AuthContext.tsx`) restores session from localStorage on mount, fetches the user profile from the `users` table, and provides `{ user, isAuthenticated, loading, signOut }`.
 
+`addTask` in DataContext is `mutateAsync`-backed (returns a `Promise`, not fire-and-forget) so bulk-creation flows (Meeting-to-Tasks) can await each insert and attribute failures per task; the insert also writes `assigned_to` (previously silently dropped — only `updateTask` wrote it).
+
 ### Role System
 
 Four roles: `architect`, `contractor`, `client`, `consultant`. Role is stored in the `users` table and drives:
@@ -122,23 +124,33 @@ Folders in use: `site-updates/<projectId>/`, `approvals/`, `chat/<conversationId
 
 ### AI Integration
 
-Gemini 2.5 Flash via `@google/generative-ai`. Key files:
-- `src/components/AIAssistant.tsx` — floating chat widget, streams responses, injects current project data as context
-- `src/components/ai/AISummaryPanel.tsx` — summarizes site updates
-- `src/components/ai/AIInsightsPanel.tsx` — generates structured project health insights
+Gemini 2.5 Flash via `@google/generative-ai`, called client-side (`VITE_GEMINI_API_KEY` in `.env`). All Gemini call sites share `src/lib/ai.ts` (`getAI()` lazy singleton, `getModel({ json, responseSchema, systemInstruction })`, `parseAIJson<T>()` — fence-strips markdown and falls back to extracting the outermost `[]`/`{}` span) and `src/lib/aiContext.ts` (pure, hook-free helpers: `compactContext()` trims workspace entities to prompt-relevant fields, `computePortfolioMetrics()` precomputes overdue/budget/approval-age/delivery-risk numbers in TS so the model never does arithmetic, `dataFingerprint()` is a cheap change-hash for cache invalidation). Never instantiate `GoogleGenerativeAI` directly outside `ai.ts`.
 
-Requires `VITE_GEMINI_API_KEY` in `.env`.
+- **`src/components/AIAssistant.tsx`** — floating chat, mounted globally in `App.tsx` for authenticated users. Grounded in the full workspace (projects/tasks/budget/siteUpdates/approvals/purchaseOrders/reimbursements/notifications) via `compactContext` + `computePortfolioMetrics`, with a role-conditioned `systemInstruction` (different guidance per architect/contractor/client/consultant). Multi-turn via `startChat`, history capped at 20 sent / 50 persisted. **History persists to localStorage** (`byld.ai.assistant.v1:{userId}`, per-user keyed) so it survives reloads; a header Trash button clears it. Full-screen sheet layout on mobile (`useIsMobile()`), floating `w-96` panel on desktop. Gotcha: Gemini's `startChat` history must start with a `'user'` turn — the hardcoded greeting message is `role: 'assistant'`/`'model'` and must never be the first item sent (leading `model` turns are stripped before the API call).
+- **`src/components/ai/AIInsightsPanel.tsx`** — "Analyze Project" (opened via `useAnalyzeDialog` in `BentoKit.tsx`, all 4 dashboards) returns a structured JSON array (`responseSchema`) of predictive risk insights — schedule slip, budget trajectory, approval bottlenecks (>5 days), delivery risk, assignee overload — each with `projectName` (click-through to `/projects/:id`) and a `recommendation`. Cached per-user in localStorage (`byld.ai.insights.v1:{userId}`) with a `dataFingerprint` staleness check; never auto-fires on mount.
+- **`src/components/ai/AISummaryPanel.tsx`** — date-ranged (today/7d/custom) executive markdown digest of site updates only. Rendered in the analyze dialog and in `SiteUpdatesPage.tsx`'s Timeline tab (reordered `order-last` on mobile so real updates show above the digest).
+- **`src/components/ai/ClientUpdateComposer.tsx`** (lazy, opened from a "Client Update" button on `SiteUpdatesPage.tsx`, architect/contractor only) — drafts a client-facing weekly progress update (recently-completed tasks, upcoming milestones, site updates, budget movement, pending client-visible approvals) from `buildClientUpdateDigest()` in `aiContext.ts`, editable with a preview tab, then delivered via **in-app chat** (`src/services/clientUpdateService.ts`: `findProjectClients()` + `sendClientUpdate()`, which reuses or creates a direct conversation through `chatService`). Draft autosaves to `byld.ai.clientupdate.v1:{userId}:{projectId}` until sent.
+- **`src/components/ai/MeetingToTasksDialog.tsx`** (lazy, opened from a "From Meeting Notes" button on `TasksPage.tsx`) — paste meeting notes → structured extraction (title/description/priority/assigneeName/deadline) resolved against the project's team roster (exact then unique-first-name match; unmatched names show inline for manual assignment), editable preview, then bulk `addTask()`. Depends on `addTaskMutation` writing `assigned_to` on insert (see DataContext below) and `addTask` being promise-returning (`mutateAsync`) so per-task failures can be attributed.
+- **Smart Search / Ask AI** — `src/components/layout/bento/CommandPalette.tsx` (⌘K) searches approvals, site updates, and purchase orders in addition to projects/tasks (role-gated, no longer capped at 8 items), and adds an explicit "Ask BYLD AI" row (never auto-fires) that switches the dialog into an answer view: a structured `{answer, links}` response, with links validated client-side against real project ids / role-allowed routes before rendering.
+
+Fix history: the `BudgetPage.tsx` receipt-scan model fallback chain used to start with a nonexistent `gemini-3.5-flash` (always failed, wasting a round-trip) — chain is now `gemini-2.5-flash → gemini-2.0-flash → gemini-flash-latest` via the shared `ai.ts` client.
+
+### Google Drive Integration
+
+Per-user OAuth tokens stored in `drive_connections`. Key files: `supabase/functions/google-auth-url/index.ts` (generates the OAuth URL, `drive.readonly` scope, carries `userId|encodeURIComponent(origin)` in `state`), `supabase/functions/google-auth-callback/index.ts` (**`verify_jwt = false`** — Google's redirect can't carry a Supabase auth header; decodes `state`, restricted to an **origin allowlist** — `localhost:5173`, `localhost:8080`, the prod Vercel URL — before redirecting back to `${origin}/settings`, falling back to `APP_URL`), `src/components/drive/DriveIntegration.tsx` (connect/disconnect card in Settings → Integrations, passes `window.location.origin` when invoking `google-auth-url`). `include_granted_scopes=true` on both Drive's and Calendar's auth-url functions prevents one integration's re-auth from dropping the other's grant (they share the same OAuth client).
 
 ### Google Calendar Integration
 
-Mirrors the Drive integration pattern exactly. Per-user OAuth tokens stored in `calendar_connections` (same shape as `drive_connections`). Uses the **same Google OAuth client** as Drive — `GOOGLE_DRIVE_CLIENT_ID` / `GOOGLE_DRIVE_CLIENT_SECRET` are reused. Both auth-url functions include `include_granted_scopes=true` to prevent one from dropping the other's grant when re-authorising.
+Mirrors the Drive integration pattern (same shared OAuth client — `GOOGLE_DRIVE_CLIENT_ID` / `GOOGLE_DRIVE_CLIENT_SECRET` — and the same origin-carrying `state` param). Per-user OAuth tokens stored in `calendar_connections` (same shape as `drive_connections`).
 
 Key files:
-- `supabase/functions/google-calendar-auth-url/index.ts` — generates OAuth URL with `calendar.readonly` scope; carries `userId|encodeURIComponent(origin)` in `state` so the callback returns the user to wherever they started (localhost or prod)
-- `supabase/functions/google-calendar-callback/index.ts` — **`verify_jwt = false`** (set in `supabase/config.toml`) because Google's browser redirect can't send a Supabase auth header; upserts into `calendar_connections`, redirects to `${APP_URL}/dashboard?success=calendar_connected`
-- `supabase/functions/google-calendar-events/index.ts` — fetches next N days from Google Calendar API; full 401 → `refreshAccessToken()` → update DB → retry pattern (identical to `google-drive-folders`)
-- `src/hooks/useCalendarEvents.ts` — two `useQuery` hooks: connection state + events (enabled only when connected); `staleTime: 5min`
-- `src/components/dashboards/GoogleCalendarWidget.tsx` — rendered for **all four roles** on the dashboard; states: loading / not-connected CTA / error+reconnect / empty / events grouped by day
+- `supabase/functions/google-calendar-auth-url/index.ts` — generates OAuth URL with the **`calendar.events`** scope (superset of `calendar.readonly` — covers both listing and creating/editing/deleting events); carries `userId|encodeURIComponent(origin)` in `state`
+- `supabase/functions/google-calendar-callback/index.ts` — **`verify_jwt = false`**; upserts into `calendar_connections`, redirects to `${APP_URL}/dashboard?success=calendar_connected`
+- `supabase/functions/google-calendar-events/index.ts` — fetches next N days (read-only); full 401 → `refreshAccessToken()` → update DB → retry pattern (identical to `google-drive-folders`)
+- `supabase/functions/google-calendar-event-write/index.ts` — create/update/delete against the Calendar API (`action: 'create'|'update'|'delete'` in the request body), same token-refresh pattern. A 403 from Google returns `{ error: 'insufficient_scope' }` — the stored token predates the `calendar.events` scope (granted before this feature shipped) and the user must reconnect.
+- `src/hooks/useCalendarEvents.ts` — connection + events `useQuery` hooks (`staleTime: 5min`), plus `createEvent`/`updateEvent`/`deleteEvent` mutations. `InsufficientCalendarScopeError` is thrown when the edge function reports `insufficient_scope`; callers should catch it and prompt reconnect (see the widget's `handleInsufficientScope`).
+- `src/components/dashboards/GoogleCalendarWidget.tsx` — rendered for **all four roles**; a `+` button opens `CalendarEventDialog` to schedule, hover-revealed pencil/trash icons on each event edit/cancel it. **Existing connections only granted `calendar.readonly`** — the widget surfaces a "Reconnect Google Calendar to enable scheduling" toast with a one-click reconnect action rather than failing silently.
+- `src/components/dashboards/CalendarEventDialog.tsx` — shared create/edit form (title, all-day toggle, date/time, location, notes) → `CalendarEventDraft`, mapped to the Google event shape in `useCalendarEvents.ts`'s `draftToGoogleEvent()`.
 - `src/components/calendar/CalendarIntegration.tsx` — connect/disconnect card in Settings → Integrations
 
 Supabase secrets required: `GOOGLE_CALENDAR_REDIRECT_URI`, `APP_URL` (production origin, no trailing slash). `APP_URL` trailing slash causes a double-slash redirect bug — always strip with `.replace(/\/+$/, '')`.
@@ -184,10 +196,32 @@ The older static showcase (`src/components/showcase/`, `featureData.ts`) is no l
 
 - **Tailwind utility classes** `soft-card`, `glass-card`, `gradient-primary`, `text-primary`, `text-success`, `text-warning`, `text-destructive` are defined in `src/index.css` and used throughout — prefer these over inline color definitions.
 - **Framer Motion** for all animations. Standard pattern: `initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}`.
-- **shadcn/ui** components live in `src/components/ui/`. The component library is Radix UI primitives styled with Tailwind.
+- **shadcn/ui** components live in `src/components/ui/`. The component library is Radix UI primitives styled with Tailwind. `src/components/ui/password-input.tsx` (`PasswordInput`) wraps `Input` with a show/hide eye-icon toggle — use it for every password field instead of a bare `<Input type="password">`.
 - **Recharts** for all data visualizations (BarChart, PieChart, LineChart).
 - **sonner** (`toast.success/error`) for all user feedback toasts.
 - **BrandLogo** (`src/components/BrandLogo.tsx`) must be used everywhere a logo appears — never the PNG (`public/images/byld-logo.png` is an unusable 3464×3464 image with mostly whitespace).
+- **`.scrollbar-none`** (defined in `src/index.css`) hides the scrollbar on horizontal chip/tab rows — used across Tasks, Approvals, Timeline, Budget, Documents, Site Updates, Team, Procurement. Always pair `overflow-x-auto` with this class rather than leaving a visible scrollbar on mobile chip rows.
+
+### Mobile / responsive patterns (dashboard app, not the landing page)
+
+The authenticated app (everything under `DashboardLayout`) follows a few repeated mobile patterns — reuse these rather than inventing new ones:
+- **Bento grid**: `BentoGrid` (`src/components/dashboards/bento/BentoKit.tsx`) is `grid-cols-2` on mobile (`lg:grid-cols-12` on desktop) — dashboard tiles use `col-span-1`/`col-span-2` to pair KPI tiles side-by-side while content tiles stay full-width, instead of one long linear column. Applied identically across all four role dashboards.
+- **Kanban / status boards**: `TasksPage.tsx` shows one column at a time on mobile via status chips (with counts) plus explicit prev/next move buttons per card — **HTML5 `draggable`/`onDragStart` never fires on touch**, so any future drag-and-drop board needs an equivalent tap-to-move fallback, not just a responsive grid.
+- **Wide data tables / Gantt charts**: make the leading label column `sticky left-0` (see `TimelinePage.tsx`'s Gantt task-name column) so it doesn't scroll away when the user swipes through wide horizontal content; give the scroll container a `min-w-[...]` on the inner table rather than letting columns crush illegibly (see `BudgetPage.tsx` expenses table).
+- **Category/filter lists**: prefer a real sidebar on desktop (`md:` breakpoint) with the same list rendered as horizontal `scrollbar-none` chips on mobile (see `DocumentsPage.tsx` categories), so filtering never pushes primary content below the fold.
+- **Compact stat strips**: 3–4 KPI cards collapse to a dense single row with shortened labels on mobile rather than stacking (see Approvals, Timeline, Budget summary cards) — icons hide first, then labels abbreviate, before font sizes shrink.
+- Always verify touch-only affordances (hover-revealed buttons, drag handles) have a tap-accessible equivalent — the Team page's remove-member button was hover-only (`opacity-0 group-hover:opacity-100`) and therefore unreachable on phones until scoped to `sm:opacity-0 sm:group-hover:opacity-100`.
+
+### Liquid glass material (`.app-glass`)
+
+The authenticated app shell (nav bars + all dashboard/page cards) uses a frosted-glass material, defined entirely in `src/index.css` and scoped by the `.app-glass` class on `DashboardLayout.tsx`'s root div — **the marketing/landing page and any Radix portal content (dialogs, popovers, dropdowns render to `document.body`) are structurally outside this scope and unaffected.**
+
+- Every fill is an alpha-adjusted version of an existing token (`--card`, ink `#1e2419`, sage) — no new hues, fonts, or spacing were introduced.
+- `Tile` (`BentoKit.tsx`) renders `lg-tile` (light) or `lg-tile-dark` (dark, for the AI Insights tile — dark surfaces stay dark, never recolored light); `soft-card`/`glass-card`/`bg-card.rounded-2xl` utility classes get the same treatment automatically. Small elements (`bg-card.rounded-xl`/`rounded-lg` — chips, inputs, kanban cards) get translucency + an edge highlight but **no `backdrop-filter`**, to keep compositing cheap when dozens render on a phone at once.
+- `DashboardLayout.tsx`'s root background carries four sage radial gradients (alpha-adjusted `C.sage`/`C.sageLight`) — the blur needs visible tonal variation behind it to read as glass; a flat background makes any backdrop-filter invisible regardless of blur radius.
+- `@supports (backdrop-filter: blur(1px))` gates the actual blur (`blur(24px) saturate(160%)` on tiles/cards, `blur(20px)` on nav panes); browsers without support get a near-solid fallback fill. `@media (prefers-reduced-transparency: reduce)` restores fully solid fills for users who opt out.
+- All glass rules use `!important` — Tailwind utility classes like `bg-card` would otherwise win on specificity/cascade order and silently strip the effect.
+- When adding a new authenticated-app card, use an existing class (`soft-card`, `glass-card`, `lg-tile`) rather than a bespoke `bg-card rounded-2xl border` combination, so it picks up the glass treatment automatically.
 
 ### Environment Variables
 
@@ -212,6 +246,7 @@ Reimbursements & approvals additions (all applied to remote):
 **Caveats:**
 - The `purchase_orders` table was created directly in the Supabase SQL editor, so its migration file exists in the repo but is **not** recorded in the remote migration history. A future `supabase db push` may error trying to re-create it — resolve with `npx supabase migration repair --status applied 20260609000000`.
 - `20260611000001_add_payments.sql` created a `payments` table that is **no longer used** (the Payments feature was removed). The migration file is kept for history integrity; the orphaned remote table can be dropped with a future migration if desired. No app code references it.
+- `supabase/config.toml`'s `project_id` **must be `qnriqsnuebcxxzcfxfsv`** (the hosted project referenced throughout this doc). It drifted to a stale/unrelated ref (`pikleinlgnhvikolifjc`) at some point; if `supabase link`/`functions deploy` behave unexpectedly or target the wrong project, check this value first.
 
 ### Deployment
 
