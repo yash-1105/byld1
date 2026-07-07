@@ -28,8 +28,8 @@ export default function DashboardLayout() {
       <div className="min-h-screen w-full" style={{ background: C.canvas }}>
         <BentoTopBar onOpenSearch={() => setCmdOpen(true)} />
         <BentoModuleRail />
-        <main className="px-4 sm:px-[22px] py-5 sm:py-6">
-          <div className="max-w-[1320px] mx-auto">
+        <main className="px-4 sm:px-[22px] 2xl:px-8 py-5 sm:py-6">
+          <div className="w-full max-w-[1920px] mx-auto">
             <motion.div
               key={location.pathname}
               initial={{ opacity: 0, y: 6 }}
