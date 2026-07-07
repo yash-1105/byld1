@@ -100,6 +100,7 @@ serve(async (req) => {
         hangoutLink: e.hangoutLink || null,
         htmlLink: e.htmlLink || null,
         attendeesCount: Array.isArray(e.attendees) ? e.attendees.length : 0,
+        description: e.description || null,
       }));
 
     return new Response(JSON.stringify({ events }), {

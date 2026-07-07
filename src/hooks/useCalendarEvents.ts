@@ -1,9 +1,53 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import type { CalendarConnection, CalendarEvent } from '@/types/calendar';
+import type { CalendarConnection, CalendarEvent, CalendarEventDraft } from '@/types/calendar';
 
 const WINDOW_DAYS = 7;
+
+/** Thrown when the stored Google token predates the calendar.events write scope. */
+export class InsufficientCalendarScopeError extends Error {
+  constructor() {
+    super('Reconnect Google Calendar to enable scheduling — your last connection only allows viewing events.');
+    this.name = 'InsufficientCalendarScopeError';
+  }
+}
+
+function draftToGoogleEvent(draft: CalendarEventDraft) {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return {
+    summary: draft.summary,
+    description: draft.description || undefined,
+    location: draft.location || undefined,
+    start: draft.allDay
+      ? { date: draft.date }
+      : { dateTime: `${draft.date}T${draft.startTime}:00`, timeZone },
+    end: draft.allDay
+      ? { date: draft.date }
+      : { dateTime: `${draft.date}T${draft.endTime}:00`, timeZone },
+  };
+}
+
+async function invokeEventWrite(body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke('google-calendar-event-write', { body });
+  if (error) {
+    let detail = error.message;
+    let isScopeError = false;
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        const parsedBody = await ctx.json();
+        if (parsedBody?.error === 'insufficient_scope') isScopeError = true;
+        else if (parsedBody?.error) detail = parsedBody.error;
+      }
+    } catch { /* keep generic message */ }
+    if (isScopeError) throw new InsufficientCalendarScopeError();
+    throw new Error(detail);
+  }
+  if (data?.error === 'insufficient_scope') throw new InsufficientCalendarScopeError();
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
 
 /**
  * Per-user Google Calendar access for the dashboard widget / settings card.
@@ -82,6 +126,26 @@ export function useCalendarEvents() {
     queryClient.removeQueries({ queryKey: ['calendar-events', user.id] });
   };
 
+  const invalidateEvents = () => queryClient.invalidateQueries({ queryKey: ['calendar-events', user?.id] });
+
+  const createEventMutation = useMutation({
+    mutationFn: (draft: CalendarEventDraft) =>
+      invokeEventWrite({ userId: user!.id, action: 'create', event: draftToGoogleEvent(draft) }),
+    onSuccess: invalidateEvents,
+  });
+
+  const updateEventMutation = useMutation({
+    mutationFn: ({ eventId, draft }: { eventId: string; draft: CalendarEventDraft }) =>
+      invokeEventWrite({ userId: user!.id, action: 'update', eventId, event: draftToGoogleEvent(draft) }),
+    onSuccess: invalidateEvents,
+  });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: (eventId: string) =>
+      invokeEventWrite({ userId: user!.id, action: 'delete', eventId }),
+    onSuccess: invalidateEvents,
+  });
+
   return {
     connection: connectionQuery.data ?? null,
     isConnected,
@@ -95,7 +159,13 @@ export function useCalendarEvents() {
     disconnect,
     refetch: () => {
       queryClient.invalidateQueries({ queryKey: ['calendar-connection', user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['calendar-events', user?.id] });
+      invalidateEvents();
     },
+    createEvent: createEventMutation.mutateAsync,
+    updateEvent: (eventId: string, draft: CalendarEventDraft) => updateEventMutation.mutateAsync({ eventId, draft }),
+    deleteEvent: deleteEventMutation.mutateAsync,
+    creatingEvent: createEventMutation.isPending,
+    updatingEvent: updateEventMutation.isPending,
+    deletingEvent: deleteEventMutation.isPending,
   };
 }

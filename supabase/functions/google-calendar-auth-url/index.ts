@@ -25,8 +25,10 @@ serve(async (req) => {
       throw new Error('Google OAuth credentials not configured.');
     }
 
+    // calendar.events grants read/write access to events (create, update, delete) —
+    // a superset of calendar.readonly, so this single scope covers listing and mutating.
     const scope = encodeURIComponent(
-      'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/userinfo.email'
+      'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email'
     );
     // Carry the originating site in state so the callback can return the user
     // to where they started (localhost during dev, prod otherwise).

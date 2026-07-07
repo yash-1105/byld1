@@ -20,4 +20,16 @@ export interface CalendarEvent {
   hangoutLink?: string | null;
   htmlLink?: string | null;
   attendeesCount?: number;
+  description?: string | null;
+}
+
+/** Form-shaped payload for creating/updating a Google Calendar event. */
+export interface CalendarEventDraft {
+  summary: string;
+  description?: string;
+  location?: string;
+  allDay: boolean;
+  date: string;       // YYYY-MM-DD
+  startTime: string;  // HH:mm, ignored when allDay
+  endTime: string;    // HH:mm, ignored when allDay
 }
