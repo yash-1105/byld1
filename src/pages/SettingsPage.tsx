@@ -11,6 +11,7 @@ import DriveIntegration from '@/components/drive/DriveIntegration';
 import CalendarIntegration from '@/components/calendar/CalendarIntegration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -122,7 +123,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-2xl pb-20">
+    <div className="space-y-6 max-w-2xl mx-auto pb-20">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your account preferences</p>
@@ -321,15 +322,15 @@ export default function SettingsPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="cur-pw">Current password</Label>
-              <Input id="cur-pw" type="password" value={curPw} onChange={e => setCurPw(e.target.value)} autoComplete="current-password" />
+              <PasswordInput id="cur-pw" value={curPw} onChange={e => setCurPw(e.target.value)} autoComplete="current-password" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-pw">New password</Label>
-              <Input id="new-pw" type="password" value={newPw} onChange={e => setNewPw(e.target.value)} autoComplete="new-password" />
+              <PasswordInput id="new-pw" value={newPw} onChange={e => setNewPw(e.target.value)} autoComplete="new-password" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirm-pw">Confirm new password</Label>
-              <Input id="confirm-pw" type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} autoComplete="new-password" />
+              <PasswordInput id="confirm-pw" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} autoComplete="new-password" />
             </div>
           </div>
           <DialogFooter>

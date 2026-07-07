@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, HardHat, User, Briefcase, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Building2, HardHat, User, Briefcase, ArrowRight, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import BrandLogo from '@/components/BrandLogo';
 
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,14 +155,25 @@ export default function LoginPage() {
           
           <div>
             <label className="text-sm font-medium mb-1.5 block text-muted-foreground">Password</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border bg-background/50 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full px-4 py-2.5 pr-11 rounded-xl border bg-background/50 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-0 flex items-center px-3.5 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {errorMsg && (
