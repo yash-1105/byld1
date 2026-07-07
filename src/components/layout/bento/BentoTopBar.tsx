@@ -16,10 +16,7 @@ export default function BentoTopBar({ onOpenSearch }: { onOpenSearch: () => void
   const unread = notifications.filter(n => !n.read).length;
 
   return (
-    <header
-      className="h-[62px] flex items-center justify-between gap-4 px-4 sm:px-[22px] sticky top-0 z-30"
-      style={{ background: C.white, borderBottom: `1px solid ${C.hairSoft}` }}
-    >
+    <header className="lg-nav h-[62px] flex items-center justify-between gap-4 px-4 sm:px-[22px] sticky top-0 z-30">
       {/* left: logo + role */}
       <div className="flex items-center gap-5 min-w-0">
         <BrandLogo size="lg" />

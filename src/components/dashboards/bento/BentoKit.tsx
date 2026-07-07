@@ -57,13 +57,11 @@ export function Tile({
     <div
       onClick={onClick}
       style={{
-        background: dark ? C.ink : C.white,
-        border: dark ? 'none' : `1px solid ${C.border}`,
-        borderRadius: 14,
+        borderRadius: 16,
         color: dark ? C.onDarkText : C.ink,
         ...style,
       }}
-      className={`p-[16px_17px] transition-shadow duration-150 ${onClick ? 'cursor-pointer hover:shadow-[0_4px_14px_rgba(38,46,33,0.10)]' : ''} ${className}`}
+      className={`p-[16px_17px] border ${dark ? 'lg-tile-dark' : 'lg-tile'} ${onClick ? 'cursor-pointer' : ''} ${className}`}
     >
       {children}
     </div>

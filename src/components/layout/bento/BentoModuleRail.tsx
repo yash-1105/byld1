@@ -29,10 +29,7 @@ export default function BentoModuleRail() {
   const overflowActive = overflow.some(n => isActive(location.pathname, n.path));
 
   return (
-    <nav
-      className="flex items-center gap-[3px] px-3 sm:px-[18px] py-[7px] sticky top-[62px] z-20 overflow-x-auto no-scrollbar"
-      style={{ background: C.white, borderBottom: `1px solid ${C.hairSoft}` }}
-    >
+    <nav className="lg-nav flex items-center gap-[3px] px-3 sm:px-[18px] py-[7px] sticky top-[62px] z-20 overflow-x-auto no-scrollbar">
       {/* mobile: all-modules bottom sheet (the pill rail scrolls, but this makes
           every module + the project switcher reachable without hunting) */}
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>

@@ -25,7 +25,20 @@ export default function DashboardLayout() {
 
   return (
     <ActiveProjectProvider>
-      <div className="min-h-screen w-full" style={{ background: C.canvas }}>
+      <div
+        className="min-h-screen w-full app-glass"
+        style={{
+          // Sage ambience (existing palette tones only, alpha-adjusted) — the
+          // liquid-glass panels need clearly visible tonal variation behind
+          // them or the backdrop blur has nothing to frost.
+          background: `
+            radial-gradient(880px 620px at 10% -6%, rgba(166, 197, 135, 0.45), transparent 68%),
+            radial-gradient(760px 580px at 98% 34%, rgba(74, 93, 64, 0.28), transparent 66%),
+            radial-gradient(840px 660px at 8% 96%, rgba(166, 197, 135, 0.38), transparent 66%),
+            radial-gradient(520px 420px at 58% 52%, rgba(74, 93, 64, 0.14), transparent 70%),
+            ${C.canvas}`,
+        }}
+      >
         <BentoTopBar onOpenSearch={() => setCmdOpen(true)} />
         <BentoModuleRail />
         <main className="px-4 sm:px-[22px] 2xl:px-8 py-5 sm:py-6">

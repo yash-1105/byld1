@@ -80,6 +80,161 @@
   }
 }
 
+/* ═══ Liquid glass — authenticated app surfaces only ═══════════════════════
+   Scoped by .app-glass on DashboardLayout: marketing/landing pages and
+   portal-rendered dialogs/popovers are never affected. Fills are alpha
+   adjustments of existing tokens (card white / ink / sage) — no new hues.
+   backdrop-filter is guarded by @supports; base rules are the readable
+   no-blur fallback. !important guards against utility-class overrides. */
+
+.app-glass {
+  --lg-blur: 24px;
+  --lg-nav-blur: 20px;
+}
+
+/* ── Light glass: card utilities, bento tiles, large bg-card panels ── */
+.app-glass .glass-card,
+.app-glass .glass-card-hover,
+.app-glass .soft-card,
+.app-glass .soft-card-hover,
+.app-glass .lg-tile,
+.app-glass .bg-card.rounded-2xl {
+  position: relative;
+  background: hsl(var(--card) / 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  box-shadow:
+    0 8px 32px rgba(74, 93, 64, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 500ms;
+}
+
+/* Top-light catch: visible gradient overlay on every glass pane.
+   Strong only in the top ~12% (padding zone) then fades fast, so text
+   contrast is untouched where content actually sits. */
+.app-glass .glass-card::before,
+.app-glass .glass-card-hover::before,
+.app-glass .soft-card::before,
+.app-glass .soft-card-hover::before,
+.app-glass .lg-tile::before,
+.app-glass .bg-card.rounded-2xl::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 12%, transparent 40%);
+}
+
+/* ── Dark glass: ink surfaces (AI Insights tile) stay dark, frosted ── */
+.app-glass .lg-tile-dark {
+  position: relative;
+  background: rgb(30 36 25 / 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow:
+    0 8px 32px rgba(30, 36, 25, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.app-glass .lg-tile-dark::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, transparent 45%);
+}
+
+/* ── Nav panes (top bar + module rail) ── */
+.app-glass .lg-nav {
+  background: hsl(var(--card) / 0.92) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 1px 0 rgba(74, 93, 64, 0.10),
+    0 8px 24px rgba(74, 93, 64, 0.10) !important;
+}
+
+/* ── Glass-lite for small elements (chips, inputs, kanban cards):
+      translucent + edged but NO blur, to keep phone compositing cheap ── */
+.app-glass .bg-card.rounded-xl,
+.app-glass .bg-card.rounded-lg {
+  background-color: hsl(var(--card) / 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* ── Hover: highlight + edge intensify (tactile glass) ── */
+.app-glass .glass-card-hover:hover,
+.app-glass .soft-card-hover:hover {
+  background: hsl(var(--card) / 0.88) !important;
+  border-color: rgba(255, 255, 255, 0.85) !important;
+  box-shadow:
+    0 20px 48px rgba(74, 93, 64, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
+}
+.app-glass .lg-tile:hover {
+  border-color: rgba(255, 255, 255, 0.8) !important;
+}
+.app-glass .lg-tile.cursor-pointer:hover {
+  box-shadow:
+    0 16px 40px rgba(74, 93, 64, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+.app-glass .lg-tile-dark.cursor-pointer:hover {
+  border-color: rgba(255, 255, 255, 0.24) !important;
+}
+
+/* ── The actual frosting, where supported ── */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .app-glass .glass-card,
+  .app-glass .glass-card-hover,
+  .app-glass .soft-card,
+  .app-glass .soft-card-hover,
+  .app-glass .lg-tile,
+  .app-glass .bg-card.rounded-2xl {
+    background: hsl(var(--card) / 0.75) !important;
+    -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(160%) !important;
+    backdrop-filter: blur(var(--lg-blur)) saturate(160%) !important;
+  }
+  .app-glass .glass-card-hover:hover,
+  .app-glass .soft-card-hover:hover {
+    background: hsl(var(--card) / 0.82) !important;
+  }
+  .app-glass .lg-tile-dark {
+    background: rgb(30 36 25 / 0.8) !important;
+    -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(160%) !important;
+    backdrop-filter: blur(var(--lg-blur)) saturate(160%) !important;
+  }
+  .app-glass .lg-nav {
+    background: hsl(var(--card) / 0.72) !important;
+    -webkit-backdrop-filter: blur(var(--lg-nav-blur)) saturate(160%) !important;
+    backdrop-filter: blur(var(--lg-nav-blur)) saturate(160%) !important;
+  }
+}
+
+/* Users who opt out of transparency get solid fills, no blur */
+@media (prefers-reduced-transparency: reduce) {
+  .app-glass .glass-card,
+  .app-glass .glass-card-hover,
+  .app-glass .soft-card,
+  .app-glass .soft-card-hover,
+  .app-glass .lg-tile,
+  .app-glass .bg-card.rounded-2xl,
+  .app-glass .lg-nav {
+    background: hsl(var(--card)) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .app-glass .lg-tile-dark {
+    background: rgb(30 36 25) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .app-glass .bg-card.rounded-xl,
+  .app-glass .bg-card.rounded-lg {
+    background-color: hsl(var(--card)) !important;
+  }
+}
+
 @layer utilities {
   /* Hide scrollbars on horizontal chip/tab rows (used across pages) */
   .scrollbar-none {
