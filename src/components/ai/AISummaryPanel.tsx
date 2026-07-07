@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getModel } from '@/lib/ai';
 
 type Range = 'today' | '7d' | 'custom';
 
@@ -55,9 +55,8 @@ export default function AISummaryPanel({ compact = false }: Props) {
         return;
       }
 
-      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      
+      const model = getModel();
+
       const prompt = `You are an expert construction project manager AI.
 Create an executive communication summary for the following site updates.
 Format it in Markdown using bullet points, bold text for emphasis, and clear headings if necessary.
@@ -71,9 +70,8 @@ ${JSON.stringify(filteredUpdates)}`;
       
       setSummary(text);
       setCount(filteredUpdates.length);
-    } catch (e: any) {
-      const msg = e?.message ?? 'Failed to generate summary';
-      toast.error(msg);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to generate summary');
     } finally {
       setLoading(false);
     }

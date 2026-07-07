@@ -1,36 +1,92 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X, Send, Sparkles } from 'lucide-react';
+import { Bot, X, Send, Sparkles, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import { useData } from '@/contexts/DataContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, type UserRole } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { getModel } from '@/lib/ai';
+import { compactContext, computePortfolioMetrics, type WorkspaceSlices } from '@/lib/aiContext';
 
 interface AIMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-const suggestions = [
-  'What is the project status?',
-  'How many tasks are pending?',
-  'Show budget summary',
-  'Any overdue items?',
-];
+const GREETING: AIMessage = {
+  role: 'assistant',
+  content: "Hi! I'm your BYLD AI assistant. Ask me about your projects, tasks, budget, approvals, or orders.",
+};
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+const STORAGE_PREFIX = 'byld.ai.assistant.v1:';
+const MAX_STORED = 50;
+const MAX_SENT = 20;
+
+const roleGuidance: Record<UserRole, string> = {
+  architect: 'They run the studio. Emphasize portfolio health, approvals awaiting decisions, budget risk, and team workload.',
+  contractor: 'They execute on site. Emphasize their assigned tasks, deadlines, procurement and deliveries, and site activity. Avoid studio-level financial commentary.',
+  client: "They are the paying client. Be reassuring and non-technical. Emphasize progress, milestones, and items awaiting their approval. Never speculate about internal margins or other clients' data.",
+  consultant: 'They advise on specific projects. Emphasize consultations, open questions, and relevant project status.',
+};
+
+const roleSuggestions: Record<UserRole, string[]> = {
+  architect: ['What needs my attention today?', 'Any budget risks across projects?', 'Which approvals are waiting the longest?', 'Who is overloaded with tasks?'],
+  contractor: ['What are my overdue tasks?', 'Any deliveries expected this week?', "What's happening on site?", 'What should I work on next?'],
+  client: ['What progress happened this week?', "What's awaiting my approval?", 'How is the budget tracking?', 'When is the next milestone?'],
+  consultant: ['What is the project status?', 'Any open items that need my input?', 'Summarize recent site activity', 'Any overdue items?'],
+};
 
 export default function AIAssistant() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<AIMessage[]>([
-    { role: 'assistant', content: "Hi! I'm your BYLD AI assistant. Ask me about your projects, tasks, or budget." }
-  ]);
+  const [messages, setMessages] = useState<AIMessage[]>([GREETING]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const saveTimerRef = useRef<number | null>(null);
+  const isMobile = useIsMobile();
   const { user } = useAuth();
-  const { projects, tasks, budgetItems, siteUpdates, notifications } = useData();
+  const {
+    projects, tasks, budgetItems, siteUpdates, notifications,
+    approvals, purchaseOrders, reimbursements, users, projectMembers,
+  } = useData();
+
+  const storageKey = user ? `${STORAGE_PREFIX}${user.id}` : null;
+
+  // Restore per-user conversation history once the user is known.
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          return;
+        }
+      }
+    } catch {
+      localStorage.removeItem(storageKey);
+    }
+    setMessages([GREETING]);
+  }, [storageKey]);
+
+  // Persist history (debounced; skipped while streaming so we don't write every chunk).
+  useEffect(() => {
+    if (!storageKey || streaming) return;
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(messages.slice(-MAX_STORED)));
+      } catch {
+        // quota exceeded — drop persistence silently
+      }
+    }, 500);
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    };
+  }, [messages, streaming, storageKey]);
 
   useEffect(() => {
     if (!open && abortRef.current) {
@@ -40,60 +96,58 @@ export default function AIAssistant() {
     }
   }, [open]);
 
+  const clearConversation = () => {
+    setMessages([GREETING]);
+    if (storageKey) localStorage.removeItem(storageKey);
+  };
+
   const streamChat = async (history: AIMessage[]) => {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const context = {
-      user: user ? { name: user.name, role: user.role } : undefined,
-      projects,
-      tasks,
-      budgetItems,
-      siteUpdates,
-      notifications,
+    const slices: WorkspaceSlices = {
+      projects, tasks, siteUpdates, budgetItems,
+      approvals, purchaseOrders, reimbursements, users, projectMembers,
     };
+    const metrics = computePortfolioMetrics(slices);
+    const compact = compactContext(slices);
+    const recentNotifications = notifications.slice(0, 15).map(n => ({
+      title: n.title, message: n.message, type: n.type, date: n.createdAt?.slice(0, 10),
+    }));
 
-    // Cap history at last 20 messages
-    const trimmed = history.slice(-20);
+    const systemInstruction = `You are BYLD AI, the assistant inside BYLD, a construction project-management app.
+You are speaking with ${user?.name ?? 'a user'}, whose role is "${user?.role ?? 'unknown'}".
+${user ? roleGuidance[user.role] : ''}
+
+Ground every answer ONLY in the WORKSPACE DATA below. If the data doesn't contain the answer, say so plainly — never invent projects, people, or numbers.
+Monetary amounts are in USD base units; repeat them as given and label them USD.
+Be concise. Use short markdown lists where they help. Today's date: ${format(new Date(), 'yyyy-MM-dd')}.
+
+PRE-COMPUTED METRICS (trust these numbers; do not recompute):
+${JSON.stringify(metrics)}
+
+WORKSPACE DATA:
+${JSON.stringify({ ...compact, recentNotifications })}`;
+
+    const trimmed = history.slice(-MAX_SENT);
 
     try {
-      if (!API_KEY) {
-        throw new Error("Gemini API key is missing. Please add VITE_GEMINI_API_KEY to your .env file.");
-      }
-      
-      const genAI = new GoogleGenerativeAI(API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = getModel({ systemInstruction });
 
       // Add empty assistant message to be filled
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-
-      const systemPrompt = `You are the BYLD AI assistant, an expert construction management AI. 
-      You are talking to: ${JSON.stringify(context.user)}. 
-      Here is the current dashboard data:
-      Projects: ${JSON.stringify(context.projects)}
-      Tasks: ${JSON.stringify(context.tasks)}
-      Budget: ${JSON.stringify(context.budgetItems)}
-      Updates: ${JSON.stringify(context.siteUpdates)}
-      
-      Please assist the user concisely and accurately based ONLY on this provided data. Keep responses relatively short.`;
 
       const geminiHistory = trimmed.map(m => ({
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }]
       }));
-      
+
       const lastMessage = geminiHistory.pop()?.parts[0].text || '';
 
-      const chat = model.startChat({
-        history: [
-          { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'model', parts: [{ text: 'Understood. I will act as the BYLD AI assistant and answer questions based on the provided dashboard data.' }] },
-          ...geminiHistory
-        ]
-      });
+      const chat = model.startChat({ history: geminiHistory });
 
       const result = await chat.sendMessageStream(lastMessage);
-      
+
       let assistantSoFar = '';
       for await (const chunk of result.stream) {
         if (abortRef.current?.signal.aborted) break;
@@ -107,8 +161,9 @@ export default function AIAssistant() {
           return next;
         });
       }
-    } catch (err: any) {
-      toast({ title: 'AI error', description: err.message || 'Something went wrong. Try again.', variant: 'destructive' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Something went wrong. Try again.';
+      toast({ title: 'AI error', description: message, variant: 'destructive' });
       throw err;
     }
   };
@@ -138,6 +193,8 @@ export default function AIAssistant() {
     }
   };
 
+  const suggestions = user ? roleSuggestions[user.role] : roleSuggestions.consultant;
+
   return (
     <>
       {/* Floating Button */}
@@ -157,15 +214,41 @@ export default function AIAssistant() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 z-50 w-96 h-[500px] glass-card shadow-2xl flex flex-col overflow-hidden"
+            className={
+              isMobile
+                ? 'fixed inset-0 z-50 glass-card shadow-2xl flex flex-col overflow-hidden rounded-none'
+                : 'fixed bottom-24 right-6 z-50 w-96 h-[min(600px,calc(100vh-8rem))] glass-card shadow-2xl flex flex-col overflow-hidden'
+            }
           >
             {/* Header */}
-            <div className="px-5 py-4 border-b border-border gradient-primary">
-              <div className="flex items-center gap-2 text-primary-foreground">
-                <Sparkles className="w-5 h-5" />
-                <span className="font-semibold">BYLD AI</span>
+            <div className="px-5 py-4 border-b border-border gradient-primary flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-primary-foreground">
+                  <Sparkles className="w-5 h-5" />
+                  <span className="font-semibold">BYLD AI</span>
+                </div>
+                <p className="text-xs text-primary-foreground/70 mt-0.5">Grounded in your project data</p>
               </div>
-              <p className="text-xs text-primary-foreground/70 mt-0.5">Powered by AI</p>
+              <div className="flex items-center gap-1">
+                {messages.length > 1 && (
+                  <button
+                    onClick={clearConversation}
+                    title="Clear conversation"
+                    className="p-2 rounded-lg text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+                {isMobile && (
+                  <button
+                    onClick={() => setOpen(false)}
+                    title="Close"
+                    className="p-2 rounded-lg text-primary-foreground/80 hover:text-primary-foreground hover:bg-white/10 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Messages */}
@@ -206,7 +289,7 @@ export default function AIAssistant() {
             )}
 
             {/* Input */}
-            <div className="p-3 border-t border-border flex gap-2">
+            <div className="p-3 border-t border-border flex gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}

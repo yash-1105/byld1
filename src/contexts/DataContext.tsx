@@ -19,7 +19,7 @@ interface DataContextType {
   projectMembers: any[];
   addProject: (p: Omit<Project, 'id' | 'createdAt'>) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
-  addTask: (t: Omit<Task, 'id' | 'createdAt'>) => void;
+  addTask: (t: Omit<Task, 'id' | 'createdAt'>) => Promise<unknown>;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   addSiteUpdate: (u: Omit<SiteUpdate, 'id'>) => void;
@@ -379,6 +379,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         status: t.status,
         priority: t.priority,
         project_id: t.projectId,
+        assigned_to: t.assignee || null,
         due_date: t.deadline || null,
         created_by: user?.id || ''
       }).select().single();
@@ -616,7 +617,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       projectMembers: rawProjectMembers,
       addProject: (p) => addProjectMutation.mutate(p),
       updateProject: () => {}, // TODO
-      addTask: (t) => addTaskMutation.mutate(t),
+      addTask: (t) => addTaskMutation.mutateAsync(t),
       updateTask: (id, updates) => updateTaskMutation.mutate({ id, updates }),
       deleteTask: () => {}, // TODO
       addSiteUpdate: (u) => addSiteUpdateMutation.mutate(u),

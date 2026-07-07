@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, GripVertical, Folder } from 'lucide-react';
+import { Plus, X, GripVertical, Folder, NotebookPen } from 'lucide-react';
 import { toast } from 'sonner';
+
+const MeetingToTasksDialog = lazy(() => import('@/components/ai/MeetingToTasksDialog'));
 
 const columns = [
   { key: 'todo' as const, label: 'To Do', color: 'border-muted-foreground/30' },
@@ -34,6 +36,7 @@ export default function TasksPage() {
   }, [projects, activeProjectId]);
 
   const [showForm, setShowForm] = useState(false);
+  const [showMeetingImport, setShowMeetingImport] = useState(false);
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', assignee: '', deadline: '' });
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
 
@@ -43,12 +46,12 @@ export default function TasksPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !activeProjectId) return;
-    addTask({ 
-      ...form, 
-      status: 'todo', 
+    addTask({
+      ...form,
+      status: 'todo',
       priority: form.priority as any,
       projectId: activeProjectId
-    });
+    }).catch(() => toast.error('Failed to create task'));
     setForm({ title: '', description: '', priority: 'medium', assignee: '', deadline: '' });
     setShowForm(false);
     toast.success('Task created');
@@ -78,10 +81,25 @@ export default function TasksPage() {
           <h1 className="text-2xl font-bold text-foreground">Tasks</h1>
           <p className="text-muted-foreground text-sm mt-1">Kanban board — drag tasks between columns</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0">
-          <Plus className="w-4 h-4" /> Add Task
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={() => setShowMeetingImport(true)} className="bg-card border border-border text-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted flex items-center gap-2 transition-colors">
+            <NotebookPen className="w-4 h-4" /> From Meeting Notes
+          </button>
+          <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20">
+            <Plus className="w-4 h-4" /> Add Task
+          </button>
+        </div>
       </div>
+
+      {showMeetingImport && (
+        <Suspense fallback={null}>
+          <MeetingToTasksDialog
+            open={showMeetingImport}
+            onOpenChange={setShowMeetingImport}
+            defaultProjectId={activeProjectId || undefined}
+          />
+        </Suspense>
+      )}
 
       {/* Project Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">

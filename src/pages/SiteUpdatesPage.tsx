@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,11 +6,13 @@ import {
   Plus, X, Camera, AlertTriangle, CheckCircle, Clock,
   CloudRain, Users, Package, Thermometer, Upload, Image,
   BookOpen, BarChart3, Eye, Trash2, Filter, Search,
-  ChevronDown, Loader2, MapPin, Wind, Sun, CloudSnow, Folder
+  ChevronDown, Loader2, MapPin, Wind, Sun, CloudSnow, Folder, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import AISummaryPanel from '@/components/ai/AISummaryPanel';
+
+const ClientUpdateComposer = lazy(() => import('@/components/ai/ClientUpdateComposer'));
 
 // ─── Types ───────────────────────────────────────────────
 interface SiteUpdateRaw {
@@ -73,6 +75,7 @@ export default function SiteUpdatesPage() {
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'logbook' | 'inventory'>('timeline');
   const [activeProjectId, setActiveProjectId] = useState<string>('');
+  const [composerOpen, setComposerOpen] = useState(false);
 
   useEffect(() => {
     if (projects.length > 0 && !activeProjectId) setActiveProjectId(projects[0].id);
@@ -97,7 +100,25 @@ export default function SiteUpdatesPage() {
           <h1 className="text-2xl font-bold text-foreground">Site Updates</h1>
           <p className="text-muted-foreground text-sm mt-1">Monitoring, digital logbook, and inventory tracking</p>
         </div>
+        {(user?.role === 'architect' || user?.role === 'contractor') && (
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="gradient-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0"
+          >
+            <Sparkles className="w-4 h-4" /> Client Update
+          </button>
+        )}
       </div>
+
+      {composerOpen && (
+        <Suspense fallback={null}>
+          <ClientUpdateComposer
+            open={composerOpen}
+            onOpenChange={setComposerOpen}
+            defaultProjectId={activeProjectId || undefined}
+          />
+        </Suspense>
+      )}
 
       {/* Project tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">

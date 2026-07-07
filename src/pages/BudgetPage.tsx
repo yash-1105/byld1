@@ -3,7 +3,7 @@ import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { supabase } from '@/integrations/supabase/client';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getAI, AI_MODEL } from '@/lib/ai';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, DollarSign, TrendingUp, TrendingDown, CreditCard, AlertTriangle, PieChart as PieIcon, Folder, Camera, Loader2, Pencil } from 'lucide-react';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, CartesianGrid } from 'recharts';
@@ -147,10 +147,7 @@ export default function BudgetPage() {
       reader.readAsDataURL(file);
       const base64Data = await base64Promise;
 
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) throw new Error('VITE_GEMINI_API_KEY is not set in .env');
-      
-      const genAI = new GoogleGenerativeAI(apiKey);
+      const genAI = getAI();
 
       const prompt = `
         Analyze this receipt and extract all the line items as well as the date. 
@@ -168,7 +165,7 @@ export default function BudgetPage() {
 
       let result;
       let lastError;
-      const modelsToTry = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"];
+      const modelsToTry = [AI_MODEL, "gemini-2.0-flash", "gemini-flash-latest"];
       
       for (const modelName of modelsToTry) {
         try {

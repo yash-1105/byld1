@@ -176,7 +176,7 @@ export function useAnalyzeDialog() {
           <DialogTitle className="font-display">AI analysis</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
-          <AIInsightsPanel />
+          <AIInsightsPanel onNavigate={() => setOpen(false)} />
           <AISummaryPanel compact />
         </div>
       </DialogContent>

@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MessageSquare } from 'lucide-react';
-import { ConversationWithMeta } from '@/services/chatService';
+import { ConversationWithMeta, getConversations } from '@/services/chatService';
+import { useAuth } from '@/contexts/AuthContext';
 import ConversationList from '@/components/chat/ConversationList';
 import ChatWindow from '@/components/chat/ChatWindow';
 import NewConversationModal from '@/components/chat/NewConversationModal';
@@ -10,6 +12,29 @@ export default function ChatPage() {
   const [activeConv, setActiveConv] = useState<ConversationWithMeta | null>(null);
   const [showNewChat, setShowNewChat] = useState(false);
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+
+  // Deep link: /chat?conversation=<id> opens that conversation directly.
+  const targetConvId = searchParams.get('conversation');
+  useEffect(() => {
+    if (!targetConvId || !user) return;
+    let cancelled = false;
+    getConversations(user.id)
+      .then(convos => {
+        if (cancelled) return;
+        const match = convos.find(c => c.id === targetConvId);
+        if (match) {
+          setActiveConv(match);
+          setMobileShowChat(true);
+        }
+      })
+      .catch(() => { /* list still renders normally */ })
+      .finally(() => {
+        if (!cancelled) setSearchParams({}, { replace: true });
+      });
+    return () => { cancelled = true; };
+  }, [targetConvId, user?.id]);
 
   const handleSelect = (conv: ConversationWithMeta) => {
     setActiveConv(conv);
