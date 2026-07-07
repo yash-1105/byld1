@@ -11,8 +11,8 @@ serve(async (req) => {
   }
 
   try {
-    const { userId } = await req.json();
-    
+    const { userId, origin } = await req.json();
+
     if (!userId) {
       throw new Error('User ID is required');
     }
@@ -25,9 +25,12 @@ serve(async (req) => {
     }
 
     const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email');
+    // Carry the originating site in state so the callback can return the user
+    // to where they started (localhost during dev, prod otherwise).
+    const state = origin ? `${userId}|${encodeURIComponent(origin)}` : `${userId}`;
     // include_granted_scopes keeps any previously-granted scopes (e.g. Calendar) so the
     // shared OAuth client's grants don't clobber each other.
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&include_granted_scopes=true&state=${userId}`;
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&include_granted_scopes=true&state=${encodeURIComponent(state)}`;
 
     return new Response(JSON.stringify({ url: authUrl }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

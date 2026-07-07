@@ -1,4 +1,4 @@
-project_id = "pikleinlgnhvikolifjc"
+project_id = "qnriqsnuebcxxzcfxfsv"
 
 [functions.chat]
 verify_jwt = false
@@ -12,6 +12,9 @@ verify_jwt = false
 # OAuth callback is hit by Google's browser redirect (no Supabase auth header),
 # so it must be public. auth-url/events stay JWT-protected (called via invoke).
 [functions.google-calendar-callback]
+verify_jwt = false
+
+[functions.google-auth-callback]
 verify_jwt = false
 
 [functions.google-vision-ocr]

@@ -1,15 +1,30 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// state carries "userId" or "userId|<origin>"; return the user to that origin
+// (allowlisted) so connecting from localhost stays on localhost. Falls back to APP_URL.
+const defaultUrl = (Deno.env.get('APP_URL') ?? 'http://localhost:5173').replace(/\/+$/, '');
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'https://byld1.vercel.app',
+];
+
 serve(async (req) => {
   // This is a GET request from Google's redirect
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
-    const userId = url.searchParams.get('state');
+    const rawState = url.searchParams.get('state') ?? '';
+    const [userId, encOrigin] = rawState.split('|');
 
-    // Default fallback URL if something fails
-    const appUrl = 'http://localhost:5173/settings'; 
+    let appUrl = `${defaultUrl}/settings`;
+    if (encOrigin) {
+      try {
+        const o = decodeURIComponent(encOrigin).replace(/\/+$/, '');
+        if (allowedOrigins.includes(o)) appUrl = `${o}/settings`;
+      } catch { /* keep default */ }
+    }
 
     if (!code || !userId) {
       return Response.redirect(`${appUrl}?error=missing_oauth_params`, 302);
@@ -73,6 +88,6 @@ serve(async (req) => {
     return Response.redirect(`${appUrl}?success=drive_connected`, 302);
   } catch (error: any) {
     console.error('Callback error:', error);
-    return Response.redirect(`http://localhost:5173/settings?error=unknown_error`, 302);
+    return Response.redirect(`${defaultUrl}/settings?error=unknown_error`, 302);
   }
 });
