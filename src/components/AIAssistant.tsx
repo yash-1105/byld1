@@ -142,6 +142,12 @@ ${JSON.stringify({ ...compact, recentNotifications })}`;
         parts: [{ text: m.content }]
       }));
 
+      // Gemini requires chat history to start with a 'user' turn — drop the
+      // leading assistant greeting (and any other leading model turns).
+      while (geminiHistory.length && geminiHistory[0].role === 'model') {
+        geminiHistory.shift();
+      }
+
       const lastMessage = geminiHistory.pop()?.parts[0].text || '';
 
       const chat = model.startChat({ history: geminiHistory });
