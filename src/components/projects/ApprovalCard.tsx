@@ -100,7 +100,7 @@ export default function ApprovalCard({ item, index, onAction, canDecide = true }
       className="soft-card overflow-hidden group"
     >
       {/* Header: photo carousel if images present, else category icon */}
-      <div className="relative h-32 border-b border-border/40 overflow-hidden">
+      <div className={`relative ${hasPhotos ? 'h-32' : 'h-16 sm:h-32'} border-b border-border/40 overflow-hidden`}>
         {hasPhotos ? (
           <>
             <img
@@ -133,9 +133,9 @@ export default function ApprovalCard({ item, index, onAction, canDecide = true }
             )}
           </>
         ) : (
-          <div className={`w-full h-full ${catCfg.bg} flex flex-col items-center justify-center gap-2`}>
-            <div className="w-14 h-14 rounded-2xl bg-white/60 backdrop-blur-sm flex items-center justify-center shadow-sm">
-              <CatIcon className={`w-7 h-7 ${catCfg.iconColor}`} />
+          <div className={`w-full h-full ${catCfg.bg} flex flex-row sm:flex-col items-center justify-center gap-2`}>
+            <div className="w-9 h-9 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white/60 backdrop-blur-sm flex items-center justify-center shadow-sm">
+              <CatIcon className={`w-4.5 h-4.5 sm:w-7 sm:h-7 ${catCfg.iconColor}`} />
             </div>
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{item.category}</span>
           </div>
@@ -158,7 +158,7 @@ export default function ApprovalCard({ item, index, onAction, canDecide = true }
       </div>
 
       {/* Content */}
-      <div className="p-5 space-y-3">
+      <div className="p-4 sm:p-5 space-y-3">
         <h3 className="text-sm font-bold text-foreground leading-snug">{item.title}</h3>
 
         {item.description && (

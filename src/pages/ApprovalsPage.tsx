@@ -269,7 +269,7 @@ export default function ApprovalsPage() {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
           {[
             { label: 'Pending',  count: counts.pending,  color: 'text-warning',         bg: 'bg-warning/8',         icon: Clock },
             { label: 'Approved', count: counts.approved, color: 'text-success',         bg: 'bg-success/8',         icon: CheckCircle },
@@ -279,12 +279,12 @@ export default function ApprovalsPage() {
             <button
               key={s.label}
               onClick={() => setStatusFilter(statusFilter === s.label.toLowerCase().replace(' ', '_') as StatusFilter ? 'all' : s.label.toLowerCase().replace(' ', '_') as StatusFilter)}
-              className={`soft-card p-4 flex items-center gap-3 hover:ring-2 hover:ring-primary/20 transition-all text-left ${s.bg}`}
+              className={`soft-card p-2 sm:p-4 flex flex-col sm:flex-row items-center gap-1 sm:gap-3 hover:ring-2 hover:ring-primary/20 transition-all text-center sm:text-left ${s.bg}`}
             >
-              <s.icon className={`w-5 h-5 ${s.color} shrink-0`} />
+              <s.icon className={`w-4 h-4 sm:w-5 sm:h-5 ${s.color} shrink-0`} />
               <div>
-                <div className={`text-xl font-bold ${s.color}`}>{s.count}</div>
-                <div className="text-xs text-muted-foreground">{s.label}</div>
+                <div className={`text-base sm:text-xl font-bold leading-tight ${s.color}`}>{s.count}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">{s.label}</div>
               </div>
             </button>
           ))}
@@ -319,12 +319,12 @@ export default function ApprovalsPage() {
         </div>
 
         {/* Status filter tabs */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
           {STATUS_FILTERS.map(f => (
             <button
               key={f.key}
               onClick={() => setStatusFilter(f.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-200 ${
                 statusFilter === f.key
                   ? 'gradient-primary text-primary-foreground shadow-md shadow-primary/15'
                   : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:shadow-sm'
@@ -343,7 +343,7 @@ export default function ApprovalsPage() {
 
         {/* Cards Grid */}
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
             {filtered.map((item, i) => {
               const project = projects.find(p => p.id === item.projectId);
               const decidedByName = item.decidedBy ? resolveUser(item.decidedBy) : undefined;

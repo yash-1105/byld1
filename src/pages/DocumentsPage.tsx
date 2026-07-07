@@ -256,7 +256,7 @@ export default function DocumentsPage() {
           <h1 className="text-2xl font-bold text-foreground">Documents</h1>
           <p className="text-muted-foreground text-sm mt-1">{normalizedDocs.length} files across sources</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex bg-muted rounded-lg p-0.5">
             <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-card shadow-sm' : ''}`}><List className="w-4 h-4 text-muted-foreground" /></button>
             <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md ${viewMode === 'grid' ? 'bg-card shadow-sm' : ''}`}><Grid className="w-4 h-4 text-muted-foreground" /></button>
@@ -267,7 +267,8 @@ export default function DocumentsPage() {
             className="flex items-center gap-2 text-sm font-medium px-4 py-2 border border-border rounded-xl hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
           >
             <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" alt="Google Drive" className="w-4 h-4" />
-            Google Drive Import
+            <span className="hidden sm:inline">Google Drive Import</span>
+            <span className="sm:hidden">Drive</span>
           </button>
 
           <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
@@ -282,19 +283,26 @@ export default function DocumentsPage() {
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
-        <div className="w-full md:w-48 space-y-1 flex-shrink-0">
-          {folders.map(f => (
-            <button
-              key={f}
-              onClick={() => setSelectedFolder(f)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${selectedFolder === f ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted'}`}
-            >
-              <Folder className="w-4 h-4" /> {f}
-              <span className="ml-auto text-xs text-muted-foreground">
-                {f === 'All Files' ? normalizedDocs.length : normalizedDocs.filter(d => (d as any).category === f).length}
-              </span>
-            </button>
-          ))}
+        {/* Categories: horizontal chips on mobile, sidebar on md+ */}
+        <div className="flex md:flex-col md:w-48 flex-shrink-0 gap-1.5 md:gap-0 md:space-y-1 overflow-x-auto scrollbar-none pb-1 md:pb-0">
+          {folders.map(f => {
+            const count = f === 'All Files' ? normalizedDocs.length : normalizedDocs.filter(d => (d as any).category === f).length;
+            const active = selectedFolder === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setSelectedFolder(f)}
+                className={`flex items-center gap-2 text-sm transition-colors whitespace-nowrap shrink-0 md:w-full md:text-left px-3 py-1.5 md:py-2 rounded-full md:rounded-lg border md:border-transparent ${
+                  active
+                    ? 'bg-primary/10 text-primary font-medium border-primary/20'
+                    : 'text-muted-foreground bg-card md:bg-transparent border-border hover:bg-muted'
+                }`}
+              >
+                <Folder className="w-4 h-4 hidden md:block" /> {f}
+                <span className={`text-xs md:ml-auto ${active ? 'text-primary/70' : 'text-muted-foreground'}`}>{count}</span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex-1 space-y-4">
@@ -316,11 +324,16 @@ export default function DocumentsPage() {
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center text-sm transition-colors cursor-pointer ${dragOver ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+                className={`border-2 border-dashed rounded-xl p-3 sm:p-8 text-center text-sm transition-colors cursor-pointer ${dragOver ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
               >
-                <Upload className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                <div className="font-medium mb-1">Drop files here or click to browse</div>
-                <div className="text-xs text-muted-foreground">Support for PDF, DOCX, JPG, PNG</div>
+                <div className="flex sm:block items-center justify-center gap-2">
+                  <Upload className="w-4 h-4 sm:w-6 sm:h-6 sm:mx-auto sm:mb-2 opacity-50" />
+                  <div className="font-medium sm:mb-1">
+                    <span className="sm:hidden">Tap to upload a file</span>
+                    <span className="hidden sm:inline">Drop files here or click to browse</span>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground hidden sm:block">Support for PDF, DOCX, JPG, PNG</div>
               </div>
 
               {isLoading ? (

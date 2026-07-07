@@ -122,7 +122,7 @@ export function SegmentBar({ total, done }: { total: number; done: number }) {
 export type WeekDay = { wd: string; kind: 'empty' | 'event' | 'today' | 'milestone'; label?: string; dim?: boolean };
 export function WeekStrip({ days }: { days: WeekDay[] }) {
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
       {days.map((d, i) => {
         const isToday = d.kind === 'today';
         const isMile = d.kind === 'milestone';
@@ -220,7 +220,9 @@ export function BentoHeader({ name, summary, onNewTask, onAnalyze, switcher }: {
 }
 
 export function BentoGrid({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-[13px]">{children}</div>;
+  // 2-col base grid so phones get a dense bento (KPI tiles sit 2-up via
+  // col-span-1; content tiles take col-span-2); desktop uses the 12-col grid.
+  return <div className="grid grid-cols-2 lg:grid-cols-12 gap-3 lg:gap-[13px]">{children}</div>;
 }
 
 export function ProjectSwitcher({ value, onChange, projects }: {

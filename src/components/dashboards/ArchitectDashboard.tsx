@@ -144,9 +144,9 @@ export default function ArchitectDashboard() {
 
       <BentoGrid>
         {/* Hero project */}
-        <Tile className="lg:col-span-5 lg:row-span-2 !p-0 overflow-hidden flex flex-col"
+        <Tile className="col-span-2 lg:col-span-5 lg:row-span-2 !p-0 overflow-hidden flex flex-col"
           onClick={hero ? () => navigate(`/projects/${hero.id}`) : undefined}>
-          <Striped className="h-[188px]"
+          <Striped className="h-[110px] sm:h-[188px]"
             label={hero ? `RENDER · ${hero.name.toUpperCase()}` : undefined}>
             <span className="absolute top-3 left-3 font-mono text-[10px] px-2 py-1 rounded-md"
               style={{ background: 'rgba(30,36,25,0.85)', color: C.onDarkText }}>
@@ -179,7 +179,7 @@ export default function ArchitectDashboard() {
         </Tile>
 
         {/* Needs you */}
-        <Tile className="lg:col-span-4">
+        <Tile className="col-span-2 lg:col-span-4">
           <div className="flex items-center gap-2 mb-3.5">
             <CircleAlert size={16} style={{ color: C.sage }} />
             <TileTitle>Needs you</TileTitle>
@@ -213,7 +213,7 @@ export default function ArchitectDashboard() {
         </Tile>
 
         {/* AI insights */}
-        <Tile dark className="lg:col-span-3 flex flex-col" onClick={() => setOpen(true)}>
+        <Tile dark className="col-span-2 lg:col-span-3 flex flex-col" onClick={() => setOpen(true)}>
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={16} style={{ color: C.sageLight }} />
             <span className="font-display font-semibold text-[12.5px]">AI Insights</span>
@@ -227,13 +227,13 @@ export default function ArchitectDashboard() {
         </Tile>
 
         {/* Budget ring */}
-        <Tile className="lg:col-span-4">
+        <Tile className="col-span-1 lg:col-span-4">
           <Donut percent={budgetPct} center={`${budgetPct}%`} label="BUDGET UTILIZED"
             sub={`${formatCurrencyCompact(totalSpent)} of ${formatCurrencyCompact(totalBudget)}`} />
         </Tile>
 
         {/* Tasks complete */}
-        <Tile className="lg:col-span-3">
+        <Tile className="col-span-1 lg:col-span-3">
           <div className="flex items-center justify-between mb-3.5">
             <Eyebrow>TASKS COMPLETE</Eyebrow>
             <ListChecks size={15} style={{ color: C.faint3 }} />
@@ -246,7 +246,7 @@ export default function ArchitectDashboard() {
         </Tile>
 
         {/* Overdue + Deliveries pair */}
-        <div className="lg:col-span-3 flex flex-col gap-[13px]">
+        <div className="col-span-2 grid grid-cols-2 gap-3 lg:col-span-3 lg:flex lg:flex-col lg:gap-[13px]">
           <Tile className="flex-1 !p-[14px_16px] flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-[10px] flex items-center justify-center" style={{ background: C.tintSage, color: C.sage }}><AlertTriangle size={18} /></div>
             <div>
@@ -264,7 +264,7 @@ export default function ArchitectDashboard() {
         </div>
 
         {/* This week on site */}
-        <Tile className="lg:col-span-9 !p-[16px_18px]">
+        <Tile className="col-span-2 lg:col-span-9 !p-[16px_18px]">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <GanttChart size={16} style={{ color: C.muted }} />
@@ -278,7 +278,7 @@ export default function ArchitectDashboard() {
         </Tile>
 
         {/* Site updates */}
-        <Tile className="lg:col-span-4" onClick={() => navigate('/site-updates')}>
+        <Tile className="col-span-2 lg:col-span-4" onClick={() => navigate('/site-updates')}>
           <div className="flex items-center gap-2 mb-3.5">
             <Camera size={16} style={{ color: C.muted }} />
             <TileTitle>Site updates</TileTitle>
@@ -303,7 +303,7 @@ export default function ArchitectDashboard() {
         </Tile>
 
         {/* Recent activity */}
-        <Tile className="lg:col-span-4">
+        <Tile className="col-span-2 lg:col-span-4">
           <div className="flex items-center gap-2 mb-3.5">
             <Activity size={16} style={{ color: C.muted }} />
             <TileTitle>Recent activity</TileTitle>
@@ -327,7 +327,7 @@ export default function ArchitectDashboard() {
         </Tile>
 
         {/* Team & messaging */}
-        <Tile className="lg:col-span-4 flex flex-col">
+        <Tile className="col-span-2 lg:col-span-4 flex flex-col">
           <div className="flex items-center gap-2 mb-3.5">
             <Users size={16} style={{ color: C.muted }} />
             <TileTitle>Team</TileTitle>

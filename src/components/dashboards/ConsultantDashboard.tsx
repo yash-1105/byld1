@@ -97,9 +97,9 @@ export default function ConsultantDashboard() {
 
       <BentoGrid>
         {/* Hero project */}
-        <Tile className="lg:col-span-5 lg:row-span-2 !p-0 overflow-hidden flex flex-col"
+        <Tile className="col-span-2 lg:col-span-5 lg:row-span-2 !p-0 overflow-hidden flex flex-col"
           onClick={hero ? () => navigate(`/projects/${hero.id}`) : undefined}>
-          <div className="relative flex items-end h-[188px]"
+          <div className="relative flex items-end h-[110px] sm:h-[188px]"
             style={{ background: `repeating-linear-gradient(135deg, ${C.hairStrong} 0 11px, ${C.canvas} 11px 22px)` }}>
             {hero && <span className="font-mono text-[10px] tracking-[0.06em] p-[7px]" style={{ color: C.faint }}>RENDER · {hero.name.toUpperCase()}</span>}
             <span className="absolute top-3 left-3 font-mono text-[10px] px-2 py-1 rounded-md"
@@ -133,7 +133,7 @@ export default function ConsultantDashboard() {
         </Tile>
 
         {/* Needs you */}
-        <Tile className="lg:col-span-4">
+        <Tile className="col-span-2 lg:col-span-4">
           <div className="flex items-center gap-2 mb-3.5">
             <CircleAlert size={16} style={{ color: C.sage }} />
             <TileTitle>Needs you</TileTitle>
@@ -160,7 +160,7 @@ export default function ConsultantDashboard() {
         </Tile>
 
         {/* AI insights */}
-        <Tile dark className="lg:col-span-3 flex flex-col" onClick={() => setOpen(true)}>
+        <Tile dark className="col-span-2 lg:col-span-3 flex flex-col" onClick={() => setOpen(true)}>
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={16} style={{ color: C.sageLight }} />
             <span className="font-display font-semibold text-[12.5px]">AI Insights</span>
@@ -174,13 +174,13 @@ export default function ConsultantDashboard() {
         </Tile>
 
         {/* Completion ring */}
-        <Tile className="lg:col-span-4">
+        <Tile className="col-span-1 lg:col-span-4">
           <Donut percent={completionRate} center={`${completionRate}%`} label="SUCCESS RATE"
             sub={`${completed.length} of ${myTasks.length} task${myTasks.length !== 1 ? 's' : ''}`} />
         </Tile>
 
         {/* Active requests */}
-        <Tile className="lg:col-span-3">
+        <Tile className="col-span-1 lg:col-span-3">
           <div className="flex items-center justify-between mb-3.5">
             <Eyebrow>ACTIVE REQUESTS</Eyebrow>
             <MessageSquare size={15} style={{ color: C.faint3 }} />
@@ -190,7 +190,7 @@ export default function ConsultantDashboard() {
         </Tile>
 
         {/* Pending review + Projects pair */}
-        <div className="lg:col-span-3 flex flex-col gap-[13px]">
+        <div className="col-span-2 grid grid-cols-2 gap-3 lg:col-span-3 lg:flex lg:flex-col lg:gap-[13px]">
           <Tile className="flex-1 !p-[14px_16px] flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-[10px] flex items-center justify-center" style={{ background: C.tintSage, color: C.sage }}><ListChecks size={18} /></div>
             <div>
@@ -208,7 +208,7 @@ export default function ConsultantDashboard() {
         </div>
 
         {/* Consultation queue */}
-        <Tile className="lg:col-span-9 !p-[16px_18px]">
+        <Tile className="col-span-2 lg:col-span-9 !p-[16px_18px]">
           <div className="flex items-center justify-between mb-3.5">
             <div className="flex items-center gap-2">
               <MessageSquare size={16} style={{ color: C.muted }} />
@@ -238,7 +238,7 @@ export default function ConsultantDashboard() {
         </Tile>
 
         {/* This week */}
-        <Tile className="lg:col-span-4">
+        <Tile className="col-span-2 lg:col-span-4">
           <div className="flex items-center gap-2 mb-3.5">
             <Calendar size={16} style={{ color: C.muted }} />
             <TileTitle>This week</TileTitle>
@@ -264,7 +264,7 @@ export default function ConsultantDashboard() {
         </Tile>
 
         {/* Recent activity */}
-        <Tile className="lg:col-span-4">
+        <Tile className="col-span-2 lg:col-span-4">
           <div className="flex items-center gap-2 mb-3.5">
             <Activity size={16} style={{ color: C.muted }} />
             <TileTitle>Recent activity</TileTitle>
@@ -288,7 +288,7 @@ export default function ConsultantDashboard() {
         </Tile>
 
         {/* Team & messaging */}
-        <Tile className="lg:col-span-4 flex flex-col">
+        <Tile className="col-span-2 lg:col-span-4 flex flex-col">
           <div className="flex items-center gap-2 mb-3.5">
             <Users size={16} style={{ color: C.muted }} />
             <TileTitle>Team</TileTitle>

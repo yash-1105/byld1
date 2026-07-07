@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, GripVertical, Folder, NotebookPen } from 'lucide-react';
+import { Plus, X, GripVertical, Folder, NotebookPen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MeetingToTasksDialog = lazy(() => import('@/components/ai/MeetingToTasksDialog'));
@@ -37,6 +37,7 @@ export default function TasksPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [showMeetingImport, setShowMeetingImport] = useState(false);
+  const [mobileCol, setMobileCol] = useState<typeof columns[number]['key']>('todo');
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', assignee: '', deadline: '' });
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
 
@@ -63,6 +64,79 @@ export default function TasksPage() {
       setDraggedTask(null);
       toast.success(`Task moved to ${status.replace('_', ' ')}`);
     }
+  };
+
+  const moveTask = (taskId: string, from: typeof columns[number]['key'], dir: -1 | 1) => {
+    const next = columns[columns.findIndex(c => c.key === from) + dir];
+    if (!next) return;
+    updateTask(taskId, { status: next.key });
+    toast.success(`Task moved to ${next.label}`);
+  };
+
+  const renderCard = (t: typeof tasks[number], mobile: boolean) => {
+    const assigneeUser = users.find(u => u.id === t.assignee);
+    const colIdx = columns.findIndex(c => c.key === t.status);
+    return (
+      <motion.div
+        key={t.id}
+        layout
+        draggable={!mobile}
+        onDragStart={!mobile ? () => setDraggedTask(t.id) : undefined}
+        className={`bg-card border border-border/40 p-4 rounded-xl transition-shadow ${mobile ? '' : 'cursor-grab active:cursor-grabbing hover:shadow-md'}`}
+      >
+        <div className="flex items-start gap-2.5">
+          {!mobile && <GripVertical className="w-4 h-4 text-muted-foreground/30 mt-0.5 flex-shrink-0" />}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-foreground">{t.title}</div>
+            <div className="flex items-center gap-2 mt-3">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${priorityColors[t.priority] || priorityColors.medium}`}>
+                {t.priority}
+              </span>
+              {assigneeUser && (
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
+                    {assigneeUser.full_name?.split(' ')[0]}
+                  </span>
+                  {assigneeUser.avatar_url ? (
+                    <img src={assigneeUser.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full gradient-primary flex items-center justify-center text-[8px] font-bold text-primary-foreground">
+                      {getInitials(assigneeUser.full_name)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {t.deadline && (
+              <div className="text-[10px] text-muted-foreground mt-2 border-t border-border/30 pt-2 flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Due {new Date(t.deadline).toLocaleDateString()}
+              </div>
+            )}
+            {mobile && (
+              <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border/30">
+                <button
+                  onClick={() => moveTask(t.id, t.status, -1)}
+                  disabled={colIdx <= 0}
+                  className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground disabled:opacity-30 px-2 py-1.5 -ml-2 rounded-lg active:bg-muted"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" /> {colIdx > 0 ? columns[colIdx - 1].label : 'Start'}
+                </button>
+                <button
+                  onClick={() => moveTask(t.id, t.status, 1)}
+                  disabled={colIdx >= columns.length - 1}
+                  className="flex items-center gap-1 text-[11px] font-medium text-primary disabled:opacity-30 disabled:text-muted-foreground px-2 py-1.5 -mr-2 rounded-lg active:bg-muted"
+                >
+                  {colIdx < columns.length - 1 ? columns[colIdx + 1].label : 'Done'} <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
   };
 
   if (projects.length === 0) {
@@ -150,8 +224,40 @@ export default function TasksPage() {
         )}
       </AnimatePresence>
 
-      {/* Kanban */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Mobile: one column at a time + move buttons (HTML5 drag doesn't work on touch) */}
+      <div className="md:hidden space-y-3">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {columns.map(col => {
+            const count = projectTasks.filter(t => t.status === col.key).length;
+            const active = mobileCol === col.key;
+            return (
+              <button
+                key={col.key}
+                onClick={() => setMobileCol(col.key)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  active ? 'bg-foreground text-background shadow-md' : 'bg-card border border-border text-muted-foreground'
+                }`}
+              >
+                {col.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-background/20' : 'bg-muted'}`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className={`rounded-2xl bg-muted/30 p-3 min-h-[280px] border-t-4 shadow-sm ${columns.find(c => c.key === mobileCol)?.color}`}>
+          <div className="space-y-3">
+            {projectTasks.filter(t => t.status === mobileCol).length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-12">
+                No tasks in {columns.find(c => c.key === mobileCol)?.label.toLowerCase()}.
+              </div>
+            )}
+            {projectTasks.filter(t => t.status === mobileCol).map(t => renderCard(t, true))}
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop: 4-column drag-and-drop board */}
+      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         {columns.map(col => (
           <div
             key={col.key}
@@ -166,52 +272,7 @@ export default function TasksPage() {
               </span>
             </div>
             <div className="space-y-3">
-              {projectTasks.filter(t => t.status === col.key).map(t => {
-                const assigneeUser = users.find(u => u.id === t.assignee);
-                return (
-                  <motion.div
-                    key={t.id}
-                    layout
-                    draggable
-                    onDragStart={() => setDraggedTask(t.id)}
-                    className="bg-card border border-border/40 p-4 rounded-xl cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <GripVertical className="w-4 h-4 text-muted-foreground/30 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-foreground">{t.title}</div>
-                        <div className="flex items-center gap-2 mt-3">
-                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${priorityColors[t.priority] || priorityColors.medium}`}>
-                            {t.priority}
-                          </span>
-                          {assigneeUser && (
-                            <div className="flex items-center gap-1.5 ml-auto">
-                              <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
-                                {assigneeUser.full_name?.split(' ')[0]}
-                              </span>
-                              {assigneeUser.avatar_url ? (
-                                <img src={assigneeUser.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
-                              ) : (
-                                <div className="w-5 h-5 rounded-full gradient-primary flex items-center justify-center text-[8px] font-bold text-primary-foreground">
-                                  {getInitials(assigneeUser.full_name)}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        {t.deadline && (
-                          <div className="text-[10px] text-muted-foreground mt-2 border-t border-border/30 pt-2 flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            Due {new Date(t.deadline).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
+              {projectTasks.filter(t => t.status === col.key).map(t => renderCard(t, false))}
             </div>
           </div>
         ))}

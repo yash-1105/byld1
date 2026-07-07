@@ -103,7 +103,7 @@ export default function SiteUpdatesPage() {
         {(user?.role === 'architect' || user?.role === 'contractor') && (
           <button
             onClick={() => setComposerOpen(true)}
-            className="gradient-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0"
+            className="gradient-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0 self-start sm:self-auto"
           >
             <Sparkles className="w-4 h-4" /> Client Update
           </button>
@@ -138,18 +138,19 @@ export default function SiteUpdatesPage() {
       </div>
 
       {/* Feature Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
         {(['timeline', 'logbook', 'inventory'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all capitalize ${
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all capitalize whitespace-nowrap shrink-0 ${
               activeTab === tab
                 ? 'gradient-primary text-primary-foreground shadow-md shadow-primary/15'
                 : 'bg-card border border-border text-muted-foreground hover:text-foreground'
             }`}
           >
-            {tab === 'logbook' ? 'Digital Logbook' : tab === 'inventory' ? 'Inventory Tracking' : 'Timeline'}
+            <span className="sm:hidden">{tab === 'logbook' ? 'Logbook' : tab === 'inventory' ? 'Inventory' : 'Timeline'}</span>
+            <span className="hidden sm:inline">{tab === 'logbook' ? 'Digital Logbook' : tab === 'inventory' ? 'Inventory Tracking' : 'Timeline'}</span>
           </button>
         ))}
       </div>
@@ -263,28 +264,28 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
   }, [updates, filterType, search, user?.id]);
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
       {/* Controls row */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center flex-1 min-w-0">
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search updates..."
-              className="pl-9 pr-4 py-2 rounded-xl border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 w-48"
+              className="pl-9 pr-4 py-2 rounded-xl border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20 w-full sm:w-48"
             />
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto scrollbar-none">
             {['all', 'progress', 'milestone', 'issue'].map(f => (
-              <button key={f} onClick={() => setFilterType(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${filterType === f ? 'bg-foreground text-background' : 'bg-card border border-border text-muted-foreground hover:text-foreground'}`}>
+              <button key={f} onClick={() => setFilterType(f)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize whitespace-nowrap shrink-0 ${filterType === f ? 'bg-foreground text-background' : 'bg-card border border-border text-muted-foreground hover:text-foreground'}`}>
                 {f}
               </button>
             ))}
           </div>
         </div>
-        <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0">
+        <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center justify-center gap-2 shadow-lg shadow-primary/20 shrink-0 w-full sm:w-auto">
           <Camera className="w-4 h-4" /> Post Update
         </button>
       </div>
@@ -380,7 +381,10 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
         )}
       </AnimatePresence>
 
-      <AISummaryPanel compact />
+      {/* On phones the AI digest drops below the feed so real updates show first */}
+      <div className="order-last sm:order-none">
+        <AISummaryPanel compact />
+      </div>
 
       {/* Timeline */}
       {loading ? (

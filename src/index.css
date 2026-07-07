@@ -81,6 +81,15 @@
 }
 
 @layer utilities {
+  /* Hide scrollbars on horizontal chip/tab rows (used across pages) */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
   .glass-card {
     @apply bg-card rounded-2xl border shadow-sm;
   }

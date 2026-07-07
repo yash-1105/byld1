@@ -418,25 +418,28 @@ export default function BudgetPage() {
       </div>
 
       {/* Top Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
-          { label: 'Total Budget', value: formatCurrencyCompact(totalBudget), icon: DollarSign, color: 'text-foreground', bg: 'bg-muted/50' },
-          { label: 'Total Spent', value: formatCurrencyCompact(totalSpent), icon: TrendingDown, color: 'text-warning', bg: 'bg-warning/10', sub: `${pctUsed}% utilized` },
-          { label: 'Remaining', value: formatCurrencyCompact(remaining), icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
+          { label: 'Total Budget', shortLabel: 'Budget', value: formatCurrencyCompact(totalBudget), icon: DollarSign, color: 'text-foreground', bg: 'bg-muted/50' },
+          { label: 'Total Spent', shortLabel: 'Spent', value: formatCurrencyCompact(totalSpent), icon: TrendingDown, color: 'text-warning', bg: 'bg-warning/10', sub: `${pctUsed}% utilized` },
+          { label: 'Remaining', shortLabel: 'Remaining', value: formatCurrencyCompact(remaining), icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
         ].map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-card rounded-2xl border border-border/40 p-5 shadow-sm">
+          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-card rounded-2xl border border-border/40 p-3 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className={`text-2xl font-bold ${s.color} mt-1 truncate max-w-[150px]`}>{s.value}</p>
-                {s.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</p>}
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="sm:hidden">{s.shortLabel}</span>
+                  <span className="hidden sm:inline">{s.label}</span>
+                </p>
+                <p className={`text-lg sm:text-2xl font-bold ${s.color} mt-0.5 sm:mt-1 truncate`}>{s.value}</p>
+                {s.sub && <p className="text-[10px] text-muted-foreground mt-0.5 whitespace-nowrap">{s.sub}</p>}
               </div>
-              <div className={`w-11 h-11 rounded-2xl ${s.bg} flex items-center justify-center shrink-0`}>
+              <div className={`hidden sm:flex w-11 h-11 rounded-2xl ${s.bg} items-center justify-center shrink-0`}>
                 <s.icon className={`w-5 h-5 ${s.color}`} />
               </div>
             </div>
             {s.label === 'Total Spent' && (
-              <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
+              <div className="mt-2 sm:mt-3 h-1.5 sm:h-2 rounded-full bg-muted overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(pctUsed, 100)}%` }}
@@ -611,7 +614,7 @@ export default function BudgetPage() {
       {activeTab === 'expenses' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card rounded-2xl border border-border/40 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[680px] text-sm">
               <thead>
                 <tr className="border-b border-border/50 bg-muted/20">
                   {['Date', 'Type', 'Category', 'Description', 'Amount', 'Status', ''].map((h, hi) => (

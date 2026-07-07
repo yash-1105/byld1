@@ -162,21 +162,24 @@ export default function TimelinePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-2 sm:gap-4">
         {[
-          { label: 'Completed', value: stats.completed, color: 'text-success', bg: 'bg-success/10', icon: CheckCircle },
-          { label: 'In Progress', value: stats.inProgress, color: 'text-primary', bg: 'bg-primary/10', icon: Clock },
-          { label: 'At Risk / Delayed', value: stats.atRisk, color: 'text-destructive', bg: 'bg-destructive/10', icon: AlertTriangle },
-          { label: 'Pending', value: stats.pending, color: 'text-muted-foreground', bg: 'bg-muted/50', icon: Layers },
+          { label: 'Completed', shortLabel: 'Done', value: stats.completed, color: 'text-success', bg: 'bg-success/10', icon: CheckCircle },
+          { label: 'In Progress', shortLabel: 'Active', value: stats.inProgress, color: 'text-primary', bg: 'bg-primary/10', icon: Clock },
+          { label: 'At Risk / Delayed', shortLabel: 'At Risk', value: stats.atRisk, color: 'text-destructive', bg: 'bg-destructive/10', icon: AlertTriangle },
+          { label: 'Pending', shortLabel: 'Pending', value: stats.pending, color: 'text-muted-foreground', bg: 'bg-muted/50', icon: Layers },
         ].map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-card rounded-2xl border border-border/40 p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{s.value}</p>
+          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-card rounded-2xl border border-border/40 p-2 sm:p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-1 text-center sm:text-left">
+              <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${s.bg} flex items-center justify-center sm:order-2 shrink-0`}>
+                <s.icon className={`w-3.5 h-3.5 sm:w-5 sm:h-5 ${s.color}`} />
               </div>
-              <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center`}>
-                <s.icon className={`w-5 h-5 ${s.color}`} />
+              <div className="sm:order-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="sm:hidden">{s.shortLabel}</span>
+                  <span className="hidden sm:inline">{s.label}</span>
+                </p>
+                <p className="text-lg sm:text-2xl font-bold text-foreground sm:mt-1 leading-tight">{s.value}</p>
               </div>
             </div>
           </motion.div>
@@ -190,13 +193,13 @@ export default function TimelinePage() {
       ) : (
         <>
           {/* Filters */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <Filter className="w-4 h-4 text-muted-foreground" />
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-none pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+            <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
             {['all', ...groups].map(f => (
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-all ${
                   activeFilter === f
                     ? 'gradient-primary text-primary-foreground shadow-md shadow-primary/15'
                     : 'bg-card border border-border text-muted-foreground hover:text-foreground'
@@ -208,9 +211,9 @@ export default function TimelinePage() {
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-5 text-xs text-muted-foreground flex-wrap">
+          <div className="flex items-center gap-4 sm:gap-5 text-xs text-muted-foreground overflow-x-auto scrollbar-none sm:flex-wrap sm:overflow-visible">
             {Object.entries(statusConfig).map(([key, cfg]) => (
-              <span key={key} className="flex items-center gap-1.5">
+              <span key={key} className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
                 <div className={`w-3 h-3 rounded-sm ${cfg.color}`} />
                 {cfg.label}
               </span>
@@ -227,7 +230,7 @@ export default function TimelinePage() {
               <div className="min-w-[900px]">
                 {/* Header */}
                 <div className="flex border-b border-border/50 bg-muted/20">
-                  <div className="w-48 flex-shrink-0 px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30">
+                  <div className="w-32 sm:w-48 flex-shrink-0 px-3 sm:px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-r border-border/30 sticky left-0 z-30 bg-card">
                     Task
                   </div>
                   <div className="flex-1 flex">
@@ -249,9 +252,11 @@ export default function TimelinePage() {
                   return (
                     <div key={group}>
                       {/* Group header */}
-                      <div className="flex items-center px-5 py-2.5 bg-muted/10 border-b border-border/30">
-                        <span className="text-xs font-bold text-foreground uppercase tracking-wider">{group}</span>
-                        <span className="text-[10px] text-muted-foreground ml-2">({roomTasks.length} tasks)</span>
+                      <div className="flex items-center py-2.5 bg-muted/10 border-b border-border/30">
+                        <div className="sticky left-0 flex items-center px-3 sm:px-5">
+                          <span className="text-xs font-bold text-foreground uppercase tracking-wider">{group}</span>
+                          <span className="text-[10px] text-muted-foreground ml-2">({roomTasks.length} tasks)</span>
+                        </div>
                       </div>
                       {/* Tasks */}
                       {roomTasks.map((task, ti) => {
@@ -268,7 +273,7 @@ export default function TimelinePage() {
                             onMouseLeave={() => setHoveredTask(null)}
                           >
                             {/* Task name */}
-                            <div className="w-48 flex-shrink-0 px-5 py-3 border-r border-border/30 relative z-20 bg-card">
+                            <div className="w-32 sm:w-48 flex-shrink-0 px-3 sm:px-5 py-3 border-r border-border/30 sticky left-0 z-20 bg-card">
                               <div className="text-xs font-medium text-foreground truncate">{task.name}</div>
                               <div className="flex items-center gap-1.5 mt-1">
                                 {task.assignees.map((a, idx) => (

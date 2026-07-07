@@ -119,7 +119,7 @@ export default function TeamPage() {
         </div>
         <button
           onClick={() => setShowManageModal(true)}
-          className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0"
+          className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0 self-start sm:self-auto"
         >
           <UserPlus className="w-4 h-4" /> Add Members
         </button>
@@ -168,38 +168,44 @@ export default function TeamPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="bg-card rounded-2xl border border-border/40 p-5 shadow-sm hover:shadow-md transition-all group relative"
+                className="bg-card rounded-2xl border border-border/40 p-3.5 sm:p-5 shadow-sm hover:shadow-md transition-all group relative"
               >
-                {/* Remove button (only for non-self) */}
+                {/* Remove button (only for non-self); always visible on touch, hover-revealed on desktop */}
                 {!isSelf && (
                   <button
                     onClick={() => handleRemove(m.id)}
-                    className="absolute top-3 right-3 w-7 h-7 rounded-lg text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100"
+                    className="absolute top-3 right-3 w-7 h-7 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-all sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 )}
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
                   {m.avatar_url ? (
-                    <img src={m.avatar_url} alt={m.full_name || ''} className="w-12 h-12 rounded-full object-cover" />
+                    <img src={m.avatar_url} alt={m.full_name || ''} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-sm">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground shadow-sm shrink-0">
                       {getInitials(m.full_name || m.email)}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
+                    <div className="font-semibold text-foreground truncate flex items-center gap-1.5 pr-6 sm:pr-0">
                       {m.full_name || 'Unknown'}
                       {isSelf && <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">You</span>}
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border mt-1 inline-flex items-center gap-1 ${roleColor}`}>
-                      <Briefcase className="w-2.5 h-2.5" /> {m.role}
-                    </span>
+                    <div className="flex items-center gap-2 mt-1 min-w-0">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border inline-flex items-center gap-1 shrink-0 ${roleColor}`}>
+                        <Briefcase className="w-2.5 h-2.5" /> {m.role}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 sm:hidden">
+                        <Mail className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{m.email}</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="mt-4 hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
                   <Mail className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{m.email}</span>
                 </div>
