@@ -482,6 +482,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project_members'] })
   });
 
+  // Project members (by user id) that hold one of the given roles — falls back to
+  // every user with that role org-wide if the project has no explicit members yet.
+  const resolveMailRecipients = (projectId: string, roles: string[]) => {
+    const memberIds = new Set(
+      rawProjectMembers.filter((m: any) => m.project_id === projectId).map((m: any) => m.user_id)
+    );
+    let matches = rawUsers.filter((u: any) => memberIds.has(u.id) && roles.includes(u.role));
+    if (matches.length === 0) {
+      matches = rawUsers.filter((u: any) => roles.includes(u.role));
+    }
+    return matches
+      .filter((u: any) => u.email && u.id !== user?.id)
+      .map((u: any) => ({ email: u.email, name: u.full_name || u.email }));
+  };
+
+  const sendApprovalEmail = async (payload: Record<string, unknown>) => {
+    try {
+      await supabase.functions.invoke('send-approval-email', { body: payload });
+    } catch (e) {
+      console.warn('send-approval-email failed', e);
+    }
+  };
+
   const addApprovalMutation = useMutation({
     mutationFn: async (a: Omit<Approval, 'id' | 'createdAt'>) => {
       const encodedDesc = (a.images?.length)
@@ -501,6 +524,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         cost_amount: a.costAmount ?? null,
       }).select().single();
       if (error) throw error;
+
+      // Notify whoever needs to decide this: the client if an architect requested it,
+      // the architect if a client requested it, or both if requested by anyone else.
+      const recipientRoles = user?.role === 'architect' ? ['client']
+        : user?.role === 'client' ? ['architect']
+        : ['architect', 'client'];
+      const recipients = a.projectId ? resolveMailRecipients(a.projectId, recipientRoles) : [];
+      if (recipients.length > 0) {
+        const project = projects.find(p => p.id === a.projectId);
+        sendApprovalEmail({
+          type: 'new_request',
+          recipients,
+          approval: {
+            title: a.title,
+            category: a.category,
+            description: a.description,
+            projectName: project?.name,
+            requesterName: user?.name,
+            costType: a.costType,
+            costAmount: a.costAmount,
+          },
+        });
+      }
+
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['approvals'] })
@@ -515,6 +562,30 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (updates.decidedAt !== undefined) dbUpdates.decided_at = updates.decidedAt;
       const { data, error } = await supabase.from('approvals').update(dbUpdates).eq('id', id).select().single();
       if (error) throw error;
+
+      // Notify the original requester of the outcome, once a decision has been made.
+      if (updates.status && updates.status !== 'pending') {
+        const original = approvals.find(a => a.id === id);
+        const requester = rawUsers.find((u: any) => u.id === original?.requestedBy);
+        if (original && requester?.email && requester.id !== user?.id) {
+          const project = projects.find(p => p.id === original.projectId);
+          sendApprovalEmail({
+            type: 'decision',
+            recipients: [{ email: requester.email, name: requester.full_name || requester.email }],
+            approval: {
+              title: original.title,
+              category: original.category,
+              projectName: project?.name,
+            },
+            decision: {
+              status: updates.status,
+              decidedByName: user?.name,
+              reason: updates.reason,
+            },
+          });
+        }
+      }
+
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['approvals'] })
