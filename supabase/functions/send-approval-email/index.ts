@@ -17,7 +17,8 @@ interface ApprovalPayload {
   projectName?: string;
   requesterName?: string;
   costType?: "fixed" | "variable";
-  costAmount?: number; // USD base
+  costAmount?: number; // already converted into costCurrency's units
+  costCurrency?: string; // e.g. "USD" | "EUR" | "GBP" | "INR" | "AED" — the requester's currency
 }
 
 interface DecisionPayload {
@@ -45,9 +46,19 @@ const STATUS_COLOR: Record<string, string> = {
   on_hold: "#9c6f1e",
 };
 
-function fmtMoney(amountUSD?: number): string | undefined {
-  if (amountUSD === undefined || amountUSD === null) return undefined;
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amountUSD);
+// Locale affects grouping (e.g. INR's lakh/crore commas), not just the symbol.
+const CURRENCY_LOCALE: Record<string, string> = {
+  USD: "en-US",
+  EUR: "de-DE",
+  GBP: "en-GB",
+  INR: "en-IN",
+  AED: "en-AE",
+};
+
+function fmtMoney(amount?: number, currency = "USD"): string | undefined {
+  if (amount === undefined || amount === null) return undefined;
+  const locale = CURRENCY_LOCALE[currency] || "en-US";
+  return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
 }
 
 // Renders the shared BYLD Space email shell: sage-green page background, centered
@@ -121,7 +132,7 @@ function renderEmail(opts: {
 }
 
 function buildNewRequestEmail(logoUrl: string, appUrl: string, a: ApprovalPayload): { subject: string; html: string } {
-  const cost = fmtMoney(a.costAmount);
+  const cost = fmtMoney(a.costAmount, a.costCurrency);
   const costLine = cost
     ? `<br/><strong>${a.costType === "variable" ? "Estimated cost" : "Cost"}:</strong> ${cost}`
     : "";

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { Project, Task, SiteUpdate, BudgetItem, Message, Notification, Approval, PurchaseOrder, Reimbursement, ReimbursementStatus } from '@/data/mockData';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { convertFromUSD, type Currency } from '@/lib/preferences';
 import { useAuth } from './AuthContext';
 
 interface DataContextType {
@@ -533,6 +534,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const recipients = a.projectId ? resolveMailRecipients(a.projectId, recipientRoles) : [];
       if (recipients.length > 0) {
         const project = projects.find(p => p.id === a.projectId);
+        const emailCurrency = (a.costCurrency as Currency) || 'USD';
         sendApprovalEmail({
           type: 'new_request',
           recipients,
@@ -543,7 +545,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             projectName: project?.name,
             requesterName: user?.name,
             costType: a.costType,
-            costAmount: a.costAmount,
+            costAmount: a.costAmount !== undefined ? convertFromUSD(a.costAmount, emailCurrency) : undefined,
+            costCurrency: emailCurrency,
           },
         });
       }

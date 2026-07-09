@@ -74,6 +74,10 @@ export interface Approval {
   // later in Budget. costAmount is stored in the app's USD base.
   costType?: 'fixed' | 'variable';
   costAmount?: number;
+  // Transient, not persisted to the DB: the currency the requester entered the cost
+  // in, passed through only so the notification email can display it in that currency
+  // instead of always converting to USD.
+  costCurrency?: string;
 }
 
 export type PurchaseOrderStatus =

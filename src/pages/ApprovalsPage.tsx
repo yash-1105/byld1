@@ -178,6 +178,7 @@ export default function ApprovalsPage() {
         visibleRoles: shareRoles, // architect + client added automatically in DataContext
         costType: costType === 'none' ? undefined : costType,
         costAmount: costUSD,
+        costCurrency: costType !== 'none' ? preferences.currency : undefined,
       });
       toast.success('Approval request submitted');
       setNewTitle(''); setNewCategory('Design'); setNewProject(''); setNewDesc(''); setPhotoFiles([]); setShareRoles([]);
