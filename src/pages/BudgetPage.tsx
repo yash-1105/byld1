@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -110,23 +111,22 @@ export default function BudgetPage() {
   const { projects, budgetItems, addBudgetItem, updateBudgetItem, reimbursements, approvals } = useData();
   const { user } = useAuth();
   const { preferences, formatCurrency, formatCurrencyCompact, formatDate } = usePreferences();
-  const [activeProjectId, setActiveProjectId] = useState<string>('');
+  const { activeProjectId } = useActiveProject();
 
   // Editing the final cost of an approval-linked (esp. variable) budget entry
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
 
-  // Set initial active project
-  useEffect(() => {
-    if (projects.length > 0 && !activeProjectId) {
-      setActiveProjectId(projects[0].id);
-    }
-  }, [projects, activeProjectId]);
-
   const [showForm, setShowForm] = useState(false);
+  const [formProjectId, setFormProjectId] = useState('');
   const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [lineItems, setLineItems] = useState([{ category: '', description: '', amount: '' }]);
   const [activeTab, setActiveTab] = useState<BudgetTab>('dashboard');
+
+  const openForm = () => {
+    setFormProjectId(prev => activeProjectId !== 'all' ? activeProjectId : (prev || projects[0]?.id || ''));
+    setShowForm(true);
+  };
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -210,6 +210,7 @@ export default function BudgetPage() {
         setLineItems([{ category: '', description: '', amount: '' }]);
       }
 
+      setFormProjectId(prev => activeProjectId !== 'all' ? activeProjectId : (prev || projects[0]?.id || ''));
       setShowForm(true);
       toast.success('Receipt scanned and categorized!', { id: 'scan-toast' });
       
@@ -222,15 +223,15 @@ export default function BudgetPage() {
     }
   };
 
-  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
-  const projectExpenses = budgetItems.filter(b => b.projectId === activeProject?.id);
-  const projectReimbursements = reimbursements.filter(r => r.projectId === activeProject?.id);
+  const activeProject = activeProjectId !== 'all' ? projects.find(p => p.id === activeProjectId) : undefined;
+  const projectExpenses = activeProjectId === 'all' ? budgetItems : budgetItems.filter(b => b.projectId === activeProjectId);
+  const projectReimbursements = activeProjectId === 'all' ? reimbursements : reimbursements.filter(r => r.projectId === activeProjectId);
 
   // Convert a native-currency amount to USD for consistent aggregation
   const toUSD = (amount: number, currency: string) =>
     amount / (USD_RATES[currency as keyof typeof USD_RATES] ?? 1);
 
-  const totalBudget = activeProject?.budget || 0;
+  const totalBudget = activeProjectId === 'all' ? projects.reduce((sum, p) => sum + (p.budget || 0), 0) : (activeProject?.budget || 0);
   const expensesSpent = projectExpenses.reduce((sum, item) => sum + (item.amount || 0), 0);
 
   const activeReimb = projectReimbursements.filter(r =>
@@ -340,19 +341,19 @@ export default function BudgetPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeProject) return;
-    
+    if (!formProjectId) return;
+
     let addedCount = 0;
     lineItems.forEach(item => {
       if (item.category.trim() && item.amount) {
-        addBudgetItem({ 
+        addBudgetItem({
           category: item.category,
           description: item.description,
-          projectId: activeProject.id,
-          amount: Number(item.amount) || 0, 
-          type: 'expense', 
-          date: formDate, 
-          status: 'pending' 
+          projectId: formProjectId,
+          amount: Number(item.amount) || 0,
+          type: 'expense',
+          date: formDate,
+          status: 'pending'
         });
         addedCount++;
       }
@@ -381,7 +382,12 @@ export default function BudgetPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Budget & Finance</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Budget & Finance</h1>
+            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium bg-muted text-muted-foreground">
+              {activeProject ? activeProject.name : 'All projects'}
+            </span>
+          </div>
           <p className="text-muted-foreground text-sm mt-1">Track expenses, budgets, and reimbursements across your projects</p>
         </div>
         <div className="flex items-center gap-2">
@@ -394,27 +400,10 @@ export default function BudgetPage() {
             {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4 text-primary" />}
             {isScanning ? 'Scanning...' : 'Scan Receipt'}
           </button>
-          <button onClick={() => { setActiveTab('expenses'); setShowForm(true); }} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0">
+          <button onClick={() => { setActiveTab('expenses'); openForm(); }} className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0">
             <Plus className="w-4 h-4" /> Add Entry
           </button>
         </div>
-      </div>
-
-      {/* Project Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {projects.map(p => (
-          <button 
-            key={p.id} 
-            onClick={() => setActiveProjectId(p.id)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-              activeProjectId === p.id 
-                ? 'bg-foreground text-background shadow-md' 
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
       </div>
 
       {/* Top Summary */}
@@ -457,7 +446,7 @@ export default function BudgetPage() {
         <div className="flex items-center gap-3 p-4 rounded-2xl bg-destructive/5 border border-destructive/10">
           <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
           <p className="text-xs text-muted-foreground">
-            <span className="font-semibold text-destructive">Budget Alert:</span> {activeProject?.name} is at {pctUsed}% utilization. You are nearing your total budget limit.
+            <span className="font-semibold text-destructive">Budget Alert:</span> {activeProject ? activeProject.name : 'Your portfolio'} is at {pctUsed}% utilization. You are nearing your total budget limit.
           </p>
         </div>
       )}
@@ -482,14 +471,21 @@ export default function BudgetPage() {
         {showForm && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
             <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border/40 p-6 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground flex items-center gap-2">Add Expense — {activeProject?.name}</h3>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  Add Expense{activeProjectId !== 'all' ? ` — ${activeProject?.name}` : ''}
+                </h3>
                 <div className="flex items-center gap-3">
+                  {activeProjectId === 'all' && (
+                    <select value={formProjectId} onChange={e => setFormProjectId(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  )}
                   <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
                   <button type="button" onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
                 </div>
               </div>
-              
+
               <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
                 {lineItems.map((item, idx) => (
                   <div key={idx} className="flex flex-col md:flex-row gap-3 relative">
@@ -603,7 +599,7 @@ export default function BudgetPage() {
               );
             }) : (
               <div className="text-center py-12 text-sm text-muted-foreground bg-card rounded-2xl border border-border/40">
-                No expenses recorded for this project yet.
+                {activeProject ? 'No expenses recorded for this project yet.' : 'No expenses recorded yet.'}
               </div>
             )}
           </div>
@@ -687,7 +683,7 @@ export default function BudgetPage() {
                 }) : (
                   <tr>
                     <td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">
-                      No entries recorded for this project yet.
+                      {activeProject ? 'No entries recorded for this project yet.' : 'No entries recorded yet.'}
                     </td>
                   </tr>
                 )}

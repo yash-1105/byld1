@@ -1,10 +1,11 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Clock, AlertTriangle, CheckCircle,
   Filter, Layers, Folder
 } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 
 interface GanttTask {
   id: string;
@@ -35,15 +36,9 @@ function getInitials(name: string | null): string {
 
 export default function TimelinePage() {
   const { projects, tasks, users } = useData();
-  const [activeProjectId, setActiveProjectId] = useState<string>('');
+  const { activeProjectId } = useActiveProject();
 
-  useEffect(() => {
-    if (projects.length > 0 && !activeProjectId) {
-      setActiveProjectId(projects[0].id);
-    }
-  }, [projects, activeProjectId]);
-
-  const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
+  const activeProject = activeProjectId !== 'all' ? projects.find(p => p.id === activeProjectId) : undefined;
 
   const ganttTasks = useMemo(() => {
     if (!activeProject) return [];
@@ -139,26 +134,14 @@ export default function TimelinePage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Project Timeline</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Project Timeline</h1>
+            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium bg-muted text-muted-foreground">
+              {activeProject ? activeProject.name : 'All projects'}
+            </span>
+          </div>
           <p className="text-muted-foreground text-sm mt-1">Gantt chart overview across projects</p>
         </div>
-      </div>
-
-      {/* Project Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {projects.map(p => (
-          <button 
-            key={p.id} 
-            onClick={() => setActiveProjectId(p.id)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-              activeProjectId === p.id 
-                ? 'bg-foreground text-background shadow-md' 
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
       </div>
 
       {/* Stats */}
@@ -188,7 +171,9 @@ export default function TimelinePage() {
 
       {ganttTasks.length === 0 ? (
         <div className="bg-card rounded-2xl border border-border/40 p-12 text-center text-muted-foreground shadow-sm">
-          No tasks found for this project. Create tasks to see the timeline.
+          {!activeProject
+            ? 'Select a specific project from the project switcher at the top to view its Gantt timeline.'
+            : 'No tasks found for this project. Create tasks to see the timeline.'}
         </div>
       ) : (
         <>

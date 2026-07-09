@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { NormalizedDocument } from '@/types/drive';
 import DriveExplorerModal from '@/components/drive/DriveExplorerModal';
 import GovernmentApprovalsTable from '@/components/documents/GovernmentApprovalsTable';
@@ -39,6 +40,7 @@ function VisibilityBadge({ vis, users, className = '' }: { vis?: string[] | null
 export default function DocumentsPage() {
   const { user } = useAuth();
   const { projects, users, projectMembers } = useData();
+  const { activeProjectId } = useActiveProject();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -109,6 +111,7 @@ export default function DocumentsPage() {
       category: d.category,
       visibleTo: d.visible_to,
       approvalStatus: (d as any).approval_status || undefined,
+      projectId: d.project_id || undefined,
     })),
     ...driveDocs.filter(d => {
       if (d.user_id === user?.id) return true;
@@ -123,11 +126,14 @@ export default function DocumentsPage() {
       created_at: d.created_at,
       uploaded_by: d.user_id,
       category: d.metadata_json?.category || 'Drive Import',
-      visibleTo: d.metadata_json?.visible_to
+      visibleTo: d.metadata_json?.visible_to,
+      projectId: d.project_id || undefined,
     }))
   ];
 
-  const filtered = normalizedDocs.filter(d => {
+  const projectScopedDocs = normalizedDocs.filter(d => activeProjectId === 'all' || d.projectId === activeProjectId);
+
+  const filtered = projectScopedDocs.filter(d => {
     const matchFolder = selectedFolder === 'All Files' || (d as any).category === selectedFolder;
     const matchSearch = d.name.toLowerCase().includes(search.toLowerCase());
     return matchFolder && matchSearch;
@@ -137,8 +143,8 @@ export default function DocumentsPage() {
     if (e.target.files && e.target.files.length > 0) {
       setSelectedFile(e.target.files[0]);
       setIsUploadModalOpen(true);
-      if (projects.length > 0 && !uploadProject) {
-        setUploadProject(projects[0].id);
+      if (projects.length > 0) {
+        setUploadProject(prev => prev || (activeProjectId !== 'all' ? activeProjectId : projects[0].id));
       }
       setUploadCategory(selectedFolder === 'All Files' ? 'Reports' : selectedFolder);
     }
@@ -150,8 +156,8 @@ export default function DocumentsPage() {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       setSelectedFile(e.dataTransfer.files[0]);
       setIsUploadModalOpen(true);
-      if (projects.length > 0 && !uploadProject) {
-        setUploadProject(projects[0].id);
+      if (projects.length > 0) {
+        setUploadProject(prev => prev || (activeProjectId !== 'all' ? activeProjectId : projects[0].id));
       }
       setUploadCategory(selectedFolder === 'All Files' ? 'Reports' : selectedFolder);
     }
@@ -245,7 +251,7 @@ export default function DocumentsPage() {
       toast.error('You need to create a project first to link a Drive folder.');
       return;
     }
-    setDriveProject(projects[0].id);
+    setDriveProject(activeProjectId !== 'all' ? activeProjectId : projects[0].id);
     setIsDriveModalOpen(true);
   };
 
@@ -253,8 +259,13 @@ export default function DocumentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Documents</h1>
-          <p className="text-muted-foreground text-sm mt-1">{normalizedDocs.length} files across sources</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-foreground">Documents</h1>
+            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium bg-muted text-muted-foreground">
+              {activeProjectId === 'all' ? 'All projects' : projects.find(p => p.id === activeProjectId)?.name}
+            </span>
+          </div>
+          <p className="text-muted-foreground text-sm mt-1">{projectScopedDocs.length} files across sources</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex bg-muted rounded-lg p-0.5">
@@ -286,7 +297,7 @@ export default function DocumentsPage() {
         {/* Categories: horizontal chips on mobile, sidebar on md+ */}
         <div className="flex md:flex-col md:w-48 flex-shrink-0 gap-1.5 md:gap-0 md:space-y-1 overflow-x-auto scrollbar-none pb-1 md:pb-0">
           {folders.map(f => {
-            const count = f === 'All Files' ? normalizedDocs.length : normalizedDocs.filter(d => (d as any).category === f).length;
+            const count = f === 'All Files' ? projectScopedDocs.length : projectScopedDocs.filter(d => (d as any).category === f).length;
             const active = selectedFolder === f;
             return (
               <button
@@ -313,7 +324,7 @@ export default function DocumentsPage() {
 
           {selectedFolder === 'Government Approvals' ? (
             <GovernmentApprovalsTable
-              documents={normalizedDocs.filter(d => (d as any).category === 'Government Approvals')}
+              documents={projectScopedDocs.filter(d => (d as any).category === 'Government Approvals')}
               canEdit={user?.role === 'architect'}
             />
           ) : (

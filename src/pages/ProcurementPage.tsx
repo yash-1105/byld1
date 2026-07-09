@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,8 +54,8 @@ export default function ProcurementPage() {
   const { projects, purchaseOrders, segments, budgetItems, addPurchaseOrder, updatePurchaseOrder, addBudgetItem, addApproval } = useData();
   const { user } = useAuth();
   const { formatCurrency, formatCurrencyCompact } = usePreferences();
+  const { activeProjectId } = useActiveProject();
 
-  const [activeProjectId, setActiveProjectId] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'pipeline' | 'suppliers' | 'analytics'>('pipeline');
   const [showForm, setShowForm] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -68,9 +69,14 @@ export default function ProcurementPage() {
 
   useEffect(() => {
     if (projects.length > 0 && !form.projectId) {
-      setForm(f => ({ ...f, projectId: projects[0].id }));
+      setForm(f => ({ ...f, projectId: activeProjectId !== 'all' ? activeProjectId : projects[0].id }));
     }
-  }, [projects, form.projectId]);
+  }, [projects, form.projectId, activeProjectId]);
+
+  const openForm = () => {
+    setForm(f => ({ ...f, projectId: activeProjectId !== 'all' ? activeProjectId : (f.projectId || projects[0]?.id || '') }));
+    setShowForm(true);
+  };
 
   const role = user?.role;
   const canCreate = role === 'contractor' || role === 'architect';
@@ -254,40 +260,22 @@ export default function ProcurementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Procurement</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Procurement</h1>
+            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium bg-muted text-muted-foreground">
+              {activeProjectId === 'all' ? 'All projects' : projects.find(p => p.id === activeProjectId)?.name}
+            </span>
+          </div>
           <p className="text-muted-foreground text-sm mt-1">Track material &amp; item orders from request to delivery</p>
         </div>
         {canCreate && (
           <button
-            onClick={() => setShowForm(true)}
+            onClick={openForm}
             className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0"
           >
             <Plus className="w-4 h-4" /> New Order
           </button>
         )}
-      </div>
-
-      {/* Project filter tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <button
-          onClick={() => setActiveProjectId('all')}
-          className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-            activeProjectId === 'all' ? 'bg-foreground text-background shadow-md' : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          All Projects
-        </button>
-        {projects.map(p => (
-          <button
-            key={p.id}
-            onClick={() => setActiveProjectId(p.id)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-              activeProjectId === p.id ? 'bg-foreground text-background shadow-md' : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
       </div>
 
       {/* KPI summary */}

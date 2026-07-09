@@ -152,6 +152,44 @@ export type Database = {
           },
         ]
       }
+      calendar_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          google_account_email: string
+          id: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          google_account_email: string
+          id?: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          google_account_email?: string
+          id?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_connections_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_members: {
         Row: {
           conversation_id: string | null
@@ -264,44 +302,6 @@ export type Database = {
             foreignKeyName: "documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      calendar_connections: {
-        Row: {
-          access_token: string
-          created_at: string
-          google_account_email: string
-          id: string
-          refresh_token: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          access_token: string
-          created_at?: string
-          google_account_email: string
-          id?: string
-          refresh_token: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          access_token?: string
-          created_at?: string
-          google_account_email?: string
-          id?: string
-          refresh_token?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_connections_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -658,12 +658,15 @@ export type Database = {
         Row: {
           address: string | null
           budget: number | null
+          budget_max: number | null
+          budget_min: number | null
           cover_image_url: string | null
           created_at: string | null
           description: string | null
           end_date: string | null
           geofence_radius: number | null
           id: string
+          is_variable_budget: boolean
           latitude: number | null
           location: string | null
           longitude: number | null
@@ -675,12 +678,15 @@ export type Database = {
         Insert: {
           address?: string | null
           budget?: number | null
+          budget_max?: number | null
+          budget_min?: number | null
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string | null
           geofence_radius?: number | null
           id?: string
+          is_variable_budget?: boolean
           latitude?: number | null
           location?: string | null
           longitude?: number | null
@@ -692,12 +698,15 @@ export type Database = {
         Update: {
           address?: string | null
           budget?: number | null
+          budget_max?: number | null
+          budget_min?: number | null
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string | null
           geofence_radius?: number | null
           id?: string
+          is_variable_budget?: boolean
           latitude?: number | null
           location?: string | null
           longitude?: number | null

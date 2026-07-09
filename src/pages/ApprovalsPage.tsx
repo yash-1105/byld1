@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import ApprovalCard from '@/components/projects/ApprovalCard';
 import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { USD_RATES } from '@/lib/preferences';
@@ -37,10 +38,10 @@ export default function ApprovalsPage() {
   const { approvals, addApproval, updateApproval, addBudgetItem, budgetItems, projects, users } = useData();
   const { user } = useAuth();
   const { preferences, formatCurrency } = usePreferences();
+  const { activeProjectId } = useActiveProject();
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [projectFilter, setProjectFilter] = useState('all');
   const [showNewForm, setShowNewForm] = useState(false);
 
   // New request form state
@@ -87,7 +88,7 @@ export default function ApprovalsPage() {
   const filtered = approvals
     .filter(a => activeCategory === 'all' || a.category.toLowerCase() === activeCategory)
     .filter(a => statusFilter === 'all' || a.status === statusFilter)
-    .filter(a => projectFilter === 'all' || a.projectId === projectFilter);
+    .filter(a => activeProjectId === 'all' || a.projectId === activeProjectId);
 
   // Counts
   const counts = {
@@ -194,19 +195,6 @@ export default function ApprovalsPage() {
       {/* Sidebar */}
       <div className="w-56 flex-shrink-0 hidden lg:block">
         <div className="soft-card p-4 space-y-1 sticky top-6">
-          {/* Project filter */}
-          <div className="mb-4">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-2 block">Project</label>
-            <select
-              value={projectFilter}
-              onChange={e => setProjectFilter(e.target.value)}
-              className="w-full bg-background border rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="all">All Projects</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-1">Categories</h3>
           {CATEGORIES.map(cat => {
             const pending = categoryCounts(cat.key);
@@ -252,7 +240,12 @@ export default function ApprovalsPage() {
         {/* Header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">Approval Center</h1>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">Approval Center</h1>
+              <span className="text-[11px] px-2.5 py-1 rounded-full font-medium bg-muted text-muted-foreground">
+                {activeProjectId === 'all' ? 'All projects' : projects.find(p => p.id === activeProjectId)?.name}
+              </span>
+            </div>
             <p className="text-muted-foreground text-sm mt-1">
               {counts.pending > 0
                 ? <><span className="font-semibold text-warning">{counts.pending} pending</span> approval{counts.pending !== 1 ? 's' : ''} need attention</>
@@ -261,7 +254,7 @@ export default function ApprovalsPage() {
           </div>
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={() => setShowNewForm(true)}
+            onClick={() => { setNewProject(activeProjectId !== 'all' ? activeProjectId : ''); setShowNewForm(true); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold shadow-md shadow-primary/20 hover:opacity-90 transition-opacity"
           >
             <Plus className="w-4 h-4" /> New Request
@@ -290,17 +283,8 @@ export default function ApprovalsPage() {
           ))}
         </div>
 
-        {/* Mobile filters — the project/category sidebar is hidden below lg */}
-        <div className="grid grid-cols-2 gap-2 lg:hidden">
-          <select
-            value={projectFilter}
-            onChange={e => setProjectFilter(e.target.value)}
-            className="w-full bg-card border border-border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-            aria-label="Filter by project"
-          >
-            <option value="all">All Projects</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+        {/* Mobile filters — the category sidebar is hidden below lg */}
+        <div className="grid grid-cols-1 gap-2 lg:hidden">
           <select
             value={activeCategory}
             onChange={e => setActiveCategory(e.target.value)}

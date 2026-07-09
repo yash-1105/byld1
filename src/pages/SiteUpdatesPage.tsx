@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -72,16 +73,12 @@ const typeConfig = {
 export default function SiteUpdatesPage() {
   const { projects, users } = useData();
   const { user } = useAuth();
+  const { activeProjectId } = useActiveProject();
 
   const [activeTab, setActiveTab] = useState<'timeline' | 'logbook' | 'inventory'>('timeline');
-  const [activeProjectId, setActiveProjectId] = useState<string>('');
   const [composerOpen, setComposerOpen] = useState(false);
 
-  useEffect(() => {
-    if (projects.length > 0 && !activeProjectId) setActiveProjectId(projects[0].id);
-  }, [projects, activeProjectId]);
-
-  const activeProject = projects.find(p => p.id === activeProjectId);
+  const activeProject = activeProjectId !== 'all' ? projects.find(p => p.id === activeProjectId) : undefined;
 
   if (projects.length === 0) {
     return (
@@ -97,7 +94,12 @@ export default function SiteUpdatesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Site Updates</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-foreground">Site Updates</h1>
+            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium bg-muted text-muted-foreground">
+              {activeProject ? activeProject.name : 'All projects'}
+            </span>
+          </div>
           <p className="text-muted-foreground text-sm mt-1">Monitoring, digital logbook, and inventory tracking</p>
         </div>
         {(user?.role === 'architect' || user?.role === 'contractor') && (
@@ -115,49 +117,41 @@ export default function SiteUpdatesPage() {
           <ClientUpdateComposer
             open={composerOpen}
             onOpenChange={setComposerOpen}
-            defaultProjectId={activeProjectId || undefined}
+            defaultProjectId={(activeProjectId !== 'all' ? activeProjectId : projects[0]?.id) || undefined}
           />
         </Suspense>
       )}
 
-      {/* Project tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {projects.map(p => (
-          <button
-            key={p.id}
-            onClick={() => setActiveProjectId(p.id)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-              activeProjectId === p.id
-                ? 'bg-foreground text-background shadow-md'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
-      </div>
+      {!activeProject ? (
+        <div className="bg-card border border-border/40 rounded-2xl p-12 text-center text-muted-foreground">
+          <Folder className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p>Select a specific project from the project switcher at the top to view its site updates.</p>
+        </div>
+      ) : (
+        <>
+          {/* Feature Tabs */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
+            {(['timeline', 'logbook', 'inventory'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all capitalize whitespace-nowrap shrink-0 ${
+                  activeTab === tab
+                    ? 'gradient-primary text-primary-foreground shadow-md shadow-primary/15'
+                    : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span className="sm:hidden">{tab === 'logbook' ? 'Logbook' : tab === 'inventory' ? 'Inventory' : 'Timeline'}</span>
+                <span className="hidden sm:inline">{tab === 'logbook' ? 'Digital Logbook' : tab === 'inventory' ? 'Inventory Tracking' : 'Timeline'}</span>
+              </button>
+            ))}
+          </div>
 
-      {/* Feature Tabs */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
-        {(['timeline', 'logbook', 'inventory'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all capitalize whitespace-nowrap shrink-0 ${
-              activeTab === tab
-                ? 'gradient-primary text-primary-foreground shadow-md shadow-primary/15'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span className="sm:hidden">{tab === 'logbook' ? 'Logbook' : tab === 'inventory' ? 'Inventory' : 'Timeline'}</span>
-            <span className="hidden sm:inline">{tab === 'logbook' ? 'Digital Logbook' : tab === 'inventory' ? 'Inventory Tracking' : 'Timeline'}</span>
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'timeline' && <TimelineTab projectId={activeProjectId} projectName={activeProject?.name} user={user} users={users} />}
-      {activeTab === 'logbook' && <LogbookTab projectId={activeProjectId} projectName={activeProject?.name} user={user} />}
-      {activeTab === 'inventory' && <InventoryTab projectId={activeProjectId} projectName={activeProject?.name} user={user} />}
+          {activeTab === 'timeline' && <TimelineTab projectId={activeProject.id} projectName={activeProject.name} user={user} users={users} />}
+          {activeTab === 'logbook' && <LogbookTab projectId={activeProject.id} projectName={activeProject.name} user={user} />}
+          {activeTab === 'inventory' && <InventoryTab projectId={activeProject.id} projectName={activeProject.name} user={user} />}
+        </>
+      )}
     </div>
   );
 }

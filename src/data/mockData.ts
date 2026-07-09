@@ -13,6 +13,10 @@ export interface Project {
   latitude?: number;
   longitude?: number;
   geofenceRadius?: number;
+  imageUrl?: string;
+  isVariableBudget?: boolean;
+  budgetMin?: number;
+  budgetMax?: number;
 }
 
 export interface Task {

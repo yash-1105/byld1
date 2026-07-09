@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Search, Users, ArrowUpRight, Map, LayoutGrid } from 'lucide-react';
+import { Plus, X, Search, Users, ArrowUpRight, Map, LayoutGrid, Upload, ImageIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { convertToUSD, CURRENCY_SYMBOLS } from '@/lib/preferences';
 import ProjectMap from '@/components/maps/ProjectMap';
 
 const statusLabels: Record<string, string> = { planning: 'Planning', design: 'Design', approval: 'Approval', construction: 'Construction', finishing: 'Finishing', completed: 'Completed' };
@@ -21,11 +23,17 @@ const projectImages = [
 export default function ProjectsPage() {
   const { projects, addProject } = useData();
   const { user } = useAuth();
-  const { formatCurrencyCompact } = usePreferences();
+  const { formatCurrencyCompact, preferences } = usePreferences();
+  const currencySymbol = CURRENCY_SYMBOLS[preferences.currency];
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [form, setForm] = useState({ name: '', description: '', deadline: '', budget: '' });
+  const [form, setForm] = useState({ name: '', description: '', deadline: '', budget: '', budgetMin: '', budgetMax: '' });
+  const [isVariableBudget, setIsVariableBudget] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   // Clients only see projects they're a part of
   const visible = user?.role === 'client'
@@ -34,22 +42,59 @@ export default function ProjectsPage() {
   const filtered = visible.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
   const isClient = user?.role === 'client';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setForm({ name: '', description: '', deadline: '', budget: '', budgetMin: '', budgetMax: '' });
+    setIsVariableBudget(false);
+    setCoverFile(null);
+    setCoverPreview(null);
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setCoverFile(file);
+    setCoverPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
-    addProject({
-      name: form.name,
-      description: form.description,
-      deadline: form.deadline,
-      budget: Number(form.budget) || 0,
-      spent: 0,
-      progress: 0,
-      status: 'planning',
-      team: [],
-    });
-    setForm({ name: '', description: '', deadline: '', budget: '' });
-    setShowForm(false);
-    toast.success('Project created successfully');
+    setCreating(true);
+    try {
+      let imageUrl: string | undefined;
+      if (coverFile) {
+        const ext = coverFile.name.split('.').pop();
+        const path = `projects/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('chat-media').upload(path, coverFile);
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage.from('chat-media').getPublicUrl(path);
+          imageUrl = publicUrl;
+        }
+      }
+
+      const budgetMinUSD = isVariableBudget ? convertToUSD(Number(form.budgetMin) || 0, preferences.currency) : undefined;
+      const budgetMaxUSD = isVariableBudget ? convertToUSD(Number(form.budgetMax) || 0, preferences.currency) : undefined;
+      const budgetUSD = isVariableBudget ? (budgetMaxUSD || 0) : convertToUSD(Number(form.budget) || 0, preferences.currency);
+
+      addProject({
+        name: form.name,
+        description: form.description,
+        deadline: form.deadline,
+        budget: budgetUSD,
+        isVariableBudget,
+        budgetMin: budgetMinUSD,
+        budgetMax: budgetMaxUSD,
+        imageUrl,
+        spent: 0,
+        progress: 0,
+        status: 'planning',
+        team: [],
+      });
+      resetForm();
+      setShowForm(false);
+      toast.success('Project created successfully');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -99,11 +144,60 @@ export default function ProjectsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Project name" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
-                <input value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} placeholder="Budget ($)" type="number" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                <input value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} type="date" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
-                <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground px-1">Deadline</label>
+                  <input value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} type="date" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
+
+                {!isVariableBudget ? (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-muted-foreground px-1">Budget ({currencySymbol})</label>
+                    <input value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} placeholder={`Budget (${currencySymbol})`} type="number" min="0" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium text-muted-foreground px-1">Budget range ({currencySymbol})</label>
+                    <div className="flex items-center gap-2">
+                      <input value={form.budgetMin} onChange={e => setForm(f => ({ ...f, budgetMin: e.target.value }))} placeholder="Min" type="number" min="0" className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                      <span className="text-muted-foreground text-xs shrink-0">to</span>
+                      <input value={form.budgetMax} onChange={e => setForm(f => ({ ...f, budgetMax: e.target.value }))} placeholder="Max" type="number" min="0" className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                  </div>
+                )}
+
+                <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 md:col-span-2" />
               </div>
-              <button type="submit" className="gradient-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-medium hover:opacity-90 shadow-lg shadow-primary/20">Create Project</button>
+
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer w-fit">
+                <input type="checkbox" checked={isVariableBudget} onChange={e => setIsVariableBudget(e.target.checked)} className="rounded border-border" />
+                This project has a variable / range budget
+              </label>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground px-1 mb-1.5 block">Cover photo</label>
+                <input type="file" accept="image/*" ref={coverInputRef} className="hidden" onChange={handleCoverChange} />
+                {coverPreview ? (
+                  <div className="flex items-center gap-3">
+                    <img src={coverPreview} alt="" className="w-16 h-16 rounded-lg object-cover border border-border" />
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">{coverFile?.name}</span>
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => coverInputRef.current?.click()} className="text-xs text-primary font-medium">Change</button>
+                        <button type="button" onClick={() => { setCoverFile(null); setCoverPreview(null); }} className="text-xs text-muted-foreground hover:text-destructive">Remove</button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => coverInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all w-full justify-center">
+                    <ImageIcon className="w-4 h-4" /> Add cover photo
+                  </button>
+                )}
+              </div>
+
+              <button type="submit" disabled={creating} className="gradient-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-medium hover:opacity-90 shadow-lg shadow-primary/20 disabled:opacity-60 flex items-center gap-2">
+                {creating && <Upload className="w-4 h-4 animate-pulse" />} {creating ? 'Creating...' : 'Create Project'}
+              </button>
             </form>
           </motion.div>
         )}
@@ -122,7 +216,7 @@ export default function ProjectsPage() {
               {/* Image */}
               <div className="h-40 overflow-hidden relative">
                 <img
-                  src={projectImages[i % projectImages.length]}
+                  src={p.imageUrl || projectImages[i % projectImages.length]}
                   alt={p.name}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
@@ -152,7 +246,7 @@ export default function ProjectsPage() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Budget: {formatCurrencyCompact(p.budget)}</span>
+                  <span>Budget: {p.isVariableBudget && p.budgetMin != null && p.budgetMax != null ? `${formatCurrencyCompact(p.budgetMin)} – ${formatCurrencyCompact(p.budgetMax)}` : formatCurrencyCompact(p.budget)}</span>
                   <span>Due: {new Date(p.deadline).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center justify-between mt-4">

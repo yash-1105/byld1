@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Briefcase, Users, Plus, X, Search, Trash2, UserPlus, Folder } from 'lucide-react';
 import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -22,36 +23,50 @@ const roleColors: Record<string, string> = {
 export default function TeamPage() {
   const { user } = useAuth();
   const { users, projectMembers, projects } = useData();
+  const { activeProjectId } = useActiveProject();
   const queryClient = useQueryClient();
 
-  const [activeProjectId, setActiveProjectId] = useState<string>('');
   const [showManageModal, setShowManageModal] = useState(false);
+  const [modalProjectId, setModalProjectId] = useState('');
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
   const [loading, setLoading] = useState(false);
 
-  // Set default project once loaded
-  useMemo(() => {
-    if (projects.length > 0 && !activeProjectId) setActiveProjectId(projects[0].id);
-  }, [projects, activeProjectId]);
+  const activeProject = activeProjectId !== 'all' ? projects.find(p => p.id === activeProjectId) : undefined;
+  // The project members are added to/removed from — the active project if concrete, otherwise chosen in the modal.
+  const targetProjectId = activeProjectId !== 'all' ? activeProjectId : modalProjectId;
+  const targetProject = projects.find(p => p.id === targetProjectId);
 
-  const activeProject = projects.find(p => p.id === activeProjectId);
+  const openManageModal = () => {
+    setModalProjectId(prev => activeProjectId !== 'all' ? activeProjectId : (prev || projects[0]?.id || ''));
+    setShowManageModal(true);
+  };
 
-  // Members of the ACTIVE project only
+  // Members of the active project, or the union of members across all accessible projects.
   const activeMembers = useMemo(() => {
     const memberIds = new Set(
       projectMembers
-        .filter(m => m.project_id === activeProjectId)
+        .filter(m => activeProjectId === 'all' || m.project_id === activeProjectId)
         .map(m => m.user_id)
     );
     return users.filter(u => memberIds.has(u.id));
   }, [projectMembers, users, activeProjectId]);
 
-  // All users NOT already in this project (for the Add panel)
+  // Members of the modal's target project (for the Add panel's exclusion list)
+  const targetMembers = useMemo(() => {
+    const memberIds = new Set(
+      projectMembers
+        .filter(m => m.project_id === targetProjectId)
+        .map(m => m.user_id)
+    );
+    return users.filter(u => memberIds.has(u.id));
+  }, [projectMembers, users, targetProjectId]);
+
+  // All users NOT already in the target project (for the Add panel)
   const nonMembers = useMemo(() => {
     const memberIds = new Set(
       projectMembers
-        .filter(m => m.project_id === activeProjectId)
+        .filter(m => m.project_id === targetProjectId)
         .map(m => m.user_id)
     );
     return users.filter(u =>
@@ -60,7 +75,7 @@ export default function TeamPage() {
         u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
         u.email?.toLowerCase().includes(search.toLowerCase()))
     );
-  }, [projectMembers, users, activeProjectId, search, user?.id]);
+  }, [projectMembers, users, targetProjectId, search, user?.id]);
 
   const filteredNonMembers = useMemo(() => {
     if (filterRole === 'all') return nonMembers;
@@ -68,34 +83,35 @@ export default function TeamPage() {
   }, [nonMembers, filterRole]);
 
   const handleAdd = async (userId: string) => {
-    if (!activeProjectId) return;
+    if (!targetProjectId) return;
     setLoading(true);
     const userToAdd = users.find(u => u.id === userId);
     const { error } = await supabase.from('project_members').insert({
-      project_id: activeProjectId,
+      project_id: targetProjectId,
       user_id: userId,
       role: userToAdd?.role || 'member'
     });
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success(`${userToAdd?.full_name || 'User'} added to ${activeProject?.name}`);
+      toast.success(`${userToAdd?.full_name || 'User'} added to ${targetProject?.name}`);
       queryClient.invalidateQueries({ queryKey: ['project_members'] });
     }
     setLoading(false);
   };
 
-  const handleRemove = async (userId: string) => {
-    if (!activeProjectId || userId === user?.id) return;
+  const handleRemove = async (userId: string, projectId?: string) => {
+    const removeFrom = projectId || targetProjectId;
+    if (!removeFrom || userId === user?.id) return;
     const userToRemove = users.find(u => u.id === userId);
     const { error } = await supabase.from('project_members')
       .delete()
-      .eq('project_id', activeProjectId)
+      .eq('project_id', removeFrom)
       .eq('user_id', userId);
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success(`${userToRemove?.full_name || 'User'} removed from ${activeProject?.name}`);
+      toast.success(`${userToRemove?.full_name || 'User'} removed from ${projects.find(p => p.id === removeFrom)?.name}`);
       queryClient.invalidateQueries({ queryKey: ['project_members'] });
     }
   };
@@ -114,32 +130,20 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Team</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-foreground">Team</h1>
+            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium bg-muted text-muted-foreground">
+              {activeProject ? activeProject.name : 'All projects'}
+            </span>
+          </div>
           <p className="text-muted-foreground text-sm mt-1">Manage your project team members</p>
         </div>
         <button
-          onClick={() => setShowManageModal(true)}
+          onClick={openManageModal}
           className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0 self-start sm:self-auto"
         >
           <UserPlus className="w-4 h-4" /> Add Members
         </button>
-      </div>
-
-      {/* Project Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {projects.map(p => (
-          <button
-            key={p.id}
-            onClick={() => setActiveProjectId(p.id)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-              activeProjectId === p.id
-                ? 'bg-foreground text-background shadow-md'
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
       </div>
 
       {/* Members Grid */}
@@ -148,10 +152,10 @@ export default function TeamPage() {
           <Users className="w-12 h-12 mx-auto opacity-20" />
           <div>
             <p className="font-semibold text-foreground">No team members yet</p>
-            <p className="text-sm text-muted-foreground mt-1">Click "Add Members" to add people to {activeProject?.name}.</p>
+            <p className="text-sm text-muted-foreground mt-1">Click "Add Members" to add people to {activeProject ? activeProject.name : 'a project'}.</p>
           </div>
           <button
-            onClick={() => setShowManageModal(true)}
+            onClick={openManageModal}
             className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 shadow-lg shadow-primary/20 inline-flex items-center gap-2"
           >
             <UserPlus className="w-4 h-4" /> Add Members
@@ -170,10 +174,10 @@ export default function TeamPage() {
                 transition={{ delay: i * 0.05 }}
                 className="bg-card rounded-2xl border border-border/40 p-3.5 sm:p-5 shadow-sm hover:shadow-md transition-all group relative"
               >
-                {/* Remove button (only for non-self); always visible on touch, hover-revealed on desktop */}
-                {!isSelf && (
+                {/* Remove button (only for non-self, and only when scoped to one project — ambiguous across "All projects") */}
+                {!isSelf && activeProject && (
                   <button
-                    onClick={() => handleRemove(m.id)}
+                    onClick={() => handleRemove(m.id, activeProject.id)}
                     className="absolute top-3 right-3 w-7 h-7 rounded-lg text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-all sm:opacity-0 sm:group-hover:opacity-100"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -236,7 +240,17 @@ export default function TeamPage() {
               <div className="flex items-center justify-between p-5 border-b border-border/40 shrink-0">
                 <div>
                   <h2 className="font-bold text-foreground">Manage Team</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{activeProject?.name}</p>
+                  {activeProjectId === 'all' ? (
+                    <select
+                      value={modalProjectId}
+                      onChange={e => setModalProjectId(e.target.value)}
+                      className="mt-1 px-2.5 py-1 rounded-lg border border-border bg-background text-xs outline-none focus:ring-2 focus:ring-primary/20"
+                    >
+                      {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5">{targetProject?.name}</p>
+                  )}
                 </div>
                 <button onClick={() => setShowManageModal(false)} className="text-muted-foreground hover:text-foreground w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center">
                   <X className="w-4 h-4" />
@@ -245,9 +259,9 @@ export default function TeamPage() {
 
               {/* Current Members */}
               <div className="p-4 border-b border-border/30 shrink-0">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Current Members ({activeMembers.length})</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Current Members ({targetMembers.length})</p>
                 <div className="flex flex-wrap gap-2">
-                  {activeMembers.map(m => (
+                  {targetMembers.map(m => (
                     <div key={m.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/50 border border-border/40 text-xs">
                       <span className="font-medium text-foreground">{m.full_name || m.email?.split('@')[0]}</span>
                       <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-medium border ${roleColors[m.role] || 'bg-muted border-border text-muted-foreground'}`}>{m.role}</span>
@@ -258,7 +272,7 @@ export default function TeamPage() {
                       )}
                     </div>
                   ))}
-                  {activeMembers.length === 0 && <p className="text-xs text-muted-foreground">No members yet.</p>}
+                  {targetMembers.length === 0 && <p className="text-xs text-muted-foreground">No members yet.</p>}
                 </div>
               </div>
 
@@ -294,7 +308,7 @@ export default function TeamPage() {
               <div className="overflow-y-auto flex-1 p-4">
                 {filteredNonMembers.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
-                    {users.length <= activeMembers.length
+                    {users.length <= targetMembers.length
                       ? 'All registered users are already in this project.'
                       : 'No users match your search.'}
                   </div>

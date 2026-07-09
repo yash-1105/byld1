@@ -191,6 +191,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       latitude: p.latitude,
       longitude: p.longitude,
       geofenceRadius: p.geofence_radius,
+      imageUrl: p.cover_image_url || undefined,
+      isVariableBudget: p.is_variable_budget || false,
+      budgetMin: p.budget_min ?? undefined,
+      budgetMax: p.budget_max ?? undefined,
     };
   }), [rawProjects, rawProjectMembers, rawUsers, rawBudgetItems, rawTasks, user?.id]);
 
@@ -360,6 +364,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         description: p.description,
         type: p.status,
         budget: p.budget,
+        is_variable_budget: p.isVariableBudget || false,
+        budget_min: p.budgetMin ?? null,
+        budget_max: p.budgetMax ?? null,
+        cover_image_url: p.imageUrl || null,
         location: 'TBD',
         start_date: new Date().toISOString(),
         end_date: p.deadline || new Date().toISOString(),

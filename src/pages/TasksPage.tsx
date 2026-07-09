@@ -1,5 +1,6 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useData } from '@/contexts/DataContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, GripVertical, Folder, NotebookPen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,31 +28,30 @@ function getInitials(name: string | null): string {
 
 export default function TasksPage() {
   const { tasks, addTask, updateTask, projects, users } = useData();
-  const [activeProjectId, setActiveProjectId] = useState<string>('');
-
-  useEffect(() => {
-    if (projects.length > 0 && !activeProjectId) {
-      setActiveProjectId(projects[0].id);
-    }
-  }, [projects, activeProjectId]);
+  const { activeProjectId } = useActiveProject();
 
   const [showForm, setShowForm] = useState(false);
   const [showMeetingImport, setShowMeetingImport] = useState(false);
   const [mobileCol, setMobileCol] = useState<typeof columns[number]['key']>('todo');
   const [form, setForm] = useState({ title: '', description: '', priority: 'medium', assignee: '', deadline: '' });
+  const [formProjectId, setFormProjectId] = useState('');
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
 
-  const activeProject = projects.find(p => p.id === activeProjectId);
-  const projectTasks = tasks.filter(t => t.projectId === activeProjectId);
+  const projectTasks = activeProjectId === 'all' ? tasks : tasks.filter(t => t.projectId === activeProjectId);
+
+  const openForm = () => {
+    setFormProjectId(activeProjectId !== 'all' ? activeProjectId : (projects[0]?.id || ''));
+    setShowForm(true);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim() || !activeProjectId) return;
+    if (!form.title.trim() || !formProjectId) return;
     addTask({
       ...form,
       status: 'todo',
       priority: form.priority as any,
-      projectId: activeProjectId
+      projectId: formProjectId
     }).catch(() => toast.error('Failed to create task'));
     setForm({ title: '', description: '', priority: 'medium', assignee: '', deadline: '' });
     setShowForm(false);
@@ -152,14 +152,19 @@ export default function TasksPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Tasks</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold text-foreground">Tasks</h1>
+            <span className="text-[11px] px-2.5 py-1 rounded-full font-medium bg-muted text-muted-foreground">
+              {activeProjectId === 'all' ? 'All projects' : projects.find(p => p.id === activeProjectId)?.name}
+            </span>
+          </div>
           <p className="text-muted-foreground text-sm mt-1">Kanban board — drag tasks between columns</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => setShowMeetingImport(true)} className="bg-card border border-border text-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-muted flex items-center gap-2 transition-colors">
             <NotebookPen className="w-4 h-4" /> From Meeting Notes
           </button>
-          <button onClick={() => setShowForm(true)} className="gradient-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20">
+          <button onClick={openForm} className="gradient-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20">
             <Plus className="w-4 h-4" /> Add Task
           </button>
         </div>
@@ -170,38 +175,28 @@ export default function TasksPage() {
           <MeetingToTasksDialog
             open={showMeetingImport}
             onOpenChange={setShowMeetingImport}
-            defaultProjectId={activeProjectId || undefined}
+            defaultProjectId={(activeProjectId !== 'all' ? activeProjectId : projects[0]?.id) || undefined}
           />
         </Suspense>
       )}
-
-      {/* Project Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {projects.map(p => (
-          <button 
-            key={p.id} 
-            onClick={() => setActiveProjectId(p.id)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
-              activeProjectId === p.id 
-                ? 'bg-foreground text-background shadow-md' 
-                : 'bg-card border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
-      </div>
 
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
             <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border/40 p-6 space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">New Task — {activeProject?.name}</h3>
+                <h3 className="font-semibold text-foreground">New Task — {projects.find(p => p.id === formProjectId)?.name}</h3>
                 <button type="button" onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Task title" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
+                {activeProjectId === 'all' && (
+                  <select value={formProjectId} onChange={e => setFormProjectId(e.target.value)} className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                )}
                 <select value={form.assignee} onChange={e => setForm(f => ({ ...f, assignee: e.target.value }))} className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
                   <option value="">Unassigned</option>
                   {users.map(u => (

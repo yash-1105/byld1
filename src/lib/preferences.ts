@@ -50,6 +50,20 @@ export function convertFromUSD(amountUSD: number, currency: Currency): number {
   return (amountUSD || 0) * USD_RATES[currency];
 }
 
+/** Convert an amount entered in the selected currency back into the USD base. */
+export function convertToUSD(amount: number, currency: Currency): number {
+  return (amount || 0) / USD_RATES[currency];
+}
+
+/** Bare currency symbol for inline use in form labels/placeholders (e.g. inputs). */
+export const CURRENCY_SYMBOLS: Record<Currency, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  INR: '₹',
+  AED: 'د.إ',
+};
+
 /** Full currency string, e.g. "$24,500" / "₹2,033,500" — converted from USD. */
 export function formatCurrency(amount: number, currency: Currency): string {
   return new Intl.NumberFormat(CURRENCY_LOCALE[currency], {
