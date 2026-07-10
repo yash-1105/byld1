@@ -307,6 +307,99 @@ export type Database = {
           },
         ]
       }
+      drawing_versions: {
+        Row: {
+          created_at: string
+          drawing_id: string
+          file_type: string
+          file_url: string
+          id: string
+          notes: string | null
+          uploaded_by: string | null
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          drawing_id: string
+          file_type?: string
+          file_url: string
+          id?: string
+          notes?: string | null
+          uploaded_by?: string | null
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          drawing_id?: string
+          file_type?: string
+          file_url?: string
+          id?: string
+          notes?: string | null
+          uploaded_by?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drawing_versions_drawing_id_fkey"
+            columns: ["drawing_id"]
+            isOneToOne: false
+            referencedRelation: "drawings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drawing_versions_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drawings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          discipline: string
+          drawing_number: string | null
+          id: string
+          project_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          discipline?: string
+          drawing_number?: string | null
+          id?: string
+          project_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          discipline?: string
+          drawing_number?: string | null
+          id?: string
+          project_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drawings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drawings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drive_connections: {
         Row: {
           access_token: string

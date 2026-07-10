@@ -1,6 +1,7 @@
 import {
   LayoutGrid, Folder, ListChecks, Stamp, Package, GanttChart, HardHat,
   IndianRupee, FileText, Users, MessageSquare, HelpCircle, Bell, Settings,
+  PencilRuler,
 } from 'lucide-react';
 
 export interface RailItem {
@@ -22,6 +23,7 @@ export const NAV: RailItem[] = [
   { label: 'Timeline',     icon: GanttChart,    path: '/timeline',     roles: ['architect', 'contractor', 'client'],              primary: true },
   { label: 'Site',         icon: HardHat,       path: '/site-updates', roles: ['architect', 'contractor', 'client'],              primary: true },
   { label: 'Budget',       icon: IndianRupee,   path: '/budget',       roles: ['architect', 'client'],                            primary: true },
+  { label: 'Drawings',     icon: PencilRuler,   path: '/drawings',     roles: ['architect', 'contractor', 'client', 'consultant'], primary: true },
   { label: 'Documents',    icon: FileText,      path: '/documents',    roles: ['architect', 'contractor', 'client'],              primary: true },
   { label: 'Team',         icon: Users,         path: '/team',         roles: ['architect'],                                      primary: true },
   { label: 'Chat',         icon: MessageSquare, path: '/chat',         roles: ['architect', 'contractor', 'client', 'consultant'], primary: true },

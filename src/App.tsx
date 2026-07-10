@@ -30,6 +30,7 @@ const ConsultationsPage = lazy(() => import("@/pages/ConsultationsPage"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
 const ProcurementPage = lazy(() => import("@/pages/ProcurementPage"));
 const TimelinePage = lazy(() => import("@/pages/TimelinePage"));
+const DrawingsPage = lazy(() => import("@/pages/DrawingsPage"));
 const StaticPage = lazy(() => import("@/pages/StaticPage"));
 const FeaturesTourPage = lazy(() => import("@/features-tour/FeaturesTourPage"));
 
@@ -86,6 +87,7 @@ function AppRoutes() {
           <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
           <Route path="/procurement" element={<Suspense fallback={<PageLoader />}><ProcurementPage /></Suspense>} />
           <Route path="/timeline" element={<Suspense fallback={<PageLoader />}><TimelinePage /></Suspense>} />
+          <Route path="/drawings" element={<Suspense fallback={<PageLoader />}><DrawingsPage /></Suspense>} />
         </Route>
 
         {/* Interactive features tour (replaces the old static features page) */}

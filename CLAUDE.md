@@ -110,6 +110,14 @@ Because contractors/consultants have no Approvals page, `DashboardPage.tsx` rend
 
 `DocumentsPage.tsx` has a **Government Approvals** category. Documents in it render through `GovernmentApprovalsTable.tsx` (not the normal file grid), showing an `approval_status` badge (`Pending`/`Submitted`/`Approved`/`Rejected`, stored on `documents.approval_status`). Architects can change the status inline. The upload modal exposes the status selector only when the chosen category is `Government Approvals`. The `NormalizedDocument` type (`src/types/drive.ts`) carries `projectId` and `approvalStatus` to unify Supabase + Drive docs.
 
+### Drawings — version control & revision compare (`DrawingsPage.tsx`)
+
+Procore/PlanRadar-style plan management at `/drawings` (nav item for all four roles; upload restricted to architect/contractor). Two tables (migration `20260710000000_add_drawings.sql`, applied to remote): `drawings` is the logical sheet (title, `drawing_number`, `discipline`), `drawing_versions` is insert-only revision history — **the current revision is simply the highest `version_number`** (no pointer column; uploading a new revision never mutates old rows, preserving the audit trail). Files (PDF/PNG/JPEG/WebP) upload to `chat-media` under `drawings/<projectId>/`; `file_type` is `'pdf' | 'image'`.
+
+- **`src/lib/drawingRender.ts`** — shared canvas pipeline: `renderVersionToCanvas()` rasterizes a revision (PDF page 1 via **lazy-imported `pdfjs-dist`** with its worker loaded through Vite's `?url`; never in the main bundle) and `buildDiffCanvas()` computes the Procore-style per-pixel overlay diff: content only in the older rev renders **red** (removed), only in the newer rev **blue** (added), unchanged near-black, paper white. Takes `dx`/`dy` to re-register misaligned exports.
+- **`DrawingsPage.tsx`** — discipline chips, thumbnail grid (module-level `thumbCache` keyed by `file_url`; the `DrawingThumb` effect must key on `file_url`, not the version object — the exhaustive-deps warning there is deliberate), detail modal with current-rev preview + full version history (uploader, timestamp, per-revision notes, view/download), "New Revision" (auto-increments, toast confirms it became current). Scoped by the global `ActiveProjectContext` like every other page.
+- **`src/components/drawings/DrawingCompareDialog.tsx`** (lazy) — pick any two revisions; three modes: **Overlay** (color-coded diff), **Side by side**, **Slider** (drag divider, newer rev clipped left). Overlay mode has an alignment nudge panel (arrow keys shift the newer rev ±2px per press, reset button) for PDFs exported with a slight offset. Rendered canvases are cached per version id so switching modes/nudging doesn't re-rasterize.
+
 ### Image Uploads
 
 All file uploads use the `chat-media` Supabase Storage bucket:
