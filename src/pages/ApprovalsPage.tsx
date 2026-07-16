@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardCheck, Layers, DollarSign, FileText, AlertTriangle,
   ShoppingCart, Wrench, Plus, X, Clock, CheckCircle, XCircle, PauseCircle,
-  ImagePlus, Loader2,
+  ImagePlus, Loader2, Mic,
 } from 'lucide-react';
 import ApprovalCard from '@/components/projects/ApprovalCard';
 import { useData } from '@/contexts/DataContext';
@@ -13,6 +13,10 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import { USD_RATES } from '@/lib/preferences';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { isVoiceInputSupported } from '@/lib/voiceSupport';
+import type { VoiceExtractedFields } from '@/components/approvals/VoiceApprovalDialog';
+
+const VoiceApprovalDialog = lazy(() => import('@/components/approvals/VoiceApprovalDialog'));
 
 const CATEGORIES = [
   { key: 'all',         label: 'All Requests', icon: ClipboardCheck },
@@ -43,6 +47,9 @@ export default function ApprovalsPage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showVoiceDialog, setShowVoiceDialog] = useState(false);
+  const [flaggedFields, setFlaggedFields] = useState<Set<string>>(new Set());
+  const voiceSupported = isVoiceInputSupported();
 
   // New request form state
   const [newTitle, setNewTitle]       = useState('');
@@ -182,7 +189,7 @@ export default function ApprovalsPage() {
       });
       toast.success('Approval request submitted');
       setNewTitle(''); setNewCategory('Design'); setNewProject(''); setNewDesc(''); setPhotoFiles([]); setShareRoles([]);
-      setCostType('none'); setCostInput('');
+      setCostType('none'); setCostInput(''); setFlaggedFields(new Set());
       setShowNewForm(false);
     } catch {
       toast.error('Failed to submit request');
@@ -190,6 +197,31 @@ export default function ApprovalsPage() {
       setSubmitting(false);
     }
   };
+
+  const handleVoiceExtracted = (fields: VoiceExtractedFields) => {
+    if (fields.title) setNewTitle(fields.title);
+    if (fields.category) setNewCategory(fields.category);
+    if (fields.projectId) setNewProject(fields.projectId);
+    setNewDesc(fields.description);
+    if (fields.shareRoles.length > 0) setShareRoles(fields.shareRoles);
+    if (fields.costType && fields.costType !== 'none') {
+      setCostType(fields.costType);
+      if (fields.costAmount !== null) setCostInput(String(fields.costAmount));
+    }
+    setFlaggedFields(new Set(fields.flaggedFields));
+    setShowNewForm(true);
+  };
+
+  const clearFlag = (field: string) =>
+    setFlaggedFields(prev => {
+      if (!prev.has(field)) return prev;
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
+
+  const flaggedClass = (field: string) =>
+    flaggedFields.has(field) ? 'border-l-4 border-l-warning' : '';
 
   return (
     <div className="flex gap-6 min-h-[calc(100vh-120px)]">
@@ -253,13 +285,25 @@ export default function ApprovalsPage() {
                 : 'All caught up — no pending approvals'}
             </p>
           </div>
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => { setNewProject(activeProjectId !== 'all' ? activeProjectId : ''); setShowNewForm(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold shadow-md shadow-primary/20 hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-4 h-4" /> New Request
-          </motion.button>
+          <div className="flex items-center gap-2">
+            {voiceSupported && (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setShowVoiceDialog(true)}
+                title="Speak to create"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl bg-card border border-border text-foreground text-sm font-semibold hover:bg-muted transition-colors"
+              >
+                <Mic className="w-4 h-4" /> <span className="hidden sm:inline">Speak to create</span>
+              </motion.button>
+            )}
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { setNewProject(activeProjectId !== 'all' ? activeProjectId : ''); setFlaggedFields(new Set()); setShowNewForm(true); }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold shadow-md shadow-primary/20 hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-4 h-4" /> New Request
+            </motion.button>
+          </div>
         </div>
 
         {/* Stats row */}
@@ -370,6 +414,19 @@ export default function ApprovalsPage() {
         )}
       </div>
 
+      {/* Speak to create */}
+      {showVoiceDialog && (
+        <Suspense fallback={null}>
+          <VoiceApprovalDialog
+            open={showVoiceDialog}
+            onOpenChange={setShowVoiceDialog}
+            projects={projects}
+            defaultProjectId={activeProjectId !== 'all' ? activeProjectId : ''}
+            onExtracted={handleVoiceExtracted}
+          />
+        </Suspense>
+      )}
+
       {/* New Request Modal */}
       <AnimatePresence>
         {showNewForm && (
@@ -403,11 +460,14 @@ export default function ApprovalsPage() {
                   <input
                     type="text"
                     value={newTitle}
-                    onChange={e => setNewTitle(e.target.value)}
+                    onChange={e => { setNewTitle(e.target.value); clearFlag('title'); }}
                     placeholder="e.g. Italian Marble Selection"
-                    className="w-full px-4 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    className={`w-full px-4 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all ${flaggedClass('title')}`}
                     required
                   />
+                  {flaggedFields.has('title') && (
+                    <p className="text-[11px] text-warning mt-1">Confirm this — voice input couldn't catch a title</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -415,24 +475,30 @@ export default function ApprovalsPage() {
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Category</label>
                     <select
                       value={newCategory}
-                      onChange={e => setNewCategory(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      onChange={e => { setNewCategory(e.target.value); clearFlag('category'); }}
+                      className={`w-full px-3 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${flaggedClass('category')}`}
                     >
                       {CATEGORIES.slice(1).map(c => (
                         <option key={c.key} value={c.label}>{c.label}</option>
                       ))}
                     </select>
+                    {flaggedFields.has('category') && (
+                      <p className="text-[11px] text-warning mt-1">Confirm this</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Project</label>
                     <select
                       value={newProject}
-                      onChange={e => setNewProject(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      onChange={e => { setNewProject(e.target.value); clearFlag('project'); }}
+                      className={`w-full px-3 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${flaggedClass('project')}`}
                     >
                       <option value="">No project</option>
                       {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
+                    {flaggedFields.has('project') && (
+                      <p className="text-[11px] text-warning mt-1">Confirm this</p>
+                    )}
                   </div>
                 </div>
 
@@ -453,13 +519,16 @@ export default function ApprovalsPage() {
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Cost</label>
                     <select
                       value={costType}
-                      onChange={e => setCostType(e.target.value as 'none' | 'fixed' | 'variable')}
-                      className="w-full px-3 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                      onChange={e => { setCostType(e.target.value as 'none' | 'fixed' | 'variable'); clearFlag('cost'); }}
+                      className={`w-full px-3 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${flaggedClass('cost')}`}
                     >
                       <option value="none">No cost</option>
                       <option value="fixed">Fixed cost</option>
                       <option value="variable">Variable cost (estimate)</option>
                     </select>
+                    {flaggedFields.has('cost') && (
+                      <p className="text-[11px] text-warning mt-1">Confirm this</p>
+                    )}
                   </div>
                   {costType !== 'none' && (
                     <div>
@@ -471,9 +540,9 @@ export default function ApprovalsPage() {
                         min="0"
                         step="0.01"
                         value={costInput}
-                        onChange={e => setCostInput(e.target.value)}
+                        onChange={e => { setCostInput(e.target.value); clearFlag('cost'); }}
                         placeholder="0.00"
-                        className="w-full px-4 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                        className={`w-full px-4 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 ${flaggedClass('cost')}`}
                       />
                     </div>
                   )}
