@@ -7,11 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-}
+import { getInitials } from '@/lib/utils';
 
 const roleColors: Record<string, string> = {
   architect: 'bg-blue-500/10 text-blue-600 border-blue-500/20',

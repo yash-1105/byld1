@@ -7,24 +7,20 @@ import {
   Plus, X, Camera, AlertTriangle, CheckCircle, Clock,
   CloudRain, Users, Package, Thermometer, Upload, Image,
   BookOpen, BarChart3, Eye, Trash2, Filter, Search,
-  ChevronDown, Loader2, MapPin, Wind, Sun, CloudSnow, Folder, Sparkles
+  ChevronDown, Loader2, MapPin, Wind, Sun, CloudSnow, Folder, Sparkles, Play
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { isVideoUrl } from '@/lib/utils';
 import AISummaryPanel from '@/components/ai/AISummaryPanel';
+import StoriesTray from '@/components/site-updates/StoriesTray';
+import StoryViewer from '@/components/site-updates/StoryViewer';
+import {
+  typeConfig, parseUpdate, canViewUpdate, buildStoryGroups,
+  type SiteUpdateRaw,
+} from '@/components/site-updates/shared';
 
 const ClientUpdateComposer = lazy(() => import('@/components/ai/ClientUpdateComposer'));
-
-// ─── Types ───────────────────────────────────────────────
-interface SiteUpdateRaw {
-  id: string;
-  content: string | null;
-  created_at: string | null;
-  media_urls: string[] | null;
-  posted_by: string | null;
-  project_id: string | null;
-  type?: string;
-}
 
 interface LogbookEntry {
   id: string;
@@ -61,12 +57,6 @@ const weatherIcons: Record<string, React.ReactNode> = {
   Snow: <CloudSnow className="w-4 h-4 text-blue-200" />,
   Clear: <Sun className="w-4 h-4 text-yellow-400" />,
   Overcast: <CloudRain className="w-4 h-4 text-gray-500" />,
-};
-
-const typeConfig = {
-  progress: { icon: <Clock className="w-4 h-4" />, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20', dot: 'bg-primary' },
-  milestone: { icon: <CheckCircle className="w-4 h-4" />, color: 'text-success', bg: 'bg-success/10', border: 'border-success/20', dot: 'bg-success' },
-  issue: { icon: <AlertTriangle className="w-4 h-4" />, color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/20', dot: 'bg-destructive' },
 };
 
 // ─── Main Component ────────────────────────────────────────
@@ -164,6 +154,15 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
   const [filterType, setFilterType] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [storyViewerGroup, setStoryViewerGroup] = useState<number | null>(null);
+  const seenKey = `byld.stories.seen.v1:${user?.id}`;
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(seenKey) || '[]'));
+    } catch {
+      return new Set();
+    }
+  });
   const [form, setForm] = useState({ title: '', description: '', type: 'progress' as 'progress' | 'milestone' | 'issue', visibility: 'public' as 'public' | 'private', taggedUserIds: [] as string[] });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -231,34 +230,56 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
     }
   };
 
-  const parseUpdate = (u: SiteUpdateRaw) => {
-    try {
-      const parsed = JSON.parse(u.content || '{}');
-      return { title: parsed.title || u.content?.slice(0, 50) || 'Update', description: parsed.description || '', type: (parsed.type as 'progress' | 'milestone' | 'issue') || 'progress', taggedUserIds: parsed.taggedUserIds || [] };
-    } catch {
-      return { title: u.content?.slice(0, 50) || 'Update', description: u.content || '', type: 'progress' as const, taggedUserIds: [] as string[] };
-    }
-  };
-
   const filteredUpdates = useMemo(() => {
     return updates.filter(u => {
+      if (!canViewUpdate(u, user?.id)) return false;
       const parsed = parseUpdate(u);
-      
-      // Privacy check
-      if (parsed.taggedUserIds && parsed.taggedUserIds.length > 0) {
-        if (u.posted_by !== user?.id && !parsed.taggedUserIds.includes(user?.id)) {
-          return false;
-        }
-      }
-
       const matchesType = filterType === 'all' || parsed.type === filterType;
       const matchesSearch = !search || parsed.title.toLowerCase().includes(search.toLowerCase()) || parsed.description.toLowerCase().includes(search.toLowerCase());
       return matchesType && matchesSearch;
     });
   }, [updates, filterType, search, user?.id]);
 
+  // Media updates from the last 24h, grouped per poster — same privacy rule as the feed.
+  const storyGroups = useMemo(() => buildStoryGroups(updates, user?.id), [updates, user?.id]);
+
+  const markStorySeen = (id: string) => {
+    setSeenIds(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      try {
+        localStorage.setItem(seenKey, JSON.stringify([...next]));
+      } catch { /* storage full/blocked — rings just stay unseen */ }
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col gap-5">
+      {/* Stories tray — 24h media updates as Instagram-style story bubbles */}
+      <StoriesTray
+        groups={storyGroups}
+        user={user}
+        users={users}
+        seenIds={seenIds}
+        onPostClick={() => setShowForm(true)}
+        onOpenViewer={idx => setStoryViewerGroup(idx)}
+      />
+
+      {storyViewerGroup !== null && storyGroups.length > 0 && (
+        <StoryViewer
+          groups={storyGroups}
+          startGroupIndex={Math.min(storyViewerGroup, storyGroups.length - 1)}
+          users={users}
+          currentUserId={user?.id}
+          projectName={projectName}
+          onClose={() => setStoryViewerGroup(null)}
+          onSeen={markStorySeen}
+          onDelete={handleDelete}
+        />
+      )}
+
       {/* Controls row */}
       <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-center justify-between">
         <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center flex-1 min-w-0">
@@ -380,78 +401,97 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
         <AISummaryPanel compact />
       </div>
 
-      {/* Timeline */}
+      {/* Archive — everything, old and new; stories above are just a highlighted 24h view */}
       {loading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-      ) : filteredUpdates.length === 0 ? (
-        <div className="bg-card border border-border/40 rounded-2xl p-12 text-center text-muted-foreground">
-          <Camera className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p>No updates yet. Post the first update for {projectName}!</p>
-        </div>
       ) : (
-        <div className="relative">
-          <div className="absolute left-5 top-2 bottom-2 w-px bg-border/50" />
-          <div className="space-y-4">
-            {filteredUpdates.map((u, i) => {
-              const parsed = parseUpdate(u);
-              const cfg = typeConfig[parsed.type] || typeConfig.progress;
-              const poster = users.find(usr => usr.id === u.posted_by);
-              const posterName = poster?.full_name || poster?.email || 'Team';
-              return (
-                <motion.div key={u.id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} className="relative pl-12">
-                  <div className={`absolute left-3 top-5 w-4 h-4 rounded-full bg-card border-2 border-border flex items-center justify-center`}>
-                    <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-                  </div>
-                  <div className={`bg-card border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow ${cfg.border}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 flex-1">
-                        <div className={`w-8 h-8 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0 ${cfg.color}`}>{cfg.icon}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-foreground text-sm">{parsed.title}</h3>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cfg.bg} ${cfg.color}`}>{parsed.type}</span>
-                            {parsed.taggedUserIds && parsed.taggedUserIds.length > 0 && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground flex items-center gap-1" title="Only visible to tagged members">
-                                <Users className="w-3 h-3" /> Private Update
-                              </span>
-                            )}
-                          </div>
-                          {parsed.description && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{parsed.description}</p>}
-                          
-                          {/* Media */}
-                          {u.media_urls && u.media_urls.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {u.media_urls.map((url, j) => (
-                                <div key={j} className="relative group cursor-pointer" onClick={() => setLightboxImg(url)}>
-                                  <img src={url} alt="" className="w-20 h-20 rounded-xl object-cover border border-border hover:opacity-90 transition-opacity" />
-                                  <div className="absolute inset-0 bg-black/30 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Eye className="w-5 h-5 text-white" />
-                                  </div>
-                                </div>
-                              ))}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Archive</h3>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-semibold">{filteredUpdates.length}</span>
+          </div>
+          {filteredUpdates.length === 0 ? (
+            <div className="soft-card p-12 text-center text-muted-foreground">
+              <Camera className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-medium text-foreground">No updates yet for {projectName}</p>
+              <p className="text-xs mt-1">Tap the + bubble above or the Post Update button to share the first one.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredUpdates.map((u, i) => {
+                const parsed = parseUpdate(u);
+                const cfg = typeConfig[parsed.type] || typeConfig.progress;
+                const poster = users.find(usr => usr.id === u.posted_by);
+                const posterName = poster?.full_name || poster?.email || 'Team';
+                return (
+                  <motion.div key={u.id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} className="relative pl-10">
+                    {/* Per-type rail: colored accent segment + node dot */}
+                    <div className={`absolute left-[15px] top-4 bottom-4 w-[3px] rounded-full ${cfg.dot} opacity-25`} />
+                    <div className="absolute left-2 top-5 w-4 h-4 rounded-full bg-card border-2 border-border flex items-center justify-center">
+                      <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+                    </div>
+                    <div className="soft-card p-5 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className={`w-8 h-8 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0 ${cfg.color}`}>{cfg.icon}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-foreground text-sm">{parsed.title}</h3>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cfg.bg} ${cfg.color}`}>{parsed.type}</span>
+                              {parsed.taggedUserIds && parsed.taggedUserIds.length > 0 && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground flex items-center gap-1" title="Only visible to tagged members">
+                                  <Users className="w-3 h-3" /> Private Update
+                                </span>
+                              )}
                             </div>
-                          )}
+                            {parsed.description && <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">{parsed.description}</p>}
 
-                          <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {projectName}</span>
-                            <span>·</span>
-                            <span>{posterName}</span>
-                            <span>·</span>
-                            <span>{u.created_at ? new Date(u.created_at).toLocaleString() : ''}</span>
+                            {/* Media */}
+                            {u.media_urls && u.media_urls.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {u.media_urls.map((url, j) => (
+                                  <div key={j} className="relative group cursor-pointer" onClick={() => setLightboxImg(url)}>
+                                    {isVideoUrl(url) ? (
+                                      <>
+                                        <video src={url} preload="metadata" muted playsInline className="w-20 h-20 rounded-xl object-cover border border-border" />
+                                        <div className="absolute inset-0 bg-black/30 rounded-xl flex items-center justify-center">
+                                          <Play className="w-5 h-5 text-white fill-white" />
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <img src={url} alt="" className="w-20 h-20 rounded-xl object-cover border border-border hover:opacity-90 transition-opacity" />
+                                        <div className="absolute inset-0 bg-black/30 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                          <Eye className="w-5 h-5 text-white" />
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {projectName}</span>
+                              <span>·</span>
+                              <span>{posterName}</span>
+                              <span>·</span>
+                              <span>{u.created_at ? new Date(u.created_at).toLocaleString() : ''}</span>
+                            </div>
                           </div>
                         </div>
+                        {user?.role !== 'client' && (
+                          <button onClick={() => handleDelete(u.id)} className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
-                      {user?.role !== 'client' && (
-                        <button onClick={() => handleDelete(u.id)} className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -459,7 +499,11 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
       <AnimatePresence>
         {lightboxImg && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setLightboxImg(null)} className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-            <motion.img initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} src={lightboxImg} alt="" className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl" onClick={e => e.stopPropagation()} />
+            {isVideoUrl(lightboxImg) ? (
+              <motion.video initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} src={lightboxImg} controls autoPlay playsInline className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl" onClick={e => e.stopPropagation()} />
+            ) : (
+              <motion.img initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} src={lightboxImg} alt="" className="max-w-full max-h-full rounded-2xl object-contain shadow-2xl" onClick={e => e.stopPropagation()} />
+            )}
             <button onClick={() => setLightboxImg(null)} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 backdrop-blur text-white flex items-center justify-center hover:bg-white/20 transition-colors"><X className="w-5 h-5" /></button>
           </motion.div>
         )}
