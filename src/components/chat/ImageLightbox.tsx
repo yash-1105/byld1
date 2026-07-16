@@ -1,13 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Pencil } from 'lucide-react';
+import Portal from '@/components/ui/portal';
 
 interface Props {
   src: string;
   onClose: () => void;
+  onAnnotate?: () => void;
 }
 
-export default function ImageLightbox({ src, onClose }: Props) {
+export default function ImageLightbox({ src, onClose, onAnnotate }: Props) {
   return (
+    <Portal>
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
@@ -18,12 +21,24 @@ export default function ImageLightbox({ src, onClose }: Props) {
         onKeyDown={e => e.key === 'Escape' && onClose()}
         tabIndex={0}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
-        >
-          <X className="w-6 h-6" />
-        </button>
+        <div className="absolute top-4 right-4 flex items-center gap-2 z-10" onClick={e => e.stopPropagation()}>
+          {onAnnotate && (
+            <button
+              onClick={onAnnotate}
+              aria-label="Annotate"
+              className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+            >
+              <Pencil className="w-5 h-5" />
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
         <motion.img
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -35,5 +50,6 @@ export default function ImageLightbox({ src, onClose }: Props) {
         />
       </motion.div>
     </AnimatePresence>
+    </Portal>
   );
 }

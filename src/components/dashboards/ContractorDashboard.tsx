@@ -1,5 +1,6 @@
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight, ArrowRight, Flag, CircleAlert, Clock, ChevronRight,
@@ -19,10 +20,17 @@ export default function ContractorDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { setOpen, dialog } = useAnalyzeDialog();
+  const { activeProjectId } = useActiveProject();
 
   const today = new Date();
 
-  const myTasks = tasks.filter(t => t.assignee === user?.id);
+  // 'all' keeps the aggregate; a selected project scopes every widget to just it.
+  // (projects/tasks/siteUpdates from DataContext are already access-filtered for this user.)
+  const scopedProjects = activeProjectId === 'all' ? projects : projects.filter(p => p.id === activeProjectId);
+  const fu = activeProjectId === 'all' ? siteUpdates : siteUpdates.filter(u => u.projectId === activeProjectId);
+
+  // A contractor's task list narrows to the selected project, not just "assigned to me everywhere."
+  const myTasks = tasks.filter(t => t.assignee === user?.id && (activeProjectId === 'all' || t.projectId === activeProjectId));
   const pending   = myTasks.filter(t => t.status !== 'done');
   const urgent    = myTasks.filter(t => t.priority === 'urgent' && t.status !== 'done');
   const done      = myTasks.filter(t => t.status === 'done');
@@ -32,18 +40,21 @@ export default function ContractorDashboard() {
   const dueThisWeek = pending.filter(t => t.deadline && new Date(t.deadline) <= weekAhead);
   const overdue     = pending.filter(t => t.deadline && new Date(t.deadline) < today);
 
-  // Procurement: orders committed but not yet delivered
-  const projectIds = new Set(projects.map(p => p.id));
+  // Procurement: orders committed but not yet delivered (scoped to the selected project)
   const pendingDeliveries = purchaseOrders.filter(po =>
-    projectIds.has(po.projectId) && ['approved', 'ordered', 'in_transit'].includes(po.status));
+    (activeProjectId === 'all' || po.projectId === activeProjectId) &&
+    ['approved', 'ordered', 'in_transit'].includes(po.status));
   const overdueDeliveries = pendingDeliveries.filter(po =>
     po.expectedDelivery && new Date(po.expectedDelivery) < today);
 
-  // hero = project of soonest pending task (fallback: first project the contractor has tasks in)
+  // hero = the selected project when one is chosen; otherwise the project of the soonest
+  // pending task (fallback: first project the contractor has tasks in).
   const soonestPending = pending
     .filter(t => t.deadline)
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0];
-  const heroProjectId = soonestPending?.projectId || myTasks[0]?.projectId;
+  const heroProjectId = activeProjectId !== 'all'
+    ? activeProjectId
+    : (soonestPending?.projectId || myTasks[0]?.projectId);
   const hero = projects.find(p => p.id === heroProjectId) || null;
   const heroNextTask = hero
     ? myTasks.filter(t => t.projectId === hero.id && t.status !== 'done' && t.deadline && new Date(t.deadline) >= today)
@@ -75,7 +86,7 @@ export default function ContractorDashboard() {
   const week: WeekDay[] = WEEKDAYS.map((wd, i) => {
     const day = new Date(monday.getTime() + i * 86400000);
     const dayTasks = myTasks.filter(t => t.deadline && sameDay(new Date(t.deadline), day));
-    const dayUpdates = siteUpdates.filter(u => sameDay(new Date(u.createdAt), day));
+    const dayUpdates = fu.filter(u => sameDay(new Date(u.createdAt), day));
     const milestone = dayUpdates.find(u => u.type === 'milestone') || dayTasks.find(t => t.priority === 'urgent');
     const label = (dayTasks[0]?.title || dayUpdates[0]?.title || (milestone as any)?.title || '');
     const short = label ? label.split(' ').slice(0, 2).join(' ') : '';
@@ -88,7 +99,7 @@ export default function ContractorDashboard() {
     };
   });
 
-  const latestUpdate = siteUpdates.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  const latestUpdate = fu.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
   const updatePhotos = (latestUpdate?.images || []).slice(0, 2);
   const timeAgoH = latestUpdate
     ? Math.max(1, Math.round((today.getTime() - new Date(latestUpdate.createdAt).getTime()) / 3600000)) : null;
@@ -101,13 +112,19 @@ export default function ContractorDashboard() {
     return `${Math.round(h / 24)}d ago`;
   };
   const activity = [
-    ...siteUpdates.map(u => ({ id: u.id, label: u.title, sub: 'Site update', ts: new Date(u.createdAt).getTime(), tone: C.sage })),
+    ...fu.map(u => ({ id: u.id, label: u.title, sub: 'Site update', ts: new Date(u.createdAt).getTime(), tone: C.sage })),
     ...myTasks.slice(0, 8).map(t => ({ id: `t-${t.id}`, label: t.title, sub: 'Task', ts: new Date(t.createdAt).getTime(), tone: t.priority === 'urgent' ? C.sage : C.mono })),
   ].sort((a, b) => b.ts - a.ts).slice(0, 5);
 
-  // team members across the contractor's projects
+  // team members: for 'all', the projects the contractor has tasks in (existing aggregate
+  // logic); for a selected project, that project's team.
   const initials = (n: string) => n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const teamMembers = [...new Set(projects.filter(p => myTasks.some(t => t.projectId === p.id)).flatMap(p => p.team || []))].filter(Boolean);
+  const teamMembers = [...new Set(
+    (activeProjectId === 'all'
+      ? projects.filter(p => myTasks.some(t => t.projectId === p.id))
+      : scopedProjects
+    ).flatMap(p => p.team || [])
+  )].filter(Boolean);
 
   return (
     <>

@@ -6,6 +6,7 @@ import { usePreferences } from '@/contexts/PreferencesContext';
 import { supabase } from '@/integrations/supabase/client';
 import { getAI, AI_MODEL } from '@/lib/ai';
 import { motion, AnimatePresence } from 'framer-motion';
+import Portal from '@/components/ui/portal';
 import { Plus, X, DollarSign, TrendingUp, TrendingDown, CreditCard, AlertTriangle, PieChart as PieIcon, Folder, Camera, Loader2, Pencil } from 'lucide-react';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, CartesianGrid } from 'recharts';
 import { toast } from 'sonner';
@@ -699,6 +700,7 @@ export default function BudgetPage() {
       )}
 
       {/* Final-cost editor for approval-linked entries */}
+      <Portal>
       <AnimatePresence>
         {editEntryId && (
           <motion.div
@@ -742,6 +744,7 @@ export default function BudgetPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
 
     </div>
   );

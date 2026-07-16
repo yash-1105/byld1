@@ -17,6 +17,17 @@ export interface ParsedUpdate {
   taggedUserIds: string[];
 }
 
+// A comment belongs to the underlying site_updates row, so it travels with that update from
+// the 24h Stories view into the Archive feed — the story viewer and the archive cards both
+// look comments up by site_update_id.
+export interface SiteUpdateComment {
+  id: string;
+  site_update_id: string;
+  comment_text: string;
+  created_by: string | null;
+  created_at: string;
+}
+
 export const typeConfig = {
   progress: { icon: <Clock className="w-4 h-4" />, color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/20', dot: 'bg-primary' },
   milestone: { icon: <CheckCircle className="w-4 h-4" />, color: 'text-success', bg: 'bg-success/10', border: 'border-success/20', dot: 'bg-success' },

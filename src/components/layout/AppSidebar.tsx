@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
   { label: 'Site Updates', icon: Camera, path: '/site-updates', roles: ['architect', 'contractor', 'client'] },
   { label: 'Budget', icon: DollarSign, path: '/budget', roles: ['architect', 'client'] },
   { label: 'Documents', icon: FileText, path: '/documents', roles: ['architect', 'contractor', 'client'] },
-  { label: 'Team', icon: Users, path: '/team', roles: ['architect'] },
+  { label: 'Team', icon: Users, path: '/team', roles: ['architect', 'contractor', 'client', 'consultant'] },
   { label: 'Chat', icon: MessageSquare, path: '/chat', roles: ['architect', 'contractor', 'client', 'consultant'] },
   { label: 'Consultations', icon: HelpCircle, path: '/consultations', roles: ['architect', 'consultant'] },
   { label: 'Notifications', icon: Bell, path: '/notifications', roles: ['architect', 'contractor', 'client', 'consultant'] },

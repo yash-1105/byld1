@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageSquarePlus, Users, User, Search, Loader2 } from 'lucide-react';
+import Portal from '@/components/ui/portal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { createConversation } from '@/services/chatService';
@@ -88,6 +89,7 @@ export default function NewConversationModal({ open, onClose, onCreated }: Props
   if (!open) return null;
 
   return (
+    <Portal>
     <>
       <motion.div
         initial={{ opacity: 0 }}
@@ -213,5 +215,6 @@ export default function NewConversationModal({ open, onClose, onCreated }: Props
         </div>
       </motion.div>
     </>
+    </Portal>
   );
 }

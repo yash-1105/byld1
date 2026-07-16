@@ -2,6 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, Receipt, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Portal from '@/components/ui/portal';
 import { Reimbursement, Project } from '@/data/mockData';
 import { useData } from '@/contexts/DataContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -119,6 +120,7 @@ export default function NewReimbursementModal({ isOpen, onClose, onSubmit, proje
   };
 
   return (
+    <Portal>
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -326,5 +328,6 @@ export default function NewReimbursementModal({ isOpen, onClose, onSubmit, proje
         </motion.div>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }

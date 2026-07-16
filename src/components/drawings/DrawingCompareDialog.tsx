@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { renderVersionToCanvas, buildDiffCanvas } from '@/lib/drawingRender';
 import type { DrawingVersion } from '@/pages/DrawingsPage';
+import Portal from '@/components/ui/portal';
 
 type CompareMode = 'overlay' | 'side' | 'slider';
 
@@ -93,6 +94,7 @@ export default function DrawingCompareDialog({ open, onOpenChange, drawingTitle,
   };
 
   return (
+    <Portal>
     <AnimatePresence>
       {open && (
         <motion.div
@@ -241,5 +243,6 @@ export default function DrawingCompareDialog({ open, onOpenChange, drawingTitle,
         </motion.div>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }

@@ -25,7 +25,7 @@ export const NAV: RailItem[] = [
   { label: 'Budget',       icon: IndianRupee,   path: '/budget',       roles: ['architect', 'client'],                            primary: true },
   { label: 'Drawings',     icon: PencilRuler,   path: '/drawings',     roles: ['architect', 'contractor', 'client', 'consultant'], primary: true },
   { label: 'Documents',    icon: FileText,      path: '/documents',    roles: ['architect', 'contractor', 'client'],              primary: true },
-  { label: 'Team',         icon: Users,         path: '/team',         roles: ['architect'],                                      primary: true },
+  { label: 'Team',         icon: Users,         path: '/team',         roles: ['architect', 'contractor', 'client', 'consultant'], primary: true },
   { label: 'Chat',         icon: MessageSquare, path: '/chat',         roles: ['architect', 'contractor', 'client', 'consultant'], primary: true },
   { label: 'Consultations',icon: HelpCircle,    path: '/consultations',roles: ['architect', 'consultant'],                        primary: true },
   // Corner icons (top bar), never in the rail:

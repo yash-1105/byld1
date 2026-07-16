@@ -21,6 +21,7 @@ export interface VoiceExtractedFields {
   description: string;
   costType: 'none' | 'fixed' | 'variable' | null;
   costAmount: number | null;
+  dueDate: string | null; // YYYY-MM-DD
   shareRoles: string[];
   flaggedFields: string[];
 }
@@ -40,6 +41,7 @@ interface RawExtracted {
   description: string;
   costType: 'none' | 'fixed' | 'variable' | null;
   costAmount: number | null;
+  dueDate: string | null;
   shareRoles: string[];
 }
 
@@ -52,10 +54,19 @@ const responseSchema = {
     description: { type: 'string' },
     costType: { type: 'string', enum: ['none', 'fixed', 'variable'], nullable: true },
     costAmount: { type: 'number', nullable: true },
+    dueDate: { type: 'string', nullable: true },
     shareRoles: { type: 'array', items: { type: 'string', enum: ['contractor', 'consultant'] } },
   },
   required: ['description', 'shareRoles'],
 };
+
+// Accept only a well-formed calendar date (YYYY-MM-DD) so a hallucinated/garbled value
+// can't reach the date input.
+function resolveDueDate(raw: string | null): string | null {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) return null;
+  const d = new Date(raw.trim() + 'T00:00:00');
+  return Number.isNaN(d.getTime()) ? null : raw.trim();
+}
 
 const CATEGORY_LABELS = ['Design', 'Procurement', 'Financial', 'Contracts', 'Execution', 'Issues'];
 const STATIC_ROLE_PHRASES = ['contractor', 'consultant', 'architect', 'client'];
@@ -575,9 +586,16 @@ exactly as spoken — project names, company names, and person names — never t
 into a similar-sounding English phrase.
 Cost amounts may use the Indian numbering system: "lakh" = 100,000 and "crore" = 10,000,000. Combine compound
 phrases correctly, e.g. "2 lakh 40 thousand" = 240000, "1.5 crore" = 15000000, "50 thousand" = 50000. Always
-return costAmount as a plain number (no lakh/crore in the numeric value).`;
+return costAmount as a plain number (no lakh/crore in the numeric value).
+"dueDate" is the date by which the approval should be decided, if the speaker mentions one ("by Friday",
+"due next week", "need this decided by the 20th", "within two weeks") — otherwise null. ALWAYS return it as an
+absolute calendar date in strict YYYY-MM-DD format, resolving any relative phrasing against today's date given
+below. Never return a date in the past; if the resolved date would be before today, roll it forward to the next
+sensible occurrence. Return null if no due date is mentioned.`;
 
-      const prompt = `Transcript:\n"""${transcript}"""`;
+      const today = new Date();
+      const todayISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const prompt = `Today's date is ${todayISO}.\n\nTranscript:\n"""${transcript}"""`;
 
       const result = await getModel({ responseSchema, systemInstruction }).generateContent(prompt);
       const parsed = parseAIJson<RawExtracted>(result.response.text());
@@ -586,6 +604,7 @@ return costAmount as a plain number (no lakh/crore in the numeric value).`;
       const projectId = resolveProject(parsed.projectName, projects);
       const costType = parsed.costType ?? null;
       const costAmount = typeof parsed.costAmount === 'number' ? parsed.costAmount : null;
+      const dueDate = resolveDueDate(parsed.dueDate);
 
       const flagged: string[] = [];
       if (!parsed.title) flagged.push('title');
@@ -603,6 +622,7 @@ return costAmount as a plain number (no lakh/crore in the numeric value).`;
         description: parsed.description || transcript,
         costType,
         costAmount,
+        dueDate,
         shareRoles: (parsed.shareRoles || []).filter(r => r === 'contractor' || r === 'consultant'),
         flaggedFields: flagged,
       });
@@ -616,6 +636,7 @@ return costAmount as a plain number (no lakh/crore in the numeric value).`;
         description: transcript,
         costType: null,
         costAmount: null,
+        dueDate: null,
         shareRoles: [],
         flaggedFields: ['title', 'category', 'project', 'cost'],
       });
@@ -677,6 +698,7 @@ return costAmount as a plain number (no lakh/crore in the numeric value).`;
                 { label: 'Project', hint: 'which project' },
                 { label: 'Description', hint: 'context or specs' },
                 { label: 'Cost', hint: 'fixed or approximate' },
+                { label: 'Due date', hint: 'when a decision is needed' },
                 { label: 'Share with', hint: 'contractor / consultant' },
               ].map(({ label, hint }) => (
                 <li key={label} className="flex items-start gap-1.5">
@@ -805,6 +827,7 @@ return costAmount as a plain number (no lakh/crore in the numeric value).`;
               <p><span className="font-semibold text-foreground">Project:</span> {projects.find(p => p.id === extractedFields.projectId)?.name || '—'}</p>
               <p><span className="font-semibold text-foreground">Description:</span> {extractedFields.description}</p>
               <p><span className="font-semibold text-foreground">Cost:</span> {extractedFields.costType && extractedFields.costType !== 'none' ? `${extractedFields.costType}${extractedFields.costAmount ? ` — ${extractedFields.costAmount}` : ''}` : '—'}</p>
+              <p><span className="font-semibold text-foreground">Due date:</span> {extractedFields.dueDate ? new Date(extractedFields.dueDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</p>
               {extractedFields.shareRoles.length > 0 && (
                 <p><span className="font-semibold text-foreground">Shared with:</span> {extractedFields.shareRoles.join(', ')}</p>
               )}

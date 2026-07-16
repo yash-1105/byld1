@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import MoodBoardEditor from './MoodBoardEditor';
+import Portal from '@/components/ui/portal';
 
 export interface MoodBoardRow {
   id: string;
@@ -163,6 +164,7 @@ export default function MoodBoardSection({ user, projects, activeProjectId }: Pr
       )}
 
       {/* Create dialog */}
+      <Portal>
       <AnimatePresence>
         {showCreate && (
           <motion.div
@@ -208,6 +210,7 @@ export default function MoodBoardSection({ user, projects, activeProjectId }: Pr
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
 
       {/* Editor (full-screen) */}
       {editorBoard && (

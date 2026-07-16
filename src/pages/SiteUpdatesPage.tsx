@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useData } from '@/contexts/DataContext';
 import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import Portal from '@/components/ui/portal';
 import {
   Plus, X, Camera, AlertTriangle, CheckCircle, Clock,
   CloudRain, Users, Package, Thermometer, Upload, Image,
   BookOpen, BarChart3, Eye, Trash2, Filter, Search,
-  ChevronDown, Loader2, MapPin, Wind, Sun, CloudSnow, Folder, Sparkles, Play
+  ChevronDown, Loader2, MapPin, Wind, Sun, CloudSnow, Folder, Sparkles, Play, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,8 +19,9 @@ import StoriesTray from '@/components/site-updates/StoriesTray';
 import StoryViewer from '@/components/site-updates/StoryViewer';
 import {
   typeConfig, parseUpdate, canViewUpdate, buildStoryGroups,
-  type SiteUpdateRaw,
+  type SiteUpdateRaw, type SiteUpdateComment,
 } from '@/components/site-updates/shared';
+import { CommentThread, CommentComposer } from '@/components/site-updates/CommentThread';
 
 const ClientUpdateComposer = lazy(() => import('@/components/ai/ClientUpdateComposer'));
 
@@ -61,7 +64,7 @@ const weatherIcons: Record<string, React.ReactNode> = {
 
 // ─── Main Component ────────────────────────────────────────
 export default function SiteUpdatesPage() {
-  const { projects, users } = useData();
+  const { projects, users, projectMembers } = useData();
   const { user } = useAuth();
   const { activeProjectId } = useActiveProject();
 
@@ -137,7 +140,7 @@ export default function SiteUpdatesPage() {
             ))}
           </div>
 
-          {activeTab === 'timeline' && <TimelineTab projectId={activeProject.id} projectName={activeProject.name} user={user} users={users} />}
+          {activeTab === 'timeline' && <TimelineTab projectId={activeProject.id} projectName={activeProject.name} user={user} users={users} projectMembers={projectMembers} />}
           {activeTab === 'logbook' && <LogbookTab projectId={activeProject.id} projectName={activeProject.name} user={user} />}
           {activeTab === 'inventory' && <InventoryTab projectId={activeProject.id} projectName={activeProject.name} user={user} />}
         </>
@@ -147,7 +150,7 @@ export default function SiteUpdatesPage() {
 }
 
 // ─── Timeline Tab ──────────────────────────────────────────
-function TimelineTab({ projectId, projectName, user, users }: { projectId: string; projectName?: string; user: any; users: any[] }) {
+function TimelineTab({ projectId, projectName, user, users, projectMembers }: { projectId: string; projectName?: string; user: any; users: any[]; projectMembers: any[] }) {
   const [updates, setUpdates] = useState<SiteUpdateRaw[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -211,10 +214,43 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
       });
       if (error) throw error;
       toast.success('Site update posted!');
+
+      // Email everyone who can see this update — same visibility rule as the feed:
+      // tagged/private → only the tagged members; public → every project member. Never the poster.
+      const taggedIds = form.taggedUserIds;
+      const recipientUsers = taggedIds.length > 0
+        ? users.filter(u => taggedIds.includes(u.id) && u.id !== user?.id)
+        : (() => {
+            const memberIds = new Set(projectMembers.filter(m => m.project_id === projectId).map(m => m.user_id));
+            return users.filter(u => memberIds.has(u.id) && u.id !== user?.id);
+          })();
+      const recipients = recipientUsers
+        .filter(u => u.email)
+        .map(u => ({ email: u.email, name: u.full_name }));
+
+      const updateEmail = { type: form.type, title: form.title, description: form.description };
+
       setForm({ title: '', description: '', type: 'progress', visibility: 'public', taggedUserIds: [] });
       setUploadedFiles([]);
       setShowForm(false);
       fetchUpdates();
+
+      // Fire-and-forget — don't block the UI on the email side effect.
+      if (recipients.length > 0) {
+        supabase.functions.invoke('send-site-update-email', {
+          body: {
+            type: 'new_update',
+            recipients,
+            update: {
+              posterName: user?.name || 'A team member',
+              projectName: projectName || '',
+              title: updateEmail.title,
+              description: updateEmail.description,
+              updateType: updateEmail.type,
+            },
+          },
+        }).catch(e => console.warn('send-site-update-email (new_update) failed', e));
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to post update');
     } finally {
@@ -229,6 +265,122 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
       toast.success('Update deleted');
     }
   };
+
+  // ─── Comments ────────────────────────────────────────────
+  // Comments belong to the underlying site_updates row, so they travel with an update from the
+  // 24h Stories view into the Archive feed. One query feeds both surfaces; grouping by
+  // site_update_id lets each look its own comments up cheaply.
+  const queryClient = useQueryClient();
+  const commentsKey = ['site_update_comments', projectId] as const;
+
+  const { data: rawComments = [] } = useQuery({
+    queryKey: commentsKey,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('site_update_comments')
+        .select('*')
+        .in('site_update_id', updates.map(u => u.id));
+      // Swallow "table does not exist" so the page still renders before the migration is applied.
+      if (error && (error as { code?: string }).code !== '42P01') throw error;
+      return (data || []) as SiteUpdateComment[];
+    },
+    enabled: !!user && updates.length > 0,
+  });
+
+  const commentsByUpdate = useMemo(() => {
+    const map = new Map<string, SiteUpdateComment[]>();
+    for (const c of rawComments) {
+      const list = map.get(c.site_update_id) ?? [];
+      list.push(c);
+      map.set(c.site_update_id, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    }
+    return map;
+  }, [rawComments]);
+
+  const addCommentMutation = useMutation({
+    mutationFn: async ({ siteUpdateId, text }: { siteUpdateId: string; text: string }) => {
+      const { error } = await supabase.from('site_update_comments').insert({
+        site_update_id: siteUpdateId,
+        comment_text: text,
+        created_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    // Append optimistically to the shared cache so the comment appears instantly on both the
+    // story viewer and the archive card, without waiting for a refetch.
+    onMutate: async ({ siteUpdateId, text }) => {
+      await queryClient.cancelQueries({ queryKey: commentsKey });
+      const prev = queryClient.getQueryData<SiteUpdateComment[]>(commentsKey);
+      const optimistic: SiteUpdateComment = {
+        id: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        site_update_id: siteUpdateId,
+        comment_text: text,
+        created_by: user!.id,
+        created_at: new Date().toISOString(),
+      };
+      queryClient.setQueryData<SiteUpdateComment[]>(commentsKey, old => [...(old || []), optimistic]);
+      return { prev };
+    },
+    // Notify the original poster by email — one place, so it fires regardless of which surface
+    // (story viewer bottom bar or archive inline thread) the comment came from. Never self-notify.
+    onSuccess: (_data, { siteUpdateId, text }) => {
+      const parent = updates.find(u => u.id === siteUpdateId);
+      const postedBy = parent?.posted_by;
+      if (!parent || !postedBy || postedBy === user?.id) return;
+      const posterUser = users.find(u => u.id === postedBy);
+      if (!posterUser?.email) return;
+      supabase.functions.invoke('send-site-update-email', {
+        body: {
+          type: 'comment',
+          recipients: [{ email: posterUser.email, name: posterUser.full_name }],
+          comment: {
+            commenterName: user?.name || 'Someone',
+            posterName: posterUser.full_name || '',
+            projectName: projectName || '',
+            title: parseUpdate(parent).title,
+            commentText: text,
+          },
+        },
+      }).catch(e => console.warn('send-site-update-email (comment) failed', e));
+    },
+    onError: (err: Error, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(commentsKey, ctx.prev);
+      toast.error(err.message || 'Failed to add comment');
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: commentsKey }),
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('site_update_comments').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: commentsKey });
+      const prev = queryClient.getQueryData<SiteUpdateComment[]>(commentsKey);
+      queryClient.setQueryData<SiteUpdateComment[]>(commentsKey, old => (old || []).filter(c => c.id !== id));
+      return { prev };
+    },
+    onError: (err: Error, _id, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(commentsKey, ctx.prev);
+      toast.error(err.message || 'Failed to delete comment');
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: commentsKey }),
+  });
+
+  const addComment = (siteUpdateId: string, text: string) => addCommentMutation.mutate({ siteUpdateId, text });
+  const deleteComment = (id: string) => deleteCommentMutation.mutate(id);
+
+  // Which archive cards have their inline comment thread expanded.
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const toggleComments = (id: string) => setExpandedComments(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
   const filteredUpdates = useMemo(() => {
     return updates.filter(u => {
@@ -273,10 +425,14 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
           startGroupIndex={Math.min(storyViewerGroup, storyGroups.length - 1)}
           users={users}
           currentUserId={user?.id}
+          currentUserRole={user?.role}
           projectName={projectName}
+          commentsByUpdateId={commentsByUpdate}
           onClose={() => setStoryViewerGroup(null)}
           onSeen={markStorySeen}
           onDelete={handleDelete}
+          onAddComment={addComment}
+          onDeleteComment={deleteComment}
         />
       )}
 
@@ -423,6 +579,9 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
                 const cfg = typeConfig[parsed.type] || typeConfig.progress;
                 const poster = users.find(usr => usr.id === u.posted_by);
                 const posterName = poster?.full_name || poster?.email || 'Team';
+                const cardComments = commentsByUpdate.get(u.id) ?? [];
+                const commentCount = cardComments.length;
+                const isExpanded = expandedComments.has(u.id);
                 return (
                   <motion.div key={u.id} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} className="relative pl-10">
                     {/* Per-type rail: colored accent segment + node dot */}
@@ -471,13 +630,51 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
                               </div>
                             )}
 
-                            <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground flex-wrap">
                               <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {projectName}</span>
                               <span>·</span>
                               <span>{posterName}</span>
                               <span>·</span>
                               <span>{u.created_at ? new Date(u.created_at).toLocaleString() : ''}</span>
+                              <span>·</span>
+                              <button
+                                onClick={() => toggleComments(u.id)}
+                                className="flex items-center gap-1 font-medium text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                {commentCount > 0 ? `${commentCount} comment${commentCount === 1 ? '' : 's'}` : 'Add a comment'}
+                              </button>
                             </div>
+
+                            {/* Inline comment thread — comments live on the update itself, so every
+                                card can be commented on (even text-only updates that never appeared
+                                as a story). */}
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="mt-4 pt-4 border-t border-border/40 space-y-3">
+                                    <CommentThread
+                                      comments={cardComments}
+                                      users={users}
+                                      currentUserId={user?.id}
+                                      currentUserRole={user?.role}
+                                      onDelete={deleteComment}
+                                      variant="light"
+                                    />
+                                    <CommentComposer
+                                      variant="light"
+                                      placeholder="Add a comment…"
+                                      onSubmit={text => addComment(u.id, text)}
+                                    />
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         </div>
                         {user?.role !== 'client' && (
@@ -496,6 +693,7 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
       )}
 
       {/* Lightbox */}
+      <Portal>
       <AnimatePresence>
         {lightboxImg && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setLightboxImg(null)} className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
@@ -508,6 +706,7 @@ function TimelineTab({ projectId, projectName, user, users }: { projectId: strin
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
     </div>
   );
 }

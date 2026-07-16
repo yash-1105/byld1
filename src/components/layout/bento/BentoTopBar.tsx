@@ -1,17 +1,24 @@
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Settings } from 'lucide-react';
+import { Search, Bell, Settings, Check, LogOut, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import BrandLogo from '@/components/BrandLogo';
 import { C, ProjectSwitcher } from '@/components/dashboards/bento/BentoKit';
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import AvailabilityDot, { STATUS_META, STATUS_OPTIONS } from '@/components/team/AvailabilityDot';
 
 export default function BentoTopBar({ onOpenSearch }: { onOpenSearch: () => void }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut, updateAvailability } = useAuth();
   const { projects, notifications } = useData();
   const { activeProjectId, setActiveProjectId } = useActiveProject();
   if (!user) return null;
+
+  const currentStatus = user.availabilityStatus || 'available';
 
   const unread = notifications.filter(n => !n.read).length;
 
@@ -70,16 +77,52 @@ export default function BentoTopBar({ onOpenSearch }: { onOpenSearch: () => void
           )}
         </button>
 
-        <button
-          onClick={() => navigate('/settings')}
-          aria-label="Account"
-          className="w-9 h-9 rounded-[9px] flex items-center justify-center font-display font-semibold text-[12px] overflow-hidden"
-          style={{ background: C.ink, color: C.onDarkText }}
-        >
-          {user.avatarUrl
-            ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-            : (user.avatar || user.name?.slice(0, 2) || 'U').toUpperCase()}
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label="Account"
+              className="relative w-9 h-9 rounded-[9px] flex items-center justify-center font-display font-semibold text-[12px] overflow-visible"
+            >
+              <span
+                className="w-9 h-9 rounded-[9px] flex items-center justify-center overflow-hidden"
+                style={{ background: C.ink, color: C.onDarkText }}
+              >
+                {user.avatarUrl
+                  ? <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                  : (user.avatar || user.name?.slice(0, 2) || 'U').toUpperCase()}
+              </span>
+              <AvailabilityDot status={currentStatus} className="absolute -bottom-0.5 -right-0.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[220px]">
+            <DropdownMenuLabel className="flex flex-col gap-0.5">
+              <span className="font-body text-[13px] font-semibold text-foreground truncate">{user.name}</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{user.role}</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <SlidersHorizontal size={12} /> Set status
+            </DropdownMenuLabel>
+            {STATUS_OPTIONS.map(status => (
+              <DropdownMenuItem
+                key={status}
+                onClick={() => { void updateAvailability(status); }}
+                className="gap-2.5 cursor-pointer font-body text-[13px]"
+              >
+                <AvailabilityDot status={status} className="ring-0" />
+                {STATUS_META[status].label}
+                {currentStatus === status && <Check size={14} className="ml-auto text-foreground" />}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/settings')} className="gap-2.5 cursor-pointer font-body text-[13px]">
+              <Settings size={15} style={{ color: C.muted }} /> Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { void signOut(); }} className="gap-2.5 cursor-pointer font-body text-[13px] text-destructive focus:text-destructive">
+              <LogOut size={15} /> Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

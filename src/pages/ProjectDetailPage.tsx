@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '@/contexts/DataContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Users, DollarSign, CheckSquare, ClipboardCheck, ShoppingCart, Layers, Clock, TrendingUp, X, Trash2, Truck } from 'lucide-react';
+import Portal from '@/components/ui/portal';
+import { ArrowLeft, Users, DollarSign, CheckSquare, ClipboardCheck, ShoppingCart, Layers, Clock, TrendingUp, X, Trash2, Truck, MapPin } from 'lucide-react';
 import SegmentMapView from '@/components/projects/SegmentMapView';
 import DeliveryTracker from '@/components/maps/DeliveryTracker';
+import DeadlineHistory from '@/components/projects/DeadlineHistory';
 
 const workflowTabs = [
   { key: 'map', label: 'Segment Map', icon: Layers },
@@ -26,6 +29,7 @@ const timelineItems = [
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { projects, tasks, users, projectMembers, addTeamMember, removeTeamMember } = useData();
+  const { user } = useAuth();
   const { formatCurrencyCompact } = usePreferences();
   const project = projects.find(p => p.id === id);
   const [activeTab, setActiveTab] = useState('map');
@@ -68,9 +72,26 @@ export default function ProjectDetailPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground">{project.name}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{project.description}</p>
+          <div className="flex items-center gap-2 flex-wrap mt-1">
+            {project.category && (
+              <span className="text-[11px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary">{project.category}</span>
+            )}
+            {(project.region || project.country) && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="w-3 h-3" /> {[project.region, project.country].filter(Boolean).join(', ')}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
         </div>
       </div>
+
+      {/* Deadline + revision history — visible to everyone; only architects can revise */}
+      <DeadlineHistory
+        projectId={project.id}
+        currentDeadline={project.deadline}
+        canEdit={user?.role === 'architect'}
+      />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -245,6 +266,7 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Team Management Modal */}
+      <Portal>
       <AnimatePresence>
         {showTeamModal && (
           <motion.div
@@ -292,6 +314,7 @@ export default function ProjectDetailPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
     </div>
   );
 }

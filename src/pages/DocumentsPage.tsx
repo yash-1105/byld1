@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Folder, Upload, Search, Tag, Eye, Download, X, Grid, List, Building2, Users, Trash2, HardDrive, Loader2, Lock, AlertTriangle } from 'lucide-react';
+import { FileText, Folder, Upload, Search, Tag, Eye, Download, X, Grid, List, Building2, Users, Trash2, HardDrive, Loader2, Lock, AlertTriangle, Plus, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,8 +10,11 @@ import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { NormalizedDocument } from '@/types/drive';
 import DriveExplorerModal from '@/components/drive/DriveExplorerModal';
 import GovernmentApprovalsTable from '@/components/documents/GovernmentApprovalsTable';
+import Portal from '@/components/ui/portal';
 
-const folders = ['All Files', 'Contracts', 'Drawings', 'Reports', 'Permits', 'Government Approvals', 'Invoices'];
+// Built-in folders — always present, always first, in this order. Custom
+// (user-created) folders from the document_folders table are appended after.
+const DEFAULT_FOLDERS = ['All Files', 'Contracts', 'Drawings', 'Reports', 'Permits', 'Government Approvals', 'Invoices', 'Closeout'];
 
 // `visible_to` now holds tagged user IDs (private) or is null/empty (public).
 // Older documents stored role names here — treat those as public for back-compat.
@@ -59,6 +62,11 @@ export default function DocumentsPage() {
   const [uploadVisMode, setUploadVisMode] = useState<'public' | 'private'>('public');
   const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
 
+  // Inline "new folder" affordance
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [creatingFolder, setCreatingFolder] = useState(false);
+
   // Project members that can be tagged (members of the chosen project, minus you;
   // falls back to all users if the project has no explicit members yet).
   const memberOptions = useMemo(() => {
@@ -92,6 +100,31 @@ export default function DocumentsPage() {
     },
     enabled: !!user,
   });
+
+  // Fetch custom (user-created) folders, scoped to the active project.
+  const { data: customFolders = [] } = useQuery({
+    queryKey: ['document_folders', activeProjectId],
+    queryFn: async () => {
+      let q = supabase.from('document_folders').select('*').order('created_at', { ascending: true });
+      if (activeProjectId !== 'all') q = q.eq('project_id', activeProjectId);
+      const { data, error } = await q;
+      if (error && error.code !== '42P01') throw error; // ignore table-not-found if migrations pending
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Defaults first (fixed order), then custom folder names not already among the
+  // defaults (case-insensitive), in creation order.
+  const folders = useMemo(() => {
+    const seen = new Set(DEFAULT_FOLDERS.map(f => f.toLowerCase()));
+    const extra: string[] = [];
+    for (const f of customFolders) {
+      const key = (f.name || '').toLowerCase();
+      if (key && !seen.has(key)) { seen.add(key); extra.push(f.name); }
+    }
+    return [...DEFAULT_FOLDERS, ...extra];
+  }, [customFolders]);
 
   const isLoading = isLoadingSupa || isLoadingDrive;
 
@@ -223,6 +256,41 @@ export default function DocumentsPage() {
     setTaggedUserIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const createFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    // A folder belongs to exactly one project (like documents) — can't create in "All projects" view.
+    if (activeProjectId === 'all') {
+      toast.error('Switch to a specific project to add a folder.');
+      return;
+    }
+    // Block collisions (case-insensitive) with a default or an existing custom folder.
+    if (folders.some(f => f.toLowerCase() === name.toLowerCase())) {
+      toast.error(`A folder named "${name}" already exists.`);
+      return;
+    }
+    setCreatingFolder(true);
+    try {
+      const { error } = await supabase.from('document_folders').insert({
+        project_id: activeProjectId,
+        name,
+        created_by: user?.id ?? null,
+      });
+      if (error) throw error;
+      toast.success(`Folder "${name}" created`);
+      queryClient.invalidateQueries({ queryKey: ['document_folders'] });
+      setNewFolderName('');
+      setShowNewFolder(false);
+      setSelectedFolder(name); // jump straight into the new folder
+    } catch (error) {
+      const err = error as { code?: string; message?: string };
+      const dup = err?.code === '23505' || /duplicate|unique/i.test(err?.message || '');
+      toast.error(dup ? `A folder named "${name}" already exists.` : `Failed to create folder: ${err?.message ?? 'unknown error'}`);
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
   const deleteDocument = async (id: string, url: string, source: 'supabase' | 'google_drive') => {
     if (!confirm('Are you sure you want to delete this document?')) return;
     try {
@@ -303,17 +371,52 @@ export default function DocumentsPage() {
               <button
                 key={f}
                 onClick={() => setSelectedFolder(f)}
+                title={f}
                 className={`flex items-center gap-2 text-sm transition-colors whitespace-nowrap shrink-0 md:w-full md:text-left px-3 py-1.5 md:py-2 rounded-full md:rounded-lg border md:border-transparent ${
                   active
                     ? 'bg-primary/10 text-primary font-medium border-primary/20'
                     : 'text-muted-foreground bg-card md:bg-transparent border-border hover:bg-muted'
                 }`}
               >
-                <Folder className="w-4 h-4 hidden md:block" /> {f}
-                <span className={`text-xs md:ml-auto ${active ? 'text-primary/70' : 'text-muted-foreground'}`}>{count}</span>
+                <Folder className="w-4 h-4 hidden md:block shrink-0" />
+                <span className="md:flex-1 md:min-w-0 md:truncate">{f}</span>
+                <span className={`text-xs shrink-0 md:ml-auto ${active ? 'text-primary/70' : 'text-muted-foreground'}`}>{count}</span>
               </button>
             );
           })}
+
+          {/* New folder — inline lightweight add (dashed like the drop-zone convention) */}
+          {showNewFolder ? (
+            <div className="flex items-center gap-1.5 shrink-0 md:w-full">
+              <input
+                autoFocus
+                value={newFolderName}
+                onChange={e => setNewFolderName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); void createFolder(); }
+                  if (e.key === 'Escape') { setShowNewFolder(false); setNewFolderName(''); }
+                }}
+                placeholder="Folder name"
+                className="min-w-0 flex-1 text-sm px-3 py-1.5 md:py-2 rounded-full md:rounded-lg border border-primary/40 bg-background outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <button onClick={() => void createFolder()} disabled={creatingFolder || !newFolderName.trim()} className="p-1.5 rounded-lg text-primary hover:bg-primary/10 disabled:opacity-40 shrink-0" title="Create folder">
+                {creatingFolder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+              </button>
+              <button onClick={() => { setShowNewFolder(false); setNewFolderName(''); }} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted shrink-0" title="Cancel">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                if (activeProjectId === 'all') { toast.error('Switch to a specific project to add a folder.'); return; }
+                setShowNewFolder(true);
+              }}
+              className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap shrink-0 md:w-full md:text-left px-3 py-1.5 md:py-2 rounded-full md:rounded-lg border border-dashed border-border hover:border-primary/50 hover:text-foreground transition-colors"
+            >
+              <Plus className="w-4 h-4" /> New Folder
+            </button>
+          )}
         </div>
 
         <div className="flex-1 space-y-4">
@@ -322,31 +425,43 @@ export default function DocumentsPage() {
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search documents..." className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
 
+          {/* Drop zone — shown for every folder (incl. Government Approvals) so any folder can
+              receive dropped/browsed files; the drop handler tags them with the current folder. */}
+          <div
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-3 sm:p-8 text-center text-sm transition-colors cursor-pointer ${dragOver ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
+          >
+            <div className="flex sm:block items-center justify-center gap-2">
+              <Upload className="w-4 h-4 sm:w-6 sm:h-6 sm:mx-auto sm:mb-2 opacity-50" />
+              <div className="font-medium sm:mb-1">
+                <span className="sm:hidden">Tap to upload a file</span>
+                <span className="hidden sm:inline">Drop files here or click to browse</span>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground hidden sm:block">Support for PDF, DOCX, JPG, PNG</div>
+          </div>
+
           {selectedFolder === 'Government Approvals' ? (
-            <GovernmentApprovalsTable
-              documents={projectScopedDocs.filter(d => (d as any).category === 'Government Approvals')}
-              canEdit={user?.role === 'architect'}
-            />
+            isLoading ? (
+              <div className="py-12 flex justify-center">
+                <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              </div>
+            ) : filtered.length > 0 ? (
+              // The approval-status table only appears once there are documents; an empty
+              // folder shows the same minimal empty state as every other folder.
+              <GovernmentApprovalsTable documents={filtered} canEdit={user?.role === 'architect'} />
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No documents found</p>
+                <button onClick={() => fileInputRef.current?.click()} className="text-sm text-primary hover:underline mt-2">Upload a document</button>
+              </div>
+            )
           ) : (
             <>
-              {/* Drop zone */}
-              <div
-                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-3 sm:p-8 text-center text-sm transition-colors cursor-pointer ${dragOver ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}
-              >
-                <div className="flex sm:block items-center justify-center gap-2">
-                  <Upload className="w-4 h-4 sm:w-6 sm:h-6 sm:mx-auto sm:mb-2 opacity-50" />
-                  <div className="font-medium sm:mb-1">
-                    <span className="sm:hidden">Tap to upload a file</span>
-                    <span className="hidden sm:inline">Drop files here or click to browse</span>
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground hidden sm:block">Support for PDF, DOCX, JPG, PNG</div>
-              </div>
-
               {isLoading ? (
                 <div className="py-12 flex justify-center">
                   <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -432,6 +547,7 @@ export default function DocumentsPage() {
       </div>
 
       {/* Upload Modal */}
+      <Portal>
       <AnimatePresence>
         {isUploadModalOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -459,7 +575,7 @@ export default function DocumentsPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium mb-1.5 flex items-center gap-2"><Folder className="w-4 h-4 text-muted-foreground" /> Category</label>
+                  <label className="text-sm font-medium mb-1.5 flex items-center gap-2"><Folder className="w-4 h-4 text-muted-foreground" /> Folder</label>
                   <select value={uploadCategory} onChange={e => setUploadCategory(e.target.value)} className="w-full bg-background border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20">
                     {folders.filter(f => f !== 'All Files').map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
@@ -526,8 +642,10 @@ export default function DocumentsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
 
       {/* Project Selection for Drive Modal Wrapper */}
+      <Portal>
       <AnimatePresence>
         {isDriveModalOpen && !driveProject ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -551,6 +669,7 @@ export default function DocumentsPage() {
           />
         ) : null}
       </AnimatePresence>
+      </Portal>
     </div>
   );
 }

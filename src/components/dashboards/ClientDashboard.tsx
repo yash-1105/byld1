@@ -1,6 +1,7 @@
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -22,11 +23,20 @@ export default function ClientDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { setOpen, dialog } = useAnalyzeDialog();
+  const { activeProjectId } = useActiveProject();
 
   const today = new Date();
 
+  // Access restriction (unchanged): a client only ever sees projects they're a member of.
   const clientProjects = projects.filter(p => p.team.includes(user?.name || ''));
-  const myProjects = clientProjects.length > 0 ? clientProjects : projects.slice(0, 1);
+  const accessibleProjects = clientProjects.length > 0 ? clientProjects : projects.slice(0, 1);
+  // Then scope to the top-bar selection on top of that access check. 'all' keeps the
+  // aggregate; a specific project narrows every widget below (they all key off myProjects
+  // / projectIds). Fall back to the aggregate if the selection isn't one of theirs.
+  const scopedProjects = accessibleProjects.filter(p => p.id === activeProjectId);
+  const myProjects = activeProjectId === 'all'
+    ? accessibleProjects
+    : (scopedProjects.length > 0 ? scopedProjects : accessibleProjects);
   const projectIds = new Set(myProjects.map(p => p.id));
   const myUpdates = siteUpdates.filter(u => projectIds.has(u.projectId));
   const ft = tasks.filter(t => projectIds.has(t.projectId));

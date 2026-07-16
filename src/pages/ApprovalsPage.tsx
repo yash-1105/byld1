@@ -1,5 +1,6 @@
 import { useState, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Portal from '@/components/ui/portal';
 import {
   ClipboardCheck, Layers, DollarSign, FileText, AlertTriangle,
   ShoppingCart, Wrench, Plus, X, Clock, CheckCircle, XCircle, PauseCircle,
@@ -56,6 +57,7 @@ export default function ApprovalsPage() {
   const [newCategory, setNewCategory] = useState('Design');
   const [newProject, setNewProject]   = useState('');
   const [newDesc, setNewDesc]         = useState('');
+  const [newDueDate, setNewDueDate]   = useState('');
   const [shareRoles, setShareRoles]   = useState<string[]>([]); // extra roles beyond architect+client
   const [costType, setCostType]       = useState<'none' | 'fixed' | 'variable'>('none');
   const [costInput, setCostInput]     = useState('');
@@ -182,13 +184,14 @@ export default function ApprovalsPage() {
         images: uploadedUrls.length > 0 ? uploadedUrls : undefined,
         projectId: newProject || '',
         requestedBy: user?.id || '',
+        dueDate: newDueDate || undefined,
         visibleRoles: shareRoles, // architect + client added automatically in DataContext
         costType: costType === 'none' ? undefined : costType,
         costAmount: costUSD,
         costCurrency: costType !== 'none' ? preferences.currency : undefined,
       });
       toast.success('Approval request submitted');
-      setNewTitle(''); setNewCategory('Design'); setNewProject(''); setNewDesc(''); setPhotoFiles([]); setShareRoles([]);
+      setNewTitle(''); setNewCategory('Design'); setNewProject(''); setNewDesc(''); setNewDueDate(''); setPhotoFiles([]); setShareRoles([]);
       setCostType('none'); setCostInput(''); setFlaggedFields(new Set());
       setShowNewForm(false);
     } catch {
@@ -203,6 +206,7 @@ export default function ApprovalsPage() {
     if (fields.category) setNewCategory(fields.category);
     if (fields.projectId) setNewProject(fields.projectId);
     setNewDesc(fields.description);
+    if (fields.dueDate) setNewDueDate(fields.dueDate);
     if (fields.shareRoles.length > 0) setShareRoles(fields.shareRoles);
     if (fields.costType && fields.costType !== 'none') {
       setCostType(fields.costType);
@@ -376,6 +380,10 @@ export default function ApprovalsPage() {
             {filtered.map((item, i) => {
               const project = projects.find(p => p.id === item.projectId);
               const decidedByName = item.decidedBy ? resolveUser(item.decidedBy) : undefined;
+              // Overdue: still awaiting a decision past its due date. Compare as date
+              // strings (YYYY-MM-DD) so it's timezone-safe.
+              const todayStr = new Date().toISOString().split('T')[0];
+              const isOverdue = item.status === 'pending' && !!item.dueDate && item.dueDate < todayStr;
               return (
                 <ApprovalCard
                   key={item.id}
@@ -387,6 +395,10 @@ export default function ApprovalsPage() {
                     requestedBy: resolveUser(item.requestedBy),
                     requestedByRole: resolveRole(item.requestedBy),
                     date: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—',
+                    dueDate: item.dueDate
+                      ? new Date(item.dueDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                      : undefined,
+                    overdue: isOverdue,
                     description: item.description,
                     images: item.images,
                     reason: item.reason,
@@ -428,6 +440,7 @@ export default function ApprovalsPage() {
       )}
 
       {/* New Request Modal */}
+      <Portal>
       <AnimatePresence>
         {showNewForm && (
           <motion.div
@@ -500,6 +513,16 @@ export default function ApprovalsPage() {
                       <p className="text-[11px] text-warning mt-1">Confirm this</p>
                     )}
                   </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Due date (optional)</label>
+                  <input
+                    type="date"
+                    value={newDueDate}
+                    onChange={e => setNewDueDate(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border bg-background/50 text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
                 </div>
 
                 <div>
@@ -644,6 +667,7 @@ export default function ApprovalsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
     </div>
   );
 }

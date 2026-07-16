@@ -20,6 +20,7 @@ interface DataContextType {
   projectMembers: any[];
   addProject: (p: Omit<Project, 'id' | 'createdAt'>) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
+  reviseDeadline: (projectId: string, newDeadline: string, reason?: string) => Promise<void>;
   addTask: (t: Omit<Task, 'id' | 'createdAt'>) => Promise<unknown>;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -188,6 +189,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         .map(m => rawUsers.find(u => u.id === m.user_id)?.full_name || m.user_id)
         .filter(Boolean),
       createdAt: p.created_at,
+      category: p.category || undefined,
+      country: p.country || undefined,
+      region: p.region || undefined,
       address: p.address,
       latitude: p.latitude,
       longitude: p.longitude,
@@ -281,6 +285,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           decidedAt: a.decided_at || undefined,
           reason: a.reason || undefined,
           createdAt: a.created_at || '',
+          dueDate: a.due_date || undefined,
           visibleRoles,
           costType: (a.cost_type as Approval['costType']) || undefined,
           costAmount: a.cost_amount ?? undefined,
@@ -369,13 +374,32 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         budget_min: p.budgetMin ?? null,
         budget_max: p.budgetMax ?? null,
         cover_image_url: p.imageUrl || null,
-        location: 'TBD',
+        category: p.category || null,
+        country: p.country || null,
+        region: p.region || null,
+        // Keep the existing `location` column (used by geofencing/maps) populated sensibly
+        // from the higher-level country/region rather than a literal "TBD".
+        location: [p.region, p.country].filter(Boolean).join(', ') || 'TBD',
         start_date: new Date().toISOString(),
         end_date: p.deadline || new Date().toISOString(),
         owner_id: user?.id || ''
       }).select().single();
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] })
+  });
+
+  const updateProjectMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Project> }) => {
+      const payload: Record<string, unknown> = {};
+      // Only forward fields this feature actually needs — don't silently allow updating others.
+      if (updates.deadline !== undefined) payload.end_date = updates.deadline;
+      if (updates.category !== undefined) payload.category = updates.category;
+      if (updates.country !== undefined) payload.country = updates.country;
+      if (updates.region !== undefined) payload.region = updates.region;
+      const { error } = await supabase.from('projects').update(payload).eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] })
   });
@@ -506,6 +530,51 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Revise a project's deadline: record the change in project_deadline_revisions,
+  // update projects.end_date, and notify the client(s) — mirroring how
+  // addApprovalMutation bundles "insert row + send email" so DeadlineHistory.tsx
+  // never has to reimplement recipient resolution or email delivery.
+  const reviseDeadlineMutation = useMutation({
+    mutationFn: async ({ projectId, newDeadline, reason }: { projectId: string; newDeadline: string; reason?: string }) => {
+      const project = projects.find(p => p.id === projectId);
+      if (!project) throw new Error('Project not found');
+
+      const { error: revError } = await supabase.from('project_deadline_revisions').insert({
+        project_id: projectId,
+        previous_deadline: project.deadline,
+        new_deadline: newDeadline,
+        reason: reason || null,
+        changed_by: user?.id || null,
+      });
+      if (revError) throw revError;
+
+      const { error: updError } = await supabase.from('projects').update({ end_date: newDeadline }).eq('id', projectId);
+      if (updError) throw updError;
+
+      // Reuse the exact same recipient-resolution helper addApprovalMutation uses —
+      // only the client(s) on this project are notified of a deadline change.
+      const recipients = resolveMailRecipients(projectId, ['client']);
+      if (recipients.length > 0) {
+        supabase.functions.invoke('send-deadline-revision-email', {
+          body: {
+            recipients,
+            revision: {
+              projectName: project.name,
+              previousDeadline: project.deadline,
+              newDeadline,
+              revisedByName: user?.name || 'Your architect',
+              reason: reason || undefined,
+            },
+          },
+        }).catch(() => {}); // don't block the UI update on email delivery
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project_deadline_revisions'] });
+    },
+  });
+
   const addApprovalMutation = useMutation({
     mutationFn: async (a: Omit<Approval, 'id' | 'createdAt'>) => {
       const encodedDesc = (a.images?.length)
@@ -523,6 +592,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         visible_roles: visibleRoles,
         cost_type: a.costType || null,
         cost_amount: a.costAmount ?? null,
+        due_date: a.dueDate || null,
       }).select().single();
       if (error) throw error;
 
@@ -698,7 +768,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       users: rawUsers,
       projectMembers: rawProjectMembers,
       addProject: (p) => addProjectMutation.mutate(p),
-      updateProject: () => {}, // TODO
+      updateProject: (id, updates) => updateProjectMutation.mutate({ id, updates }),
+      reviseDeadline: (projectId, newDeadline, reason) => reviseDeadlineMutation.mutateAsync({ projectId, newDeadline, reason }),
       addTask: (t) => addTaskMutation.mutateAsync(t),
       updateTask: (id, updates) => updateTaskMutation.mutate({ id, updates }),
       deleteTask: () => {}, // TODO

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Portal from '@/components/ui/portal';
 import {
   ClipboardCheck, Clock, CheckCircle, XCircle, PauseCircle, X,
   FolderKanban, User, ChevronRight, Layers, ShoppingCart, DollarSign,
@@ -127,6 +128,7 @@ export default function SharedApprovalsWidget() {
       </motion.div>
 
       {/* Detail popup */}
+      <Portal>
       <AnimatePresence>
         {openItem && (
           <motion.div
@@ -228,6 +230,7 @@ export default function SharedApprovalsWidget() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
     </>
   );
 }

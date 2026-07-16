@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, X, Search, Loader2, HardDrive, ArrowRight, CheckCircle2, Users, Lock, AlertTriangle } from 'lucide-react';
+import Portal from '@/components/ui/portal';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
@@ -112,6 +113,7 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
   const filteredFiles = files.filter(f => f.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
+    <Portal>
     <AnimatePresence>
       {isOpen && (
         <>
@@ -288,5 +290,6 @@ export default function DriveExplorerModal({ isOpen, onClose, projectId }: Drive
         </>
       )}
     </AnimatePresence>
+    </Portal>
   );
 }

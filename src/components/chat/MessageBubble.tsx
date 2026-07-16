@@ -10,6 +10,7 @@ interface Props {
   onReply: (msg: ChatMessage) => void;
   onDelete: (msgId: string) => void;
   showAvatar: boolean;
+  onAnnotateReply?: (imageUrl: string, originalMessage: ChatMessage) => void;
 }
 
 function getInitials(name: string | null | undefined): string {
@@ -29,7 +30,7 @@ function formatFileSize(bytes: number | null): string {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
-export default function MessageBubble({ message, isMe, onReply, onDelete, showAvatar }: Props) {
+export default function MessageBubble({ message, isMe, onReply, onDelete, showAvatar, onAnnotateReply }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
@@ -235,7 +236,17 @@ export default function MessageBubble({ message, isMe, onReply, onDelete, showAv
         </div>
       </div>
 
-      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+      {lightboxSrc && (
+        <ImageLightbox
+          src={lightboxSrc}
+          onClose={() => setLightboxSrc(null)}
+          onAnnotate={
+            onAnnotateReply && message.file_url
+              ? () => { setLightboxSrc(null); onAnnotateReply(message.file_url!, message); }
+              : undefined
+          }
+        />
+      )}
     </>
   );
 }

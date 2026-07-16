@@ -1,8 +1,17 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { format } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// Project deadlines are stored as the first of a month; show them as "January 2026".
+export function formatDeadline(dateStr: string): string {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "—";
+  return format(d, "MMMM yyyy");
 }
 
 export function getInitials(name: string | null | undefined): string {

@@ -6,9 +6,12 @@ export interface Project {
   progress: number;
   budget: number;
   spent: number;
-  deadline: string;
+  deadline: string; // always the first of a month, e.g. "2026-01-01"
   team: string[];
   createdAt: string;
+  category?: string;
+  country?: string;
+  region?: string; // state / metro area / place
   address?: string;
   latitude?: number;
   longitude?: number;
@@ -67,6 +70,9 @@ export interface Approval {
   decidedAt?: string;
   reason?: string;
   createdAt: string;
+  // Optional date by which this approval should be decided. If it's still 'pending'
+  // past this date it's shown as overdue in-app and triggers a reminder email.
+  dueDate?: string;
   // Roles allowed to view this approval. Architects & clients (the decision-makers)
   // are always included; the requester may additionally share with contractors/consultants.
   visibleRoles?: string[];

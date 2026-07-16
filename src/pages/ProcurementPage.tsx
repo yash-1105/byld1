@@ -4,6 +4,7 @@ import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import Portal from '@/components/ui/portal';
 import {
   Plus, X, Package, Truck, ClipboardList, CheckCircle2, Clock, AlertTriangle,
   DollarSign, Folder, ChevronLeft, ChevronRight, MoreVertical, Ban, MapPin,
@@ -320,6 +321,7 @@ export default function ProcurementPage() {
       </div>
 
       {/* New Order modal */}
+      <Portal>
       <AnimatePresence>
         {showForm && (
           <motion.div
@@ -419,6 +421,7 @@ export default function ProcurementPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
 
       {/* PIPELINE */}
       {activeTab === 'pipeline' && (

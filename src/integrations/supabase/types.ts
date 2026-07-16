@@ -23,9 +23,11 @@ export type Database = {
           decided_at: string | null
           decided_by: string | null
           description: string | null
+          due_date: string | null
           id: string
           project_id: string | null
           reason: string | null
+          reminder_sent_at: string | null
           requested_by: string | null
           segment_id: string | null
           status: string | null
@@ -40,9 +42,11 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           project_id?: string | null
           reason?: string | null
+          reminder_sent_at?: string | null
           requested_by?: string | null
           segment_id?: string | null
           status?: string | null
@@ -57,9 +61,11 @@ export type Database = {
           decided_at?: string | null
           decided_by?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           project_id?: string | null
           reason?: string | null
+          reminder_sent_at?: string | null
           requested_by?: string | null
           segment_id?: string | null
           status?: string | null
@@ -245,6 +251,45 @@ export type Database = {
           type?: string | null
         }
         Relationships: []
+      }
+      document_folders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_folders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_folders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
@@ -795,6 +840,51 @@ export type Database = {
           },
         ]
       }
+      project_deadline_revisions: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_deadline: string
+          previous_deadline: string
+          project_id: string
+          reason: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_deadline: string
+          previous_deadline: string
+          project_id: string
+          reason?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_deadline?: string
+          previous_deadline?: string
+          project_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_deadline_revisions_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_deadline_revisions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           accepted_at: string | null
@@ -846,6 +936,8 @@ export type Database = {
           budget: number | null
           budget_max: number | null
           budget_min: number | null
+          category: string | null
+          country: string | null
           cover_image_url: string | null
           created_at: string | null
           description: string | null
@@ -858,6 +950,7 @@ export type Database = {
           longitude: number | null
           name: string
           owner_id: string | null
+          region: string | null
           start_date: string | null
           type: string | null
         }
@@ -866,6 +959,8 @@ export type Database = {
           budget?: number | null
           budget_max?: number | null
           budget_min?: number | null
+          category?: string | null
+          country?: string | null
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
@@ -878,6 +973,7 @@ export type Database = {
           longitude?: number | null
           name: string
           owner_id?: string | null
+          region?: string | null
           start_date?: string | null
           type?: string | null
         }
@@ -886,6 +982,8 @@ export type Database = {
           budget?: number | null
           budget_max?: number | null
           budget_min?: number | null
+          category?: string | null
+          country?: string | null
           cover_image_url?: string | null
           created_at?: string | null
           description?: string | null
@@ -898,6 +996,7 @@ export type Database = {
           longitude?: number | null
           name?: string
           owner_id?: string | null
+          region?: string | null
           start_date?: string | null
           type?: string | null
         }
@@ -1109,6 +1208,45 @@ export type Database = {
           },
         ]
       }
+      site_update_comments: {
+        Row: {
+          comment_text: string
+          created_at: string
+          created_by: string | null
+          id: string
+          site_update_id: string
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          site_update_id: string
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          site_update_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_update_comments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_update_comments_site_update_id_fkey"
+            columns: ["site_update_id"]
+            isOneToOne: false
+            referencedRelation: "site_updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_updates: {
         Row: {
           content: string | null
@@ -1242,8 +1380,67 @@ export type Database = {
           },
         ]
       }
+      team_invitations: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string | null
+          invited_email: string
+          invited_user_id: string
+          project_id: string
+          responded_at: string | null
+          role: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          invited_email: string
+          invited_user_id: string
+          project_id: string
+          responded_at?: string | null
+          role: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          invited_email?: string
+          invited_user_id?: string
+          project_id?: string
+          responded_at?: string | null
+          role?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invitations_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_invitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
+          availability_status: string
           avatar_url: string | null
           created_at: string | null
           email: string
@@ -1253,6 +1450,7 @@ export type Database = {
           studio_name: string | null
         }
         Insert: {
+          availability_status?: string
           avatar_url?: string | null
           created_at?: string | null
           email: string
@@ -1262,6 +1460,7 @@ export type Database = {
           studio_name?: string | null
         }
         Update: {
+          availability_status?: string
           avatar_url?: string | null
           created_at?: string | null
           email?: string
@@ -1277,7 +1476,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      lookup_user_for_invite: {
+        Args: { p_email: string }
+        Returns: {
+          avatar_url: string
+          email: string
+          full_name: string
+          id: string
+          role: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

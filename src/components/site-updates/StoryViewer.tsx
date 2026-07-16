@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trash2, Volume2, VolumeX, MapPin } from 'lucide-react';
+import { X, Trash2, Volume2, VolumeX, MapPin, MessageCircle, ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { getInitials, isVideoUrl } from '@/lib/utils';
-import { parseUpdate, typeConfig, type StoryGroup } from './shared';
+import { parseUpdate, typeConfig, type StoryGroup, type SiteUpdateComment } from './shared';
+import Portal from '@/components/ui/portal';
+import { CommentThread, CommentComposer } from './CommentThread';
 
 interface ViewerUser {
   id: string;
@@ -17,10 +19,14 @@ interface Props {
   startGroupIndex: number;
   users: ViewerUser[];
   currentUserId: string | undefined;
+  currentUserRole?: string;
   projectName?: string;
+  commentsByUpdateId: Map<string, SiteUpdateComment[]>;
   onClose: () => void;
   onSeen: (id: string) => void;
   onDelete: (id: string) => void;
+  onAddComment: (updateId: string, text: string) => void;
+  onDeleteComment: (id: string) => void;
 }
 
 const IMAGE_DURATION_MS = 5000;
@@ -31,13 +37,18 @@ interface StoryItem {
   url: string;
 }
 
-export default function StoryViewer({ groups, startGroupIndex, users, currentUserId, projectName, onClose, onSeen, onDelete }: Props) {
+export default function StoryViewer({ groups, startGroupIndex, users, currentUserId, currentUserRole, projectName, commentsByUpdateId, onClose, onSeen, onDelete, onAddComment, onDeleteComment }: Props) {
   const [groupIdx, setGroupIdx] = useState(startGroupIndex);
   const [itemIdx, setItemIdx] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Comments pause the auto-advance the same way press-and-hold does: while the reply input is
+  // focused or the comment list is open, playback is frozen so the reader isn't rushed.
+  const [listOpen, setListOpen] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const isPaused = paused || listOpen || inputFocused;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const elapsedRef = useRef(0);
@@ -110,10 +121,12 @@ export default function StoryViewer({ groups, startGroupIndex, users, currentUse
   }, [itemIdx, groupIdx, groups, flatCountOf]);
 
   // Reset the clock only when the item itself changes — not on pause/resume.
+  // Also collapse the comment list so it never lingers over the next story.
   useEffect(() => {
     elapsedRef.current = 0;
     durationRef.current = IMAGE_DURATION_MS;
     setProgress(0);
+    setListOpen(false);
   }, [current]);
 
   // Progress engine: images advance on a pause-aware clock; videos follow their own playhead.
@@ -126,7 +139,7 @@ export default function StoryViewer({ groups, startGroupIndex, users, currentUse
     const tick = (now: number) => {
       const delta = now - last;
       last = now;
-      if (!paused) {
+      if (!isPaused) {
         if (isVideo) {
           const v = videoRef.current;
           if (v && v.duration > 0) {
@@ -152,19 +165,25 @@ export default function StoryViewer({ groups, startGroupIndex, users, currentUse
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [current, paused, goNext]);
+  }, [current, isPaused, goNext]);
 
   // Pause/resume must also drive the video element itself.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (paused) v.pause();
+    if (isPaused) v.pause();
     else void v.play().catch(() => { /* autoplay policy — user can tap */ });
-  }, [paused, current]);
+  }, [isPaused, current]);
 
   // Keyboard: arrows navigate, Escape closes, Space pauses.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Don't hijack keys while the reply input has focus — let the user type.
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
+        if (e.key === 'Escape') (t as HTMLInputElement).blur();
+        return;
+      }
       if (e.key === 'ArrowRight') goNext();
       else if (e.key === 'ArrowLeft') goPrev();
       else if (e.key === 'Escape') onClose();
@@ -188,6 +207,7 @@ export default function StoryViewer({ groups, startGroupIndex, users, currentUse
   const relTime = current.update.created_at
     ? formatDistanceToNow(new Date(current.update.created_at), { addSuffix: true })
     : '';
+  const comments = commentsByUpdateId.get(current.update.id) ?? [];
 
   const handleZonePointerDown = () => {
     pointerDownAtRef.current = performance.now();
@@ -204,6 +224,7 @@ export default function StoryViewer({ groups, startGroupIndex, users, currentUse
   };
 
   return (
+    <Portal>
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
@@ -330,8 +351,8 @@ export default function StoryViewer({ groups, startGroupIndex, users, currentUse
             </div>
           </div>
 
-          {/* Bottom scrim: title / description / type */}
-          <div className="absolute bottom-0 inset-x-0 z-20 p-4 pt-12 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+          {/* Bottom scrim: title / description / type — bottom padding clears the comment strip */}
+          <div className="absolute bottom-0 inset-x-0 z-20 px-4 pt-12 pb-[92px] bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cfg.bg} ${cfg.color}`}>{parsed.type}</span>
               {projectName && (
@@ -339,10 +360,81 @@ export default function StoryViewer({ groups, startGroupIndex, users, currentUse
               )}
             </div>
             <h3 className="text-white font-semibold text-sm">{parsed.title}</h3>
-            {parsed.description && <p className="text-white/75 text-xs mt-1 leading-relaxed line-clamp-3">{parsed.description}</p>}
+            {parsed.description && <p className="text-white/75 text-xs mt-1 leading-relaxed line-clamp-2">{parsed.description}</p>}
+          </div>
+
+          {/* Slide-up comment list — tap the backdrop to dismiss. Sits above the tap zones so
+              reading/scrolling never triggers navigation. */}
+          <AnimatePresence>
+            {listOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-30 bg-black/40"
+                  onClick={() => setListOpen(false)}
+                />
+                <motion.div
+                  initial={{ y: '100%' }}
+                  animate={{ y: 0 }}
+                  exit={{ y: '100%' }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                  className="absolute inset-x-0 bottom-[76px] z-40 max-h-[55%] flex flex-col bg-neutral-900/95 backdrop-blur-md rounded-t-2xl border-t border-white/10"
+                >
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
+                    <span className="text-sm font-semibold text-white">
+                      {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+                    </span>
+                    <button
+                      onClick={() => setListOpen(false)}
+                      className="w-7 h-7 rounded-full bg-white/10 text-white/70 hover:text-white flex items-center justify-center"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="overflow-y-auto px-4 py-3">
+                    <CommentThread
+                      comments={comments}
+                      users={users}
+                      currentUserId={currentUserId}
+                      currentUserRole={currentUserRole}
+                      onDelete={onDeleteComment}
+                      variant="dark"
+                    />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Comment strip: "💬 N comments" affordance + reply input. Its own bottom band above the
+              side tap zones — focusing the input pauses auto-advance; blur/send resumes it. The
+              wrapper is pointer-events-none so empty gaps fall through to the tap-to-navigate zones;
+              only the button and input themselves capture taps. */}
+          <div className="absolute bottom-0 inset-x-0 z-40 px-3 pb-3 pt-2 flex flex-col gap-2 pointer-events-none">
+            {comments.length > 0 && !listOpen && (
+              <button
+                onClick={() => setListOpen(true)}
+                className="self-start flex items-center gap-1.5 text-[11px] font-medium text-white/80 hover:text-white bg-black/30 rounded-full px-3 py-1.5 backdrop-blur-sm pointer-events-auto"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                View all {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+              </button>
+            )}
+            <div className="pointer-events-auto">
+              <CommentComposer
+                variant="dark"
+                placeholder="Reply to this update…"
+                onSubmit={text => { onAddComment(current.update.id, text); }}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+              />
+            </div>
           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
+    </Portal>
   );
 }

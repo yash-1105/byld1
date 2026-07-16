@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import {
   Check, X, Pause, MessageSquare, Clock, User, Layers, ShoppingCart,
   DollarSign, FileText, Wrench, AlertTriangle, ClipboardCheck, FolderKanban,
-  CheckCircle, XCircle, PauseCircle, ChevronLeft, ChevronRight, ImageOff, Coins
+  CheckCircle, XCircle, PauseCircle, ChevronLeft, ChevronRight, ImageOff, Coins,
+  CalendarClock
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -15,6 +16,8 @@ export interface ApprovalItem {
   requestedBy: string;
   requestedByRole?: string;
   date: string;
+  dueDate?: string;   // formatted, e.g. "Jul 20"
+  overdue?: boolean;  // still pending past its due date
   description?: string;
   images?: string[];
   reason?: string;
@@ -174,6 +177,16 @@ export default function ApprovalCard({ item, index, onAction, canDecide = true }
             )}
           </span>
           <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{item.date}</span>
+          {item.dueDate && (
+            <span className={`flex items-center gap-1.5 ${item.overdue ? 'text-destructive font-medium' : ''}`}>
+              <CalendarClock className="w-3.5 h-3.5" />Due {item.dueDate}
+            </span>
+          )}
+          {item.overdue && (
+            <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive font-semibold">
+              <AlertTriangle className="w-3 h-3" />Overdue
+            </span>
+          )}
         </div>
 
         {/* Cost */}

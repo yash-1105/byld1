@@ -88,6 +88,9 @@ export default function TasksPage() {
           {!mobile && <GripVertical className="w-4 h-4 text-muted-foreground/30 mt-0.5 flex-shrink-0" />}
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-foreground">{t.title}</div>
+            {t.description && (
+              <p className="line-clamp-2 text-xs text-muted-foreground mt-1">{t.description}</p>
+            )}
             <div className="flex items-center gap-2 mt-3">
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${priorityColors[t.priority] || priorityColors.medium}`}>
                 {t.priority}
@@ -190,6 +193,7 @@ export default function TasksPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Task title" className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description (optional)" rows={2} className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 resize-none md:col-span-3" />
                 {activeProjectId === 'all' && (
                   <select value={formProjectId} onChange={e => setFormProjectId(e.target.value)} className="px-4 py-2.5 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
                     {projects.map(p => (

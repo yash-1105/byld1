@@ -9,6 +9,11 @@ verify_jwt = false
 [functions.ai-insights]
 verify_jwt = false
 
+# Triggered on a schedule by pg_cron with an empty body (no Supabase auth header),
+# so it must be public. It's safe: reminder_sent_at gates each approval to one email.
+[functions.send-approval-reminder-email]
+verify_jwt = false
+
 # OAuth callback is hit by Google's browser redirect (no Supabase auth header),
 # so it must be public. auth-url/events stay JWT-protected (called via invoke).
 [functions.google-calendar-callback]

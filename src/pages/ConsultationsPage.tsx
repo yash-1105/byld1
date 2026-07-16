@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import Portal from '@/components/ui/portal';
 import { MessageSquare, Search, Star, MessageCircle, Loader2, Users, Briefcase, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -387,6 +388,7 @@ function MarketplaceTab({ user, navigate }: { user: any; navigate: (to: string) 
       )}
 
       {/* Profile Modal */}
+      <Portal>
       <AnimatePresence>
         {selectedConsultant && (
           <motion.div
@@ -455,6 +457,7 @@ function MarketplaceTab({ user, navigate }: { user: any; navigate: (to: string) 
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useData } from '@/contexts/DataContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpRight, ArrowRight, Flag, CircleAlert, Clock, ChevronRight,
@@ -16,10 +17,13 @@ export default function ConsultantDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { setOpen, dialog } = useAnalyzeDialog();
+  const { activeProjectId } = useActiveProject();
 
   const today = new Date();
 
-  const myTasks = tasks.filter(t => t.assignee === user?.id);
+  // A selected project scopes the consultant's task list (and everything derived from it);
+  // 'all' keeps the aggregate across every project they're assigned to.
+  const myTasks = tasks.filter(t => t.assignee === user?.id && (activeProjectId === 'all' || t.projectId === activeProjectId));
   const activeRequests = myTasks.filter(t => t.status === 'todo' || t.status === 'in_progress');
   const pendingReview  = myTasks.filter(t => t.status === 'review');
   const completed      = myTasks.filter(t => t.status === 'done');
@@ -33,11 +37,17 @@ export default function ConsultantDashboard() {
 
   const completionRate = myTasks.length > 0 ? Math.round((completed.length / myTasks.length) * 100) : 0;
 
-  // Unique projects this consultant is involved in
+  // Projects this consultant is assigned to (has tasks in) — the aggregate 'all' set.
   const myProjectIds = [...new Set(myTasks.map(t => t.projectId))];
-  const myProjects = projects.filter(p => myProjectIds.includes(p.id));
+  const assignedProjects = projects.filter(p => myProjectIds.includes(p.id));
+  // When a project is selected, scope to just it (accessible projects only); fall back to
+  // the aggregate if the selection isn't one of theirs.
+  const scopedProjects = projects.filter(p => p.id === activeProjectId);
+  const myProjects = activeProjectId === 'all'
+    ? assignedProjects
+    : (scopedProjects.length > 0 ? scopedProjects : assignedProjects);
 
-  // hero = first assigned project; next = soonest upcoming task in that project
+  // hero = the selected/first project; next = soonest upcoming task in that project
   const hero = myProjects[0] || null;
   const heroNextTask = hero
     ? myTasks.filter(t => t.projectId === hero.id && t.status !== 'done' && t.deadline && new Date(t.deadline) >= today)

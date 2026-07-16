@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Portal from '@/components/ui/portal';
 import {
   Plus, X, Folder, Loader2, Upload, History, Eye, GitCompareArrows,
   FileText, Image as ImageIcon, PencilRuler, Trash2, Download, MessageSquarePlus,
@@ -450,6 +451,7 @@ export default function DrawingsPage() {
       )}
 
       {/* Detail modal: preview + version history */}
+      <Portal>
       <AnimatePresence>
         {detail && (
           <motion.div
@@ -583,6 +585,7 @@ export default function DrawingsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
 
       {/* Compare dialog (lazy) */}
       {compareOpen && detail && (
@@ -597,6 +600,7 @@ export default function DrawingsPage() {
       )}
 
       {/* Upload modal (new drawing OR new revision) */}
+      <Portal>
       <AnimatePresence>
         {showUpload && (
           <motion.div
@@ -686,6 +690,7 @@ export default function DrawingsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
       </>
       )}
     </div>

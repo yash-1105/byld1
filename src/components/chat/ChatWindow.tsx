@@ -15,6 +15,7 @@ import {
 } from '@/services/chatService';
 import MessageBubble from './MessageBubble';
 import VoiceRecorder from './VoiceRecorder';
+import PhotoAnnotator from './PhotoAnnotator';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
@@ -57,6 +58,9 @@ export default function ChatWindow({ conversation, onBack }: Props) {
   const [showAttach, setShowAttach] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // Photo markup: shared annotator state for both entry points (new photo & annotate-a-reply).
+  const [annotatorSrc, setAnnotatorSrc] = useState<string | null>(null);
+  const [annotatorReplyTo, setAnnotatorReplyTo] = useState<ChatMessage | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -148,7 +152,13 @@ export default function ChatWindow({ conversation, onBack }: Props) {
   };
 
   // ─── Send file ───
-  const handleFileUpload = async (file: File, type: 'image' | 'video' | 'file') => {
+  const handleFileUpload = async (
+    file: File,
+    type: 'image' | 'video' | 'file',
+    // Optional — only the annotate-a-photo reply flow passes this; every other
+    // caller omits it, keeping the previous `null` (unthreaded) behavior intact.
+    replyToId: string | null = null,
+  ) => {
     if (!user) return;
     setShowAttach(false);
     setUploading(true);
@@ -163,7 +173,7 @@ export default function ChatWindow({ conversation, onBack }: Props) {
       file_url: type === 'image' ? URL.createObjectURL(file) : null,
       file_size: file.size,
       duration: null,
-      reply_to_id: null,
+      reply_to_id: replyToId,
       is_read: false,
       created_at: new Date().toISOString(),
       sender: { full_name: user.name, avatar_url: user.avatar || null, role: user.role },
@@ -174,7 +184,7 @@ export default function ChatWindow({ conversation, onBack }: Props) {
 
     try {
       const url = await uploadChatFile(file, conversation.id, pct => setUploadProgress(pct));
-      await sendMessage(conversation.id, user.id, type, file.name, url, null, file.size);
+      await sendMessage(conversation.id, user.id, type, file.name, url, replyToId, file.size);
     } catch (e: any) {
       setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? { ...m, _failed: true } : m));
       toast.error(`Upload failed: ${e.message}`);
@@ -213,7 +223,16 @@ export default function ChatWindow({ conversation, onBack }: Props) {
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video' | 'file') => {
     const f = e.target.files?.[0];
-    if (f) handleFileUpload(f, type);
+    if (f) {
+      if (type === 'image') {
+        // Photos open the markup editor first; video/file upload directly (unchanged).
+        setShowAttach(false);
+        setAnnotatorReplyTo(null);
+        setAnnotatorSrc(URL.createObjectURL(f));
+      } else {
+        handleFileUpload(f, type);
+      }
+    }
     e.target.value = '';
   };
 
@@ -288,6 +307,10 @@ export default function ChatWindow({ conversation, onBack }: Props) {
                         onReply={setReplyTo}
                         onDelete={handleDelete}
                         showAvatar={showAvatar}
+                        onAnnotateReply={(url, original) => {
+                          setAnnotatorReplyTo(original);
+                          setAnnotatorSrc(url);
+                        }}
                       />
                     );
                   })}
@@ -419,6 +442,27 @@ export default function ChatWindow({ conversation, onBack }: Props) {
           </div>
         )}
       </div>
+
+      {/* Photo markup editor — shared by the new-photo and annotate-a-reply flows */}
+      <AnimatePresence>
+        {annotatorSrc && (
+          <PhotoAnnotator
+            imageSrc={annotatorSrc}
+            onCancel={() => {
+              if (annotatorSrc.startsWith('blob:')) URL.revokeObjectURL(annotatorSrc);
+              setAnnotatorSrc(null);
+              setAnnotatorReplyTo(null);
+            }}
+            onSend={(file) => {
+              const replyId = annotatorReplyTo?.id ?? null;
+              if (annotatorSrc.startsWith('blob:')) URL.revokeObjectURL(annotatorSrc);
+              setAnnotatorSrc(null);
+              setAnnotatorReplyTo(null);
+              void handleFileUpload(file, 'image', replyId);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

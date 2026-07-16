@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { AvailabilityStatus } from '@/components/team/AvailabilityDot';
 
 export type UserRole = 'architect' | 'contractor' | 'client' | 'consultant';
+export type { AvailabilityStatus };
 
 export interface User {
   id: string;
@@ -11,6 +13,7 @@ export interface User {
   avatar?: string;      // initials, derived from name (fallback when no photo)
   avatarUrl?: string;   // uploaded profile photo URL
   studio_name?: string;
+  availabilityStatus: AvailabilityStatus;
 }
 
 export interface ProfileUpdate {
@@ -24,6 +27,7 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   updateProfile: (updates: ProfileUpdate) => Promise<{ error?: string }>;
+  updateAvailability: (status: AvailabilityStatus) => Promise<{ error?: string }>;
   isAuthenticated: boolean;
 }
 
@@ -60,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatar: initialsFrom(data.full_name || data.email || ''),
           avatarUrl: data.avatar_url || undefined,
           studio_name: data.studio_name || undefined,
+          availabilityStatus: (data.availability_status || 'available') as AvailabilityStatus,
         };
         setUser(profile);
         userRef.current = profile;
@@ -131,8 +136,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return {};
   };
 
+  // Availability status — users only ever set their OWN (mirror updateProfile's shape).
+  const updateAvailability = async (status: AvailabilityStatus): Promise<{ error?: string }> => {
+    const current = userRef.current;
+    if (!current) return { error: 'Not signed in' };
+
+    const { error } = await supabase.from('users').update({ availability_status: status }).eq('id', current.id);
+    if (error) return { error: error.message };
+
+    const next: User = { ...current, availabilityStatus: status };
+    setUser(next);
+    userRef.current = next;
+    return {};
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signOut, updateProfile, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, loading, signOut, updateProfile, updateAvailability, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

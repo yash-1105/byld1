@@ -9,9 +9,25 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { convertToUSD, CURRENCY_SYMBOLS } from '@/lib/preferences';
 import ProjectMap from '@/components/maps/ProjectMap';
+import DeadlineHistory from '@/components/projects/DeadlineHistory';
 
 const statusLabels: Record<string, string> = { planning: 'Planning', design: 'Design', approval: 'Approval', construction: 'Construction', finishing: 'Finishing', completed: 'Completed' };
 const statusColors: Record<string, string> = { planning: 'bg-muted text-muted-foreground', design: 'bg-primary/10 text-primary', approval: 'bg-warning/10 text-warning', construction: 'bg-success/10 text-success', finishing: 'bg-primary/10 text-primary', completed: 'bg-success/10 text-success' };
+
+// Project classification. Category has no default — the person must choose.
+const PROJECT_CATEGORIES = ['Residential', 'Commercial', 'Industrial', 'Institutional', 'Hospitality', 'Renovation / Retrofit', 'Interior Design', 'Landscape', 'Mixed-Use', 'Other'];
+// Convenience list — India & UAE first (this team's primary markets), then a few common ones, then Other.
+const COUNTRIES = ['India', 'United Arab Emirates', 'United States', 'United Kingdom', 'Saudi Arabia', 'Qatar', 'Singapore', 'Australia', 'Canada', 'Other'];
+
+// Deadline is month-granularity — dropdowns give clean "Month"/"Year" placeholders instead of the
+// native month input's "--------- ----" empty state.
+const MONTHS = [
+  { v: '01', l: 'January' }, { v: '02', l: 'February' }, { v: '03', l: 'March' },
+  { v: '04', l: 'April' }, { v: '05', l: 'May' }, { v: '06', l: 'June' },
+  { v: '07', l: 'July' }, { v: '08', l: 'August' }, { v: '09', l: 'September' },
+  { v: '10', l: 'October' }, { v: '11', l: 'November' }, { v: '12', l: 'December' },
+];
+const DEADLINE_YEARS = Array.from({ length: 11 }, (_, i) => String(new Date().getFullYear() + i));
 
 const projectImages = [
   'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&h=400&fit=crop',
@@ -28,7 +44,7 @@ export default function ProjectsPage() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [form, setForm] = useState({ name: '', description: '', deadline: '', budget: '', budgetMin: '', budgetMax: '' });
+  const [form, setForm] = useState({ name: '', description: '', deadlineMonth: '', deadlineYear: '', budget: '', budgetMin: '', budgetMax: '', category: '', country: '', countryOther: '', region: '' });
   const [isVariableBudget, setIsVariableBudget] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -43,7 +59,7 @@ export default function ProjectsPage() {
   const isClient = user?.role === 'client';
 
   const resetForm = () => {
-    setForm({ name: '', description: '', deadline: '', budget: '', budgetMin: '', budgetMax: '' });
+    setForm({ name: '', description: '', deadlineMonth: '', deadlineYear: '', budget: '', budgetMin: '', budgetMax: '', category: '', country: '', countryOther: '', region: '' });
     setIsVariableBudget(false);
     setCoverFile(null);
     setCoverPreview(null);
@@ -75,15 +91,22 @@ export default function ProjectsPage() {
       const budgetMaxUSD = isVariableBudget ? convertToUSD(Number(form.budgetMax) || 0, preferences.currency) : undefined;
       const budgetUSD = isVariableBudget ? (budgetMaxUSD || 0) : convertToUSD(Number(form.budget) || 0, preferences.currency);
 
+      const resolvedCountry = form.country === 'Other' ? form.countryOther.trim() : form.country;
+      // Deadline is a month/year — store as the first of that month (only when both are chosen).
+      const deadline = form.deadlineMonth && form.deadlineYear ? `${form.deadlineYear}-${form.deadlineMonth}-01` : '';
+
       addProject({
         name: form.name,
         description: form.description,
-        deadline: form.deadline,
+        deadline,
         budget: budgetUSD,
         isVariableBudget,
         budgetMin: budgetMinUSD,
         budgetMax: budgetMaxUSD,
         imageUrl,
+        category: form.category || undefined,
+        country: resolvedCountry || undefined,
+        region: form.region.trim() || undefined,
         spent: 0,
         progress: 0,
         status: 'planning',
@@ -146,8 +169,17 @@ export default function ProjectsPage() {
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Project name" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" required />
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-muted-foreground px-1">Deadline</label>
-                  <input value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} type="date" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  <label className="text-xs font-medium text-muted-foreground px-1">Deadline (month / year)</label>
+                  <div className="flex items-center gap-2">
+                    <select value={form.deadlineMonth} onChange={e => setForm(f => ({ ...f, deadlineMonth: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                      <option value="">Month</option>
+                      {MONTHS.map(m => <option key={m.v} value={m.v}>{m.l}</option>)}
+                    </select>
+                    <select value={form.deadlineYear} onChange={e => setForm(f => ({ ...f, deadlineYear: e.target.value }))} className="w-full px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                      <option value="">Year</option>
+                      {DEADLINE_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
                 </div>
 
                 {!isVariableBudget ? (
@@ -165,6 +197,30 @@ export default function ProjectsPage() {
                     </div>
                   </div>
                 )}
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground px-1">Category</label>
+                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Select category</option>
+                    {PROJECT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground px-1">Country</label>
+                  <select value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="">Select country</option>
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  {form.country === 'Other' && (
+                    <input value={form.countryOther} onChange={e => setForm(f => ({ ...f, countryOther: e.target.value }))} placeholder="Country name" className="mt-1.5 px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground px-1">State / Metro Area</label>
+                  <input value={form.region} onChange={e => setForm(f => ({ ...f, region: e.target.value }))} placeholder="e.g. Maharashtra / Mumbai" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20" />
+                </div>
 
                 <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" className="px-4 py-3 rounded-xl border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/20 md:col-span-2" />
               </div>
@@ -223,7 +279,15 @@ export default function ProjectsPage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
                 <div className="absolute bottom-3 left-4 right-4">
                   <h3 className="font-semibold text-primary-foreground text-lg">{p.name}</h3>
+                  {(p.region || p.country) && (
+                    <p className="text-[11px] text-primary-foreground/80 mt-0.5">{[p.region, p.country].filter(Boolean).join(', ')}</p>
+                  )}
                 </div>
+                {p.category && (
+                  <span className="absolute top-3 left-3 text-[11px] px-2.5 py-1 rounded-full font-medium bg-background/80 text-foreground backdrop-blur-sm">
+                    {p.category}
+                  </span>
+                )}
                 <span className={`absolute top-3 right-3 text-[11px] px-2.5 py-1 rounded-full font-medium ${statusColors[p.status]} backdrop-blur-sm`}>
                   {statusLabels[p.status]}
                 </span>
@@ -247,7 +311,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Budget: {p.isVariableBudget && p.budgetMin != null && p.budgetMax != null ? `${formatCurrencyCompact(p.budgetMin)} – ${formatCurrencyCompact(p.budgetMax)}` : formatCurrencyCompact(p.budget)}</span>
-                  <span>Due: {new Date(p.deadline).toLocaleDateString()}</span>
+                  <span className="inline-flex items-center gap-1">Due: <DeadlineHistory projectId={p.id} currentDeadline={p.deadline} canEdit={false} compact /></span>
                 </div>
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center gap-1">
