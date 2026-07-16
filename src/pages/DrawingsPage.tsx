@@ -2,17 +2,19 @@ import { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, X, Folder, Loader2, Upload, History, Eye, GitCompareArrows,
-  FileText, Image as ImageIcon, PencilRuler, Trash2, Download,
+  FileText, Image as ImageIcon, PencilRuler, Trash2, Download, MessageSquarePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
 import { useActiveProject } from '@/contexts/ActiveProjectContext';
 import { renderVersionToCanvas, drawingFileType, type DrawingFileType } from '@/lib/drawingRender';
+import DrawingCommentLayer, { type DrawingComment } from '@/components/drawings/DrawingCommentLayer';
 
 const DrawingCompareDialog = lazy(() => import('@/components/drawings/DrawingCompareDialog'));
+const MoodBoardSection = lazy(() => import('@/components/moodboard/MoodBoardSection'));
 
 export interface DrawingVersion {
   id: string;
@@ -88,6 +90,14 @@ export default function DrawingsPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [placingComment, setPlacingComment] = useState(false);
+  // Mood Board is architect-only: for everyone else this stays 'sheets' forever and
+  // the Mood Board component tree is never mounted (RLS is the DB-level backstop).
+  const [drawingsTab, setDrawingsTab] = useState<'sheets' | 'moodboard'>('sheets');
+  const isArchitect = user?.role === 'architect';
+
+  // Placement mode shouldn't survive switching to a different drawing
+  useEffect(() => { setPlacingComment(false); }, [detailId]);
 
   // Upload form state (shared between "new drawing" and "new revision")
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -120,6 +130,41 @@ export default function DrawingsPage() {
       return (data || []) as DrawingVersion[];
     },
     enabled: !!user,
+  });
+
+  const { data: rawComments = [] } = useQuery({
+    queryKey: ['drawing_comments'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('drawing_comments').select('*');
+      if (error && (error as { code?: string }).code !== '42P01') throw error;
+      return (data || []) as DrawingComment[];
+    },
+    enabled: !!user,
+  });
+
+  const addCommentMutation = useMutation({
+    mutationFn: async (payload: { drawing_version_id: string; x_pct: number; y_pct: number; comment_text: string }) => {
+      const { error } = await supabase.from('drawing_comments').insert({ ...payload, created_by: user!.id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drawing_comments'] });
+      setPlacingComment(false);
+      toast.success('Comment pinned');
+    },
+    onError: (e: Error) => toast.error(`Failed to add comment: ${e.message}`),
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('drawing_comments').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drawing_comments'] });
+      toast.success('Comment deleted');
+    },
+    onError: (e: Error) => toast.error(`Failed to delete comment: ${e.message}`),
   });
 
   const isLoading = loadingDrawings || loadingVersions;
@@ -155,6 +200,10 @@ export default function DrawingsPage() {
 
   const detail = detailId ? rawDrawings.find(d => d.id === detailId) : null;
   const detailVersions = detail ? (versionsByDrawing.get(detail.id) || []) : [];
+  // Pins are scoped to the specific current revision — never carried across revisions
+  const currentVersionComments = detailVersions[0]
+    ? rawComments.filter(c => c.drawing_version_id === detailVersions[0].id)
+    : [];
 
   const resolveName = (id: string | null) => {
     const u = users.find(x => x.id === id);
@@ -288,7 +337,7 @@ export default function DrawingsPage() {
           </div>
           <p className="text-muted-foreground text-sm mt-1">Plan uploads, automatic version history, and revision compare</p>
         </div>
-        {canUpload && (
+        {canUpload && drawingsTab === 'sheets' && (
           <button
             onClick={openNewDrawing}
             className="gradient-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 flex items-center gap-2 shadow-lg shadow-primary/20 shrink-0 self-start sm:self-auto"
@@ -298,6 +347,31 @@ export default function DrawingsPage() {
         )}
       </div>
 
+      {/* Sheets / Mood Board tabs — architects only; everyone else gets exactly the old page */}
+      {isArchitect && (
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
+          {([['sheets', 'Sheets'], ['moodboard', 'Mood Board']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setDrawingsTab(key)}
+              className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
+                drawingsTab === key
+                  ? 'gradient-primary text-primary-foreground shadow-md shadow-primary/15'
+                  : 'bg-card border border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {isArchitect && drawingsTab === 'moodboard' ? (
+        <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>}>
+          <MoodBoardSection user={user} projects={projects} activeProjectId={activeProjectId} />
+        </Suspense>
+      ) : (
+      <>
       {/* Discipline chips */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {['All', ...DISCIPLINES].map(d => {
@@ -420,6 +494,23 @@ export default function DrawingsPage() {
                       <Upload className="w-3.5 h-3.5" /> New Revision
                     </button>
                   )}
+                  {detailVersions[0] && (
+                    <button
+                      onClick={() => setPlacingComment(p => !p)}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold shrink-0 whitespace-nowrap transition-colors ${
+                        placingComment
+                          ? 'bg-foreground text-background'
+                          : 'bg-card border border-border text-foreground hover:bg-muted'
+                      }`}
+                      title={placingComment ? 'Click the drawing to place a pin — or click again to cancel' : 'Pin a comment to a spot on this revision'}
+                    >
+                      <MessageSquarePlus className="w-3.5 h-3.5" />
+                      {placingComment ? 'Click drawing to pin…' : 'Comment'}
+                      {!placingComment && currentVersionComments.length > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-bold">{currentVersionComments.length}</span>
+                      )}
+                    </button>
+                  )}
                   {user?.id === detail.created_by && (
                     <button onClick={() => handleDelete(detail)} title="Delete" className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0">
                       <Trash2 className="w-4 h-4" />
@@ -429,9 +520,32 @@ export default function DrawingsPage() {
               </div>
 
               <div className="flex flex-col md:flex-row min-h-0 flex-1 overflow-y-auto md:overflow-hidden">
-                {/* Current revision preview */}
+                {/* Current revision preview — the relative inline-block wrapper hugs the
+                    image's own rendered box, so pin percentages track the image exactly
+                    (not the padded flex-centering container around it) */}
                 <div className="md:flex-[3] bg-muted/20 flex items-start justify-center p-4 md:overflow-auto">
-                  <DrawingThumb version={detailVersions[0]} className="max-w-full rounded-lg border border-border/50 shadow-sm" />
+                  <div className="relative inline-block">
+                    <DrawingThumb version={detailVersions[0]} className="max-w-full rounded-lg border border-border/50 shadow-sm" />
+                    {detailVersions[0] && (
+                      <DrawingCommentLayer
+                        comments={currentVersionComments}
+                        users={users}
+                        currentUserId={user?.id}
+                        canModerate={user?.role === 'architect'}
+                        placing={placingComment}
+                        submitting={addCommentMutation.isPending}
+                        onAddComment={(x_pct, y_pct, text) =>
+                          addCommentMutation.mutate({
+                            drawing_version_id: detailVersions[0].id,
+                            x_pct,
+                            y_pct,
+                            comment_text: text,
+                          })
+                        }
+                        onDeleteComment={id => deleteCommentMutation.mutate(id)}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 {/* Version history — the audit trail */}
@@ -572,6 +686,8 @@ export default function DrawingsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   );
 }

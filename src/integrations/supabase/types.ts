@@ -307,6 +307,51 @@ export type Database = {
           },
         ]
       }
+      drawing_comments: {
+        Row: {
+          comment_text: string
+          created_at: string
+          created_by: string | null
+          drawing_version_id: string
+          id: string
+          x_pct: number
+          y_pct: number
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string
+          created_by?: string | null
+          drawing_version_id: string
+          id?: string
+          x_pct: number
+          y_pct: number
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string
+          created_by?: string | null
+          drawing_version_id?: string
+          id?: string
+          x_pct?: number
+          y_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drawing_comments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drawing_comments_drawing_version_id_fkey"
+            columns: ["drawing_version_id"]
+            isOneToOne: false
+            referencedRelation: "drawing_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drawing_versions: {
         Row: {
           created_at: string
@@ -584,6 +629,54 @@ export type Database = {
             columns: ["reply_to_id"]
             isOneToOne: false
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mood_boards: {
+        Row: {
+          canvas_data: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          project_id: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          canvas_data?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          canvas_data?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mood_boards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mood_boards_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
